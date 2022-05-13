@@ -11,11 +11,12 @@ pub use self::trajectory::Trajectory;
 pub struct VehicleName(String);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VehicleID(usize);
+pub struct VehicleID(pub usize);
 
 pub struct Model {
     pub bounds: Bounds,
     pub gps_bounds: GPSBounds,
+    // TODO TiVec
     pub vehicles: Vec<Vehicle>,
 }
 

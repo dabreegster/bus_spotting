@@ -8,8 +8,8 @@ use abstutil::prettyprint_usize;
 use geom::{Circle, Distance, Duration, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
-    Color, EventCtx, GeomBatch, GfxCtx, Line, SharedAppState, State, Text, Transition, UpdateType,
-    Widget,
+    Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, SharedAppState, State, Text,
+    Transition, UpdateType, Widget,
 };
 
 use self::model::{Model, VehicleID};
@@ -47,6 +47,7 @@ impl SharedAppState for App {}
 struct Viewer {
     time_controls: TimeControls,
     world: World<Obj>,
+    hover_path: Cached<Obj, Drawable>,
 }
 
 impl Viewer {
@@ -54,6 +55,7 @@ impl Viewer {
         let mut state = Self {
             time_controls: TimeControls::new(ctx, app),
             world: World::unbounded(),
+            hover_path: Cached::new(),
         };
         state.on_time_change(ctx, app);
         Box::new(state)
@@ -78,6 +80,21 @@ impl State<App> for Viewer {
 
         self.world.event(ctx);
 
+        self.hover_path
+            .update(self.world.get_hovering(), |obj| match obj {
+                Obj::Bus(id) => {
+                    let mut batch = GeomBatch::new();
+                    batch.push(
+                        Color::CYAN,
+                        app.model.vehicles[id.0]
+                            .trajectory
+                            .as_polyline()
+                            .make_polygons(Distance::meters(5.0)),
+                    );
+                    ctx.upload(batch)
+                }
+            });
+
         if !self.time_controls.is_paused() {
             ctx.request_update(UpdateType::Game);
         }
@@ -90,6 +107,9 @@ impl State<App> for Viewer {
 
         self.time_controls.draw(g);
         self.world.draw(g);
+        if let Some(draw) = self.hover_path.value() {
+            g.redraw(draw);
+        }
     }
 }
 

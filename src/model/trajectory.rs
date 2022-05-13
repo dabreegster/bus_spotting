@@ -1,5 +1,5 @@
 use anyhow::Result;
-use geom::{Line, PolyLine, Pt2D, Speed, Time};
+use geom::{Distance, Line, PolyLine, Pt2D, Speed, Time};
 
 pub struct Trajectory {
     // TODO Figure out how to represent/compress staying in the same position for a long time
@@ -66,8 +66,10 @@ impl Trajectory {
         for (pos, _) in &self.inner {
             pts.push(*pos);
         }
-        // TODO If the trajectory doubles back on itself, this'll fail. Should we split into
-        // multiple segments if that happens, or do unchecked_new?
-        PolyLine::deduping_new(pts).unwrap()
+        let pts = Pt2D::approx_dedupe(pts, Distance::meters(1.0));
+
+        // TODO The trajectory usually doubles back on itself. Should we split into multiple
+        // segments instead of doing this?
+        PolyLine::unchecked_new(pts)
     }
 }
