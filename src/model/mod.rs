@@ -1,8 +1,11 @@
+mod avl;
+mod trajectory;
+
 use anyhow::Result;
 use geom::{Bounds, GPSBounds};
 use serde::Deserialize;
 
-use crate::Trajectory;
+pub use self::trajectory::Trajectory;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 pub struct VehicleName(String);
@@ -24,7 +27,7 @@ pub struct Vehicle {
 
 impl Model {
     pub fn load(avl_path: &str) -> Result<Self> {
-        let (gps_bounds, trajectories) = crate::avl::load(avl_path)?;
+        let (gps_bounds, trajectories) = avl::load(avl_path)?;
         let mut vehicles = Vec::new();
         for (original_id, trajectory) in trajectories {
             vehicles.push(Vehicle {

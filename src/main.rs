@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate anyhow;
 
-mod avl;
 mod model;
-mod trajectory;
 
 use abstutil::prettyprint_usize;
 use geom::{Circle, Distance, Duration, Speed, Time, UnitFmt};
@@ -13,8 +11,7 @@ use widgetry::{
     Slider, State, Text, Transition, VerticalAlignment, Widget,
 };
 
-use model::{Model, VehicleID, VehicleName};
-use trajectory::Trajectory;
+use self::model::{Model, VehicleID};
 
 fn main() {
     abstutil::logger::setup();
