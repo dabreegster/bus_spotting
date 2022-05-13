@@ -8,9 +8,12 @@ edition = "2021"
 default = ["widgetry/native-backend"]
 
 [dependencies]
+anyhow = "1.0.38"
 abstutil = { git = "https://github.com/dabreegster/abstreet" }
+chrono = "0.4.19"
+csv = "1.1.4"
 geom = { git = "https://github.com/dabreegster/abstreet" }
-log = "0.4.14"
+serde = "1.0.123"
 widgetry = { git = "https://github.com/dabreegster/abstreet" }
 
 [patch.crates-io]
