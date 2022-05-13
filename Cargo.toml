@@ -1,0 +1,18 @@
+[package]
+name = "bus_spotting"
+version = "0.1.0"
+authors = ["Dustin Carlino <dabreegster@gmail.com>"]
+edition = "2021"
+
+[features]
+default = ["widgetry/native-backend"]
+
+[dependencies]
+abstutil = { git = "https://github.com/dabreegster/abstreet" }
+geom = { git = "https://github.com/dabreegster/abstreet" }
+log = "0.4.14"
+widgetry = { git = "https://github.com/dabreegster/abstreet" }
+
+[patch.crates-io]
+# Waiting for a release: https://github.com/21re/rust-geo-booleanop/pull/27
+geo-booleanop = { git = "https://github.com/21re/rust-geo-booleanop" }
