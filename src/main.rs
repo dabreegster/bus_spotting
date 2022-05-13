@@ -2,16 +2,18 @@
 extern crate anyhow;
 
 mod model;
+mod speed;
 
 use abstutil::prettyprint_usize;
 use geom::{Circle, Distance, Duration, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
-    Color, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome, Panel, SharedAppState,
-    Slider, State, Text, Transition, VerticalAlignment, Widget,
+    Color, EventCtx, GeomBatch, GfxCtx, Line, SharedAppState, State, Text, Transition, UpdateType,
+    Widget,
 };
 
 use self::model::{Model, VehicleID};
+use self::speed::TimeControls;
 
 fn main() {
     abstutil::logger::setup();
@@ -27,40 +29,30 @@ fn main() {
         let app = App {
             model,
             time: Time::START_OF_DAY,
+            time_increment: Duration::minutes(10),
         };
         let states = vec![Viewer::new(ctx, &app)];
         (app, states)
     });
 }
 
-struct App {
+pub struct App {
     model: Model,
     time: Time,
+    time_increment: Duration,
 }
 
 impl SharedAppState for App {}
 
 struct Viewer {
-    panel: Panel,
+    time_controls: TimeControls,
     world: World<Obj>,
 }
 
 impl Viewer {
     fn new(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
-            panel: Panel::new_builder(Widget::col(vec![
-                Line("Bus Spotting").small_heading().into_widget(ctx),
-                Slider::area(
-                    ctx,
-                    0.15 * ctx.canvas.window_width,
-                    app.time.to_percent(end_of_day()),
-                    "time",
-                ),
-                // TODO Widget::placeholder()?
-                Text::new().into_widget(ctx).named("controls"),
-            ]))
-            .aligned(HorizontalAlignment::Left, VerticalAlignment::Top)
-            .build(ctx),
+            time_controls: TimeControls::new(ctx, app),
             world: World::unbounded(),
         };
         state.on_time_change(ctx, app);
@@ -68,9 +60,9 @@ impl Viewer {
     }
 
     fn on_time_change(&mut self, ctx: &mut EventCtx, app: &App) {
-        let (world, controls) = make_world_and_panel(ctx, app);
+        let (world, stats) = make_world_and_stats(ctx, app);
         self.world = world;
-        self.panel.replace(ctx, "controls", controls);
+        self.time_controls.panel.replace(ctx, "stats", stats);
     }
 }
 
@@ -78,15 +70,17 @@ impl State<App> for Viewer {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition<App> {
         ctx.canvas_movement();
 
-        match self.panel.event(ctx) {
-            Outcome::Changed(_) => {
-                app.time = end_of_day().percent_of(self.panel.slider("time").get_percent());
-                self.on_time_change(ctx, app);
-            }
-            _ => {}
+        let prev_time = app.time;
+        self.time_controls.event(ctx, app);
+        if app.time != prev_time {
+            self.on_time_change(ctx, app);
         }
 
         self.world.event(ctx);
+
+        if !self.time_controls.is_paused() {
+            ctx.request_update(UpdateType::Game);
+        }
 
         Transition::Keep
     }
@@ -94,7 +88,7 @@ impl State<App> for Viewer {
     fn draw(&self, g: &mut GfxCtx, _: &App) {
         g.clear(Color::BLACK);
 
-        self.panel.draw(g);
+        self.time_controls.draw(g);
         self.world.draw(g);
     }
 }
@@ -105,7 +99,7 @@ enum Obj {
 }
 impl ObjectID for Obj {}
 
-fn make_world_and_panel(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
+fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
     // TODO We really need unzoomed circles
     let radius = Distance::meters(50.0);
     // TODO UnitFmt::metric()?
@@ -150,17 +144,12 @@ fn make_world_and_panel(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
     }
     world.initialize_hover(ctx);
 
-    let controls = Text::from_multiline(vec![
-        Line(format!("Time: {}", app.time)),
+    let stats = Text::from_multiline(vec![
         Line(format!("Away: {}", prettyprint_usize(away))),
         Line(format!("Idling: {}", prettyprint_usize(idling))),
         Line(format!("Moving: {}", prettyprint_usize(moving))),
     ])
     .into_widget(ctx);
 
-    (world, controls)
-}
-
-fn end_of_day() -> Time {
-    Time::START_OF_DAY + Duration::hours(24)
+    (world, stats)
 }
