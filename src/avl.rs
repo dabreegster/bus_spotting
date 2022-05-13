@@ -7,11 +7,11 @@ use chrono::{NaiveDateTime, Timelike};
 use geom::{Duration, GPSBounds, LonLat, Pt2D, Time};
 use serde::Deserialize;
 
-use crate::{Trajectory, VehicleID};
+use crate::{Trajectory, VehicleName};
 
-pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleID, Trajectory>)> {
+pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleName, Trajectory>)> {
     // Read raw data
-    let mut data_per_vehicle: BTreeMap<VehicleID, Vec<(LonLat, Time)>> = BTreeMap::new();
+    let mut data_per_vehicle: BTreeMap<VehicleName, Vec<(LonLat, Time)>> = BTreeMap::new();
     for rec in csv::Reader::from_reader(File::open(path)?).deserialize() {
         let rec: AVL = rec?;
 
@@ -26,7 +26,7 @@ pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleID, Trajectory>)> 
         let pos = LonLat::new(rec.longitude, rec.latitude);
 
         data_per_vehicle
-            .entry(rec.vehicle_id)
+            .entry(rec.vehicle_name)
             .or_insert_with(Vec::new)
             .push((pos, time));
     }
@@ -41,12 +41,12 @@ pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleID, Trajectory>)> 
 
     // Calculate trajectories
     let mut results = BTreeMap::new();
-    for (vehicle_id, raw_pts) in data_per_vehicle {
+    for (vehicle_name, raw_pts) in data_per_vehicle {
         let mut points: Vec<(Pt2D, Time)> = Vec::new();
         for (gps, time) in raw_pts {
             points.push((gps.to_pt(&gps_bounds), time));
         }
-        results.insert(vehicle_id, Trajectory::new(points)?);
+        results.insert(vehicle_name, Trajectory::new(points)?);
     }
     Ok((gps_bounds, results))
 }
@@ -54,7 +54,7 @@ pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleID, Trajectory>)> 
 #[derive(Deserialize)]
 struct AVL {
     #[serde(rename = "CODVEICULO")]
-    vehicle_id: VehicleID,
+    vehicle_name: VehicleName,
     #[serde(rename = "DATAHORACOORD")]
     datetime: String,
     #[serde(rename = "LATITUDE")]
