@@ -1,10 +1,12 @@
 mod avl;
+mod gtfs;
 mod trajectory;
 
 use anyhow::Result;
 use geom::{Bounds, GPSBounds};
 use serde::Deserialize;
 
+pub use self::gtfs::GTFS;
 pub use self::trajectory::Trajectory;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
@@ -18,6 +20,7 @@ pub struct Model {
     pub gps_bounds: GPSBounds,
     // TODO TiVec
     pub vehicles: Vec<Vehicle>,
+    pub gtfs: GTFS,
 }
 
 pub struct Vehicle {
@@ -27,7 +30,7 @@ pub struct Vehicle {
 }
 
 impl Model {
-    pub fn load(avl_path: &str) -> Result<Self> {
+    pub fn load(avl_path: &str, gtfs_dir: &str) -> Result<Self> {
         let (gps_bounds, trajectories) = avl::load(avl_path)?;
         let mut vehicles = Vec::new();
         for (original_id, trajectory) in trajectories {
@@ -37,10 +40,12 @@ impl Model {
                 trajectory,
             });
         }
+        let gtfs = GTFS::load_from_dir(&gps_bounds, gtfs_dir)?;
         Ok(Self {
             bounds: gps_bounds.to_bounds(),
             gps_bounds,
             vehicles,
+            gtfs,
         })
     }
 }

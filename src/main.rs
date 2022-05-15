@@ -5,7 +5,7 @@ mod model;
 mod speed;
 
 use abstutil::prettyprint_usize;
-use geom::{Circle, Distance, Duration, Speed, Time, UnitFmt};
+use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, SharedAppState, State, Text,
@@ -19,7 +19,11 @@ fn main() {
     abstutil::logger::setup();
 
     // TODO Plumb paths
-    let model = Model::load("/home/dabreegster/Downloads/mdt_data/AVL/avl_2019-09-01.csv").unwrap();
+    let model = Model::load(
+        "/home/dabreegster/Downloads/mdt_data/AVL/avl_2019-09-01.csv",
+        "/home/dabreegster/Downloads/mdt_data/GTFS/google_transit-02-2019/",
+    )
+    .unwrap();
 
     widgetry::run(widgetry::Settings::new("Bus Spotting"), move |ctx| {
         let bounds = &model.bounds;
@@ -93,6 +97,7 @@ impl State<App> for Viewer {
                     );
                     ctx.upload(batch)
                 }
+                Obj::Stop(_) => Drawable::empty(ctx),
             });
 
         if !self.time_controls.is_paused() {
@@ -116,18 +121,11 @@ impl State<App> for Viewer {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Obj {
     Bus(VehicleID),
+    Stop(usize),
 }
 impl ObjectID for Obj {}
 
 fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
-    // TODO We really need unzoomed circles
-    let radius = Distance::meters(50.0);
-    // TODO UnitFmt::metric()?
-    let metric = UnitFmt {
-        round_durations: false,
-        metric: true,
-    };
-
     let mut world = World::bounded(&app.model.bounds);
     // Show the bounds of the world
     world.draw_master_batch(
@@ -135,41 +133,85 @@ fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
         GeomBatch::from(vec![(Color::grey(0.1), app.model.bounds.get_rectangle())]),
     );
 
-    let mut away = 0;
-    let mut idling = 0;
-    let mut moving = 0;
+    // TODO We really need unzoomed circles
+    let radius = Distance::meters(50.0);
 
-    for vehicle in &app.model.vehicles {
-        if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
-            if speed == Speed::ZERO {
-                idling += 1;
-            } else {
-                moving += 1;
+    // Stops -- these never change; could we avoid rebuilding every time?
+    {
+        // Optimization
+        let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
+
+        for (idx, stop) in app.model.gtfs.stops.values().enumerate() {
+            let mut txt = Text::from(format!("{:?}", stop.stop_id));
+            if let Some(ref name) = stop.name {
+                txt.add_line(Line(format!("Name: {name}")));
+            }
+            if let Some(ref code) = stop.code {
+                txt.add_line(Line(format!("Code: {code}")));
+            }
+            if let Some(ref description) = stop.description {
+                txt.add_line(Line(format!("Description: {description}")));
             }
 
             world
-                .add(Obj::Bus(vehicle.id))
-                .hitbox(Circle::new(pos, radius).to_polygon())
-                .draw_color(Color::RED)
+                // TODO Need to assign numeric IDs in the model
+                .add(Obj::Stop(idx))
+                .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
+                .draw_color(Color::BLUE)
                 .hover_alpha(0.5)
-                .tooltip(Text::from(format!(
-                    "{:?} currently has speed {}",
-                    vehicle.original_id,
-                    speed.to_string(&metric)
-                )))
+                .tooltip(txt)
                 .build(ctx);
-        } else {
-            away += 1;
         }
     }
-    world.initialize_hover(ctx);
 
-    let stats = Text::from_multiline(vec![
-        Line(format!("Away: {}", prettyprint_usize(away))),
-        Line(format!("Idling: {}", prettyprint_usize(idling))),
-        Line(format!("Moving: {}", prettyprint_usize(moving))),
-    ])
-    .into_widget(ctx);
+    // Vehicles
+    let stats = {
+        // TODO UnitFmt::metric()?
+        let metric = UnitFmt {
+            round_durations: false,
+            metric: true,
+        };
+
+        let mut away = 0;
+        let mut idling = 0;
+        let mut moving = 0;
+
+        for vehicle in &app.model.vehicles {
+            if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
+                if speed == Speed::ZERO {
+                    idling += 1;
+                } else {
+                    moving += 1;
+                }
+
+                world
+                    .add(Obj::Bus(vehicle.id))
+                    .hitbox(Circle::new(pos, radius).to_polygon())
+                    .draw_color(Color::RED)
+                    .hover_alpha(0.5)
+                    .tooltip(Text::from(format!(
+                        "{:?} currently has speed {}",
+                        vehicle.original_id,
+                        speed.to_string(&metric)
+                    )))
+                    .build(ctx);
+            } else {
+                away += 1;
+            }
+        }
+        world.initialize_hover(ctx);
+
+        Text::from_multiline(vec![
+            Line(format!("Away: {}", prettyprint_usize(away))),
+            Line(format!("Idling: {}", prettyprint_usize(idling))),
+            Line(format!("Moving: {}", prettyprint_usize(moving))),
+            Line(format!(
+                "Stops: {}",
+                prettyprint_usize(app.model.gtfs.stops.len())
+            )),
+        ])
+        .into_widget(ctx)
+    };
 
     (world, stats)
 }

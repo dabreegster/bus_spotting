@@ -12,6 +12,7 @@ anyhow = "1.0.38"
 abstutil = { git = "https://github.com/dabreegster/abstreet" }
 chrono = "0.4.19"
 csv = "1.1.4"
+fs-err = "2.6.0"
 geom = { git = "https://github.com/dabreegster/abstreet" }
 serde = "1.0.123"
 widgetry = { git = "https://github.com/dabreegster/abstreet" }

@@ -1,9 +1,8 @@
 use std::collections::BTreeMap;
-// TODO fs_err
-use std::fs::File;
 
 use anyhow::Result;
 use chrono::{NaiveDateTime, Timelike};
+use fs_err::File;
 use geom::{Duration, GPSBounds, LonLat, Pt2D, Time};
 use serde::Deserialize;
 

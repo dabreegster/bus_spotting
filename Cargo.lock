@@ -201,6 +201,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "csv",
+ "fs-err",
  "geom",
  "serde",
  "widgetry",
