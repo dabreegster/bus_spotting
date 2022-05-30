@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#213df7fa82d03e3b4f7af8dba21acffc8c7aa0f8"
+source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -24,19 +24,21 @@ dependencies = [
  "futures-channel",
  "include_dir",
  "instant",
+ "js-sys",
  "lazy_static",
  "log",
  "reqwest",
  "serde",
  "serde_json",
  "tokio",
+ "wasm-bindgen",
  "web-sys",
 ]
 
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#213df7fa82d03e3b4f7af8dba21acffc8c7aa0f8"
+source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
 dependencies = [
  "anyhow",
  "bincode",
@@ -811,7 +813,7 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#213df7fa82d03e3b4f7af8dba21acffc8c7aa0f8"
+source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
 dependencies = [
  "aabb-quadtree",
  "abstutil",
@@ -2638,7 +2640,7 @@ checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#213df7fa82d03e3b4f7af8dba21acffc8c7aa0f8"
+source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
 dependencies = [
  "aabb-quadtree",
  "abstio",
