@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate anyhow;
+
 mod avl;
 mod gtfs;
 mod trajectory;

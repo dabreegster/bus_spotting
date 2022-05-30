@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate anyhow;
 
-mod model;
 mod speed;
 
 use abstutil::prettyprint_usize;
@@ -12,7 +11,8 @@ use widgetry::{
     Transition, UpdateType, Widget,
 };
 
-use self::model::{Model, VehicleID};
+use model::{Model, VehicleID};
+
 use self::speed::TimeControls;
 
 fn main() {

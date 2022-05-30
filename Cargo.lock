@@ -196,20 +196,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 
 [[package]]
-name = "bus_spotting"
-version = "0.1.0"
-dependencies = [
- "abstutil",
- "anyhow",
- "chrono",
- "csv",
- "fs-err",
- "geom",
- "serde",
- "widgetry",
-]
-
-[[package]]
 name = "bytemuck"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1411,6 +1397,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "model"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "csv",
+ "fs-err",
+ "geom",
+ "serde",
+]
+
+[[package]]
 name = "ndk"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2318,6 +2316,17 @@ name = "typenum"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
+
+[[package]]
+name = "ui"
+version = "0.1.0"
+dependencies = [
+ "abstutil",
+ "anyhow",
+ "geom",
+ "model",
+ "widgetry",
+]
 
 [[package]]
 name = "unicode-bidi"

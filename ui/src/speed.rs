@@ -1,7 +1,8 @@
 use geom::{Duration, Time};
 use widgetry::{
-    Choice, ControlState, EdgeInsets, EventCtx, GfxCtx, HorizontalAlignment, Key, Line, Outcome,
-    Panel, PersistentSplit, ScreenDims, Slider, Text, VerticalAlignment, Widget,
+    include_labeled_bytes, Choice, ControlState, EdgeInsets, EventCtx, GfxCtx, HorizontalAlignment,
+    Key, Line, Outcome, Panel, PersistentSplit, ScreenDims, Slider, Text, VerticalAlignment,
+    Widget,
 };
 
 use crate::App;
@@ -71,14 +72,14 @@ impl TimeControls {
             let button = ctx
                 .style()
                 .btn_plain
-                .icon("assets/triangle.svg")
+                .icon_bytes(include_labeled_bytes!("../assets/triangle.svg"))
                 .hotkey(Key::Space);
 
             Widget::custom_row(vec![if self.paused {
                 button.build_widget(ctx, "play")
             } else {
                 button
-                    .image_path("assets/pause.svg")
+                    .image_bytes(include_labeled_bytes!("../assets/pause.svg"))
                     .build_widget(ctx, "pause")
             }])
             .margin_right(16)
@@ -102,7 +103,7 @@ impl TimeControls {
                         .style()
                         .btn_plain
                         .btn()
-                        .image_path("assets/triangle.svg")
+                        .image_bytes(include_labeled_bytes!("../assets/triangle.svg"))
                         .image_dims(ScreenDims::new(16.0, 26.0))
                         .tooltip(txt)
                         .padding(EdgeInsets {
@@ -150,7 +151,7 @@ impl TimeControls {
         row.push(
             ctx.style()
                 .btn_plain
-                .icon("assets/reset.svg")
+                .icon_bytes(include_labeled_bytes!("../assets/reset.svg"))
                 .hotkey(Key::X)
                 .build_widget(ctx, "reset to midnight"),
         );

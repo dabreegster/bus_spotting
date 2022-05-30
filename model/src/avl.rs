@@ -6,7 +6,7 @@ use fs_err::File;
 use geom::{Duration, GPSBounds, LonLat, Pt2D, Time};
 use serde::Deserialize;
 
-use crate::model::{Trajectory, VehicleName};
+use crate::{Trajectory, VehicleName};
 
 pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleName, Trajectory>)> {
     // Read raw data

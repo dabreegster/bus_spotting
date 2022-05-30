@@ -1,21 +1,12 @@
-[package]
-name = "bus_spotting"
-version = "0.1.0"
-authors = ["Dustin Carlino <dabreegster@gmail.com>"]
-edition = "2021"
+[workspace]
+members = ["model", "ui"]
 
-[features]
-default = ["widgetry/native-backend"]
-
-[dependencies]
-anyhow = "1.0.38"
-abstutil = { git = "https://github.com/dabreegster/abstreet" }
-chrono = "0.4.19"
-csv = "1.1.4"
-fs-err = "2.6.0"
-geom = { git = "https://github.com/dabreegster/abstreet" }
-serde = "1.0.123"
-widgetry = { git = "https://github.com/dabreegster/abstreet" }
+# See https://doc.rust-lang.org/cargo/reference/profiles.html#overrides. This
+# compiles all external dependencies as release mode, yielding great runtime
+# speed, but only paying the cost of slow compilation once (since we don't
+# update dependencies often).
+[profile.dev.package."*"]
+opt-level = 3
 
 [patch.crates-io]
 # Waiting for a release: https://github.com/21re/rust-geo-booleanop/pull/27
