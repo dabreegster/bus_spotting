@@ -7,17 +7,18 @@ mod trajectory;
 
 use anyhow::Result;
 use geom::{Bounds, GPSBounds};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub use self::gtfs::GTFS;
 pub use self::trajectory::Trajectory;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VehicleName(String);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VehicleID(pub usize);
 
+#[derive(Serialize, Deserialize)]
 pub struct Model {
     pub bounds: Bounds,
     pub gps_bounds: GPSBounds,
@@ -26,6 +27,7 @@ pub struct Model {
     pub gtfs: GTFS,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Vehicle {
     pub id: VehicleID,
     pub original_id: VehicleName,
@@ -33,7 +35,7 @@ pub struct Vehicle {
 }
 
 impl Model {
-    pub fn load(avl_path: &str, gtfs_dir: &str) -> Result<Self> {
+    pub fn import(avl_path: &str, gtfs_dir: &str) -> Result<Self> {
         let (gps_bounds, trajectories) = avl::load(avl_path)?;
         let mut vehicles = Vec::new();
         for (original_id, trajectory) in trajectories {

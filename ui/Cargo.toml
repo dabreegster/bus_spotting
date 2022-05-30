@@ -9,7 +9,9 @@ default = ["widgetry/native-backend"]
 
 [dependencies]
 anyhow = "1.0.38"
+abstio = { git = "https://github.com/dabreegster/abstreet" }
 abstutil = { git = "https://github.com/dabreegster/abstreet" }
 geom = { git = "https://github.com/dabreegster/abstreet" }
 model = { path = "../model" }
+structopt = "0.3.23"
 widgetry = { git = "https://github.com/dabreegster/abstreet" }

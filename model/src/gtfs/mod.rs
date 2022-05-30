@@ -1,12 +1,14 @@
-use std::collections::BTreeMap;
-
 mod stops;
+
+use std::collections::BTreeMap;
 
 use anyhow::Result;
 use geom::GPSBounds;
+use serde::{Deserialize, Serialize};
 
 pub use stops::{Stop, StopID};
 
+#[derive(Serialize, Deserialize)]
 pub struct GTFS {
     pub stops: BTreeMap<StopID, Stop>,
 }

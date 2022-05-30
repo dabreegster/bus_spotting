@@ -3,8 +3,10 @@ extern crate anyhow;
 
 mod speed;
 
-use abstutil::prettyprint_usize;
+use abstutil::{prettyprint_usize, Timer};
+use anyhow::Result;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
+use structopt::StructOpt;
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, SharedAppState, State, Text,
@@ -15,17 +17,49 @@ use model::{Model, VehicleID};
 
 use self::speed::TimeControls;
 
+#[derive(StructOpt)]
+struct Args {
+    /// The path to a previously built and serialized model
+    #[structopt(long)]
+    model: Option<String>,
+    /// The path to an AVL CSV file
+    #[structopt(long)]
+    avl: Option<String>,
+    /// The path to a GTFS directory
+    #[structopt(long)]
+    gtfs: Option<String>,
+}
+
+impl Args {
+    fn load(mut self, timer: &mut Timer) -> Result<Model> {
+        if let Some(path) = self.model.take() {
+            if self.avl.is_some() || self.gtfs.is_some() {
+                bail!("If --model is specified, nothing will be imported");
+            }
+            return abstio::maybe_read_binary::<Model>(path, timer);
+        }
+        if self.avl.is_none() && self.gtfs.is_none() {
+            // TODO Support an empty model
+            bail!("No input specified");
+        }
+        if self.avl.is_none() || self.gtfs.is_none() {
+            bail!("Both --avl and --gtfs needed to import a model");
+        }
+        let model = Model::import(&self.avl.take().unwrap(), &self.gtfs.take().unwrap())?;
+        // TODO Don't save to a fixed path; maybe use the date
+        abstio::write_binary("model.bin".to_string(), &model);
+        Ok(model)
+    }
+}
+
 fn main() {
     abstutil::logger::setup();
 
-    // TODO Plumb paths
-    let model = Model::load(
-        "/home/dabreegster/Downloads/mdt_data/AVL/avl_2019-09-01.csv",
-        "/home/dabreegster/Downloads/mdt_data/GTFS/google_transit-02-2019/",
-    )
-    .unwrap();
+    let args = Args::from_iter(abstutil::cli_args());
 
     widgetry::run(widgetry::Settings::new("Bus Spotting"), move |ctx| {
+        let model = ctx.loading_screen("initialize model", |_, timer| args.load(timer).unwrap());
+
         let bounds = &model.bounds;
         ctx.canvas.map_dims = (bounds.max_x, bounds.max_y);
         ctx.canvas.center_on_map_pt(bounds.center());

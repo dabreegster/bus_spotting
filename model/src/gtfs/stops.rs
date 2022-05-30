@@ -3,11 +3,12 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use fs_err::File;
 use geom::{GPSBounds, LonLat, Pt2D};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct StopID(String);
 
+#[derive(Serialize, Deserialize)]
 pub struct Stop {
     pub stop_id: StopID,
     pub pos: Pt2D,
