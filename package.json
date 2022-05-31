@@ -1,0 +1,15 @@
+{
+  "name": "ui",
+  "collaborators": [
+    "Dustin Carlino <dabreegster@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "ui_bg.wasm",
+    "ui.js",
+    "ui.d.ts"
+  ],
+  "module": "ui.js",
+  "types": "ui.d.ts",
+  "sideEffects": false
+}
