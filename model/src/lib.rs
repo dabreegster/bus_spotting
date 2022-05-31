@@ -6,7 +6,7 @@ mod gtfs;
 mod trajectory;
 
 use anyhow::Result;
-use geom::{Bounds, GPSBounds};
+use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
 pub use self::gtfs::GTFS;
@@ -52,5 +52,15 @@ impl Model {
             vehicles,
             gtfs,
         })
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            // Avoid crashing the UI with empty bounds
+            bounds: Bounds::from(&[Pt2D::zero(), Pt2D::new(1.0, 1.0)]),
+            gps_bounds: GPSBounds::new(),
+            vehicles: Vec::new(),
+            gtfs: GTFS::empty(),
+        }
     }
 }

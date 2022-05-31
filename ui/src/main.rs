@@ -39,8 +39,7 @@ impl Args {
             return abstio::maybe_read_binary::<Model>(path, timer);
         }
         if self.avl.is_none() && self.gtfs.is_none() {
-            // TODO Support an empty model
-            bail!("No input specified");
+            return Ok(Model::empty());
         }
         if self.avl.is_none() || self.gtfs.is_none() {
             bail!("Both --avl and --gtfs needed to import a model");

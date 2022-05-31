@@ -19,6 +19,12 @@ impl GTFS {
             stops: stops::load(gps_bounds, format!("{path}/stops.txt"))?,
         })
     }
+
+    pub fn empty() -> Self {
+        Self {
+            stops: BTreeMap::new(),
+        }
+    }
 }
 
 // TODO are routes one or both directions? (probably both)
