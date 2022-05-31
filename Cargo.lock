@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
+source = "git+https://github.com/dabreegster/abstreet#7bdca2411fa8aee933c7231994feceb9ce8c3827"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -38,7 +38,7 @@ dependencies = [
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
+source = "git+https://github.com/dabreegster/abstreet#7bdca2411fa8aee933c7231994feceb9ce8c3827"
 dependencies = [
  "anyhow",
  "bincode",
@@ -823,7 +823,7 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
+source = "git+https://github.com/dabreegster/abstreet#7bdca2411fa8aee933c7231994feceb9ce8c3827"
 dependencies = [
  "aabb-quadtree",
  "abstutil",
@@ -2423,6 +2423,7 @@ dependencies = [
  "geom",
  "model",
  "structopt",
+ "wasm-bindgen",
  "widgetry",
 ]
 
@@ -2634,6 +2635,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d554b7f530dee5964d9a9468d95c1f8b8acae4f282807e7d27d4b03099a46744"
 
 [[package]]
+name = "wasm-streams"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bbae3363c08332cadccd13b67db371814cd214c2524020932f0804b8cf7c078"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "wayland-client"
 version = "0.29.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2765,7 +2779,7 @@ checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#099e674d76de5d7c8a08aff07e1ffcb09417b4b3"
+source = "git+https://github.com/dabreegster/abstreet#7bdca2411fa8aee933c7231994feceb9ce8c3827"
 dependencies = [
  "aabb-quadtree",
  "abstio",
@@ -2783,6 +2797,7 @@ dependencies = [
  "htmlescape",
  "image",
  "instant",
+ "js-sys",
  "log",
  "lru",
  "lyon",
@@ -2792,6 +2807,10 @@ dependencies = [
  "tokio",
  "ttf-parser",
  "usvg",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-streams",
+ "web-sys",
  "webbrowser",
  "winit",
 ]

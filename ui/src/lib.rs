@@ -8,7 +8,7 @@ use abstutil::Timer;
 use anyhow::Result;
 use geom::{Duration, Time};
 use structopt::StructOpt;
-use widgetry::SharedAppState;
+use widgetry::{Settings, SharedAppState};
 
 use model::Model;
 
@@ -46,12 +46,12 @@ impl Args {
     }
 }
 
-pub fn main() {
+fn run(settings: Settings) {
     abstutil::logger::setup();
 
     let args = Args::from_iter(abstutil::cli_args());
 
-    widgetry::run(widgetry::Settings::new("Bus Spotting"), move |ctx| {
+    widgetry::run(settings, move |ctx| {
         let model = ctx.loading_screen("initialize model", |_, timer| args.load(timer).unwrap());
 
         let bounds = &model.bounds;
@@ -66,6 +66,20 @@ pub fn main() {
         let states = vec![crate::viewer::Viewer::new(ctx, &app)];
         (app, states)
     });
+}
+
+pub fn main() {
+    let settings = Settings::new("Bus Spotting");
+    run(settings);
+}
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(start)]
+pub fn run_wasm() {
+    run(Settings::new("Bus Spotting").root_dom_element_id("loading".to_string()));
 }
 
 pub struct App {

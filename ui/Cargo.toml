@@ -4,8 +4,12 @@ version = "0.1.0"
 authors = ["Dustin Carlino <dabreegster@gmail.com>"]
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib", "lib"]
+
 [features]
 default = ["widgetry/native-backend"]
+wasm = ["wasm-bindgen", "widgetry/wasm-backend"]
 
 [dependencies]
 anyhow = "1.0.38"
@@ -14,4 +18,5 @@ abstutil = { git = "https://github.com/dabreegster/abstreet" }
 geom = { git = "https://github.com/dabreegster/abstreet" }
 model = { path = "../model" }
 structopt = "0.3.23"
+wasm-bindgen = { version = "0.2.70", optional = true }
 widgetry = { git = "https://github.com/dabreegster/abstreet" }
