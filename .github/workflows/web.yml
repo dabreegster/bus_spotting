@@ -18,6 +18,7 @@ jobs:
           cd ui
           wasm-pack build --release --target web -- --no-default-features --features wasm
           cp index.html pkg
+          rm -f pkg/.gitignore
 
       - name: Publish
         uses: peaceiris/actions-gh-pages@v3
