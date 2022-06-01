@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate anyhow;
+#[macro_use]
+extern crate log;
 
+mod file_loader;
 mod speed;
 mod viewer;
 
@@ -89,3 +92,5 @@ pub struct App {
 }
 
 impl SharedAppState for App {}
+
+pub type Transition = widgetry::Transition<App>;

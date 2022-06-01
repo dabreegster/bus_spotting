@@ -1,20 +1,23 @@
 use abstutil::prettyprint_usize;
+use anyhow::Result;
 use geom::{Circle, Distance, Pt2D, Speed, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
+use widgetry::tools::PopupMsg;
 use widgetry::{
-    Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, State, Text, Transition,
-    UpdateType, Widget,
+    Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome,
+    Panel, State, Text, UpdateType, VerticalAlignment, Widget,
 };
 
 use model::VehicleID;
 
 use crate::speed::TimeControls;
-use crate::App;
+use crate::{App, Transition};
 
 pub struct Viewer {
     time_controls: TimeControls,
     world: World<Obj>,
     hover_path: Cached<Obj, Drawable>,
+    panel: Panel,
 }
 
 impl Viewer {
@@ -23,6 +26,13 @@ impl Viewer {
             time_controls: TimeControls::new(ctx, app),
             world: World::unbounded(),
             hover_path: Cached::new(),
+            panel: Panel::new_builder(Widget::col(vec![ctx
+                .style()
+                .btn_outline
+                .text("Import data")
+                .build_def(ctx)]))
+            .aligned(HorizontalAlignment::Left, VerticalAlignment::Bottom)
+            .build(ctx),
         };
         state.on_time_change(ctx, app);
         Box::new(state)
@@ -36,7 +46,7 @@ impl Viewer {
 }
 
 impl State<App> for Viewer {
-    fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition<App> {
+    fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
         ctx.canvas_movement();
 
         let prev_time = app.time;
@@ -67,12 +77,22 @@ impl State<App> for Viewer {
             ctx.request_update(UpdateType::Game);
         }
 
+        if let Outcome::Clicked(x) = self.panel.event(ctx) {
+            match x.as_ref() {
+                "Import data" => {
+                    return import_data(ctx);
+                }
+                _ => unreachable!(),
+            }
+        }
+
         Transition::Keep
     }
 
     fn draw(&self, g: &mut GfxCtx, _: &App) {
         g.clear(Color::BLACK);
 
+        self.panel.draw(g);
         self.time_controls.draw(g);
         self.world.draw(g);
         if let Some(draw) = self.hover_path.value() {
@@ -177,4 +197,23 @@ fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
     };
 
     (world, stats)
+}
+
+fn import_data(ctx: &mut EventCtx) -> Transition {
+    Transition::Push(crate::file_loader::FileLoader::new_state(
+        ctx,
+        Box::new(|ctx, _, maybe_bytes: Result<Option<Vec<u8>>>| {
+            match maybe_bytes {
+                Ok(Some(bytes)) => {
+                    info!("got {} bytes", bytes.len());
+                    Transition::Pop
+                }
+                // User didn't pick a file
+                Ok(None) => Transition::Pop,
+                Err(err) => {
+                    Transition::Replace(PopupMsg::new_state(ctx, "Error", vec![err.to_string()]))
+                }
+            }
+        }),
+    ))
 }
