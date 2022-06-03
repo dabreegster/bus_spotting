@@ -1,9 +1,10 @@
+use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
-    Choice, Color, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
+    Choice, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
-use model::gtfs::{RouteID, TripID};
+use model::gtfs::{RouteID, Trip, TripID};
 
 use crate::components::MainMenu;
 use crate::{App, Transition};
@@ -78,7 +79,7 @@ impl ViewGTFS {
 
         self.panel.replace(ctx, "contents", Widget::col(col));
 
-        // TODO The world
+        self.world = make_world(ctx, app, trip);
     }
 }
 
@@ -131,3 +132,51 @@ enum Obj {
     Stop(usize),
 }
 impl ObjectID for Obj {}
+
+fn make_world(ctx: &mut EventCtx, app: &App, trip: &Trip) -> World<Obj> {
+    let mut world = World::bounded(&app.model.bounds);
+    // Show the bounds of the world
+    world.draw_master_batch(
+        ctx,
+        GeomBatch::from(vec![(Color::grey(0.1), app.model.bounds.get_rectangle())]),
+    );
+
+    // TODO We really need unzoomed circles
+    let radius = Distance::meters(50.0);
+    // Optimization
+    let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
+
+    for (idx, stop_time) in trip.stop_times.iter().enumerate() {
+        let stop = &app.model.gtfs.stops[&stop_time.stop_id];
+
+        let mut txt = Text::new();
+        txt.add_line(format!("Stop {}/{}", idx + 1, trip.stop_times.len()));
+        txt.add_line(Line(format!("Arrival time: {}", stop_time.arrival_time)));
+        txt.add_line(Line(format!(
+            "Departure time: {}",
+            stop_time.departure_time
+        )));
+        // TODO Share with other tool
+        txt.add_line(format!("{:?}", stop.stop_id));
+        if let Some(ref name) = stop.name {
+            txt.add_line(Line(format!("Name: {name}")));
+        }
+        if let Some(ref code) = stop.code {
+            txt.add_line(Line(format!("Code: {code}")));
+        }
+        if let Some(ref description) = stop.description {
+            txt.add_line(Line(format!("Description: {description}")));
+        }
+
+        world
+            .add(Obj::Stop(idx))
+            .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
+            .draw_color(Color::BLUE)
+            .hover_alpha(0.5)
+            .tooltip(txt)
+            .build(ctx);
+    }
+
+    world.initialize_hover(ctx);
+    world
+}
