@@ -20,26 +20,44 @@ pub use trips::{Trip, TripID};
 pub struct GTFS {
     pub stops: BTreeMap<StopID, Stop>,
     pub routes: BTreeMap<RouteID, Route>,
-    pub trips: BTreeMap<TripID, Trip>,
-    pub stop_times: BTreeMap<TripID, Vec<StopTime>>,
 }
 
 impl GTFS {
     pub fn load_from_dir(gps_bounds: &GPSBounds, path: &str) -> Result<Self> {
-        Ok(Self {
+        let mut gtfs = Self {
             stops: stops::load(gps_bounds, format!("{path}/stops.txt"))?,
             routes: routes::load(format!("{path}/routes.txt"))?,
-            trips: trips::load(format!("{path}/trips.txt"))?,
-            stop_times: stop_times::load(format!("{path}/stop_times.txt"))?,
-        })
+        };
+
+        let trips = trips::load(format!("{path}/trips.txt"))?;
+        let mut stop_times = stop_times::load(format!("{path}/stop_times.txt"))?;
+
+        for (trip_id, mut trip) in trips {
+            trip.stop_times = match stop_times.remove(&trip_id) {
+                Some(list) => list,
+                None => bail!("Trip {trip_id:?} has no stop times"),
+            };
+            gtfs.routes
+                .get_mut(&trip.route_id)
+                .unwrap()
+                .trips
+                .insert(trip_id, trip);
+        }
+
+        if !stop_times.is_empty() {
+            warn!(
+                "Stop times defined for unknown trips: {:?}",
+                stop_times.keys()
+            );
+        }
+
+        Ok(gtfs)
     }
 
     pub fn empty() -> Self {
         Self {
             stops: BTreeMap::new(),
             routes: BTreeMap::new(),
-            trips: BTreeMap::new(),
-            stop_times: BTreeMap::new(),
         }
     }
 }

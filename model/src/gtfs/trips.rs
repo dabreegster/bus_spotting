@@ -4,7 +4,7 @@ use anyhow::Result;
 use fs_err::File;
 use serde::{Deserialize, Serialize};
 
-use super::{RouteID, ShapeID};
+use super::{RouteID, ShapeID, StopTime};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct TripID(String);
@@ -17,6 +17,8 @@ pub struct Trip {
     pub headsign: Option<String>,
     /// true is 0 in GTFS, false is 1. Inbound/outbound are arbitrary.
     pub outbound_direction: bool,
+
+    pub stop_times: Vec<StopTime>,
 }
 
 pub fn load(path: String) -> Result<BTreeMap<TripID, Trip>> {
@@ -38,6 +40,8 @@ pub fn load(path: String) -> Result<BTreeMap<TripID, Trip>> {
                     1 => false,
                     x => bail!("Unknown direction_id {x}"),
                 },
+
+                stop_times: Vec::new(),
             },
         );
     }

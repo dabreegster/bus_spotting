@@ -4,6 +4,8 @@ use anyhow::Result;
 use fs_err::File;
 use serde::{Deserialize, Serialize};
 
+use super::{Trip, TripID};
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteID(String);
 
@@ -13,6 +15,8 @@ pub struct Route {
     pub short_name: Option<String>,
     pub long_name: Option<String>,
     pub description: Option<String>,
+
+    pub trips: BTreeMap<TripID, Trip>,
 }
 
 pub fn load(path: String) -> Result<BTreeMap<RouteID, Route>> {
@@ -29,6 +33,8 @@ pub fn load(path: String) -> Result<BTreeMap<RouteID, Route>> {
                 short_name: rec.route_short_name,
                 long_name: rec.route_long_name,
                 description: rec.route_desc,
+
+                trips: BTreeMap::new(),
             },
         );
     }

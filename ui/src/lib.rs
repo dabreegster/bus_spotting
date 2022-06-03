@@ -44,7 +44,7 @@ impl Args {
         }
         let model = Model::import(&self.avl.take().unwrap(), &self.gtfs.take().unwrap())?;
         // TODO Don't save to a fixed path; maybe use the date
-        abstio::write_binary("model.bin".to_string(), &model);
+        abstio::write_binary("data/output/model.bin".to_string(), &model);
         Ok(model)
     }
 }
