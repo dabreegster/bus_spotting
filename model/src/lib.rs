@@ -4,14 +4,14 @@ extern crate anyhow;
 extern crate log;
 
 mod avl;
-mod gtfs;
+pub mod gtfs;
 mod trajectory;
 
 use anyhow::Result;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
-pub use self::gtfs::GTFS;
+use self::gtfs::GTFS;
 pub use self::trajectory::Trajectory;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

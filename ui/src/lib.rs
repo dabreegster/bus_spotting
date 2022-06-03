@@ -3,9 +3,9 @@ extern crate anyhow;
 #[macro_use]
 extern crate log;
 
-mod file_loader;
-mod speed;
-mod viewer;
+mod bus_replay;
+mod components;
+mod gtfs;
 
 use abstutil::Timer;
 use anyhow::Result;
@@ -66,7 +66,7 @@ fn run(settings: Settings) {
             time: Time::START_OF_DAY,
             time_increment: Duration::minutes(10),
         };
-        let states = vec![crate::viewer::Viewer::new(ctx, &app)];
+        let states = vec![crate::gtfs::ViewGTFS::new_state(ctx, &app)];
         (app, states)
     });
 }
@@ -87,6 +87,7 @@ pub fn run_wasm() {
 
 pub struct App {
     model: Model,
+    // TODO Maybe this is per-mode state
     time: Time,
     time_increment: Duration,
 }
