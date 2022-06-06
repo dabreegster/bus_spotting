@@ -1,4 +1,4 @@
-use geom::{Circle, Distance, Pt2D};
+use geom::{Circle, Distance, Line, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::PopupMsg;
 use widgetry::{
@@ -246,6 +246,17 @@ fn make_world(ctx: &mut EventCtx, app: &App, trip: &Trip) -> World<Obj> {
             .clickable()
             .build(ctx);
     }
+
+    let mut trip_order_batch = GeomBatch::new();
+    for pair in trip.stop_times.windows(2) {
+        let stop1 = &app.model.gtfs.stops[&pair[0].stop_id];
+        let stop2 = &app.model.gtfs.stops[&pair[1].stop_id];
+        trip_order_batch.push(
+            Color::RED,
+            Line::must_new(stop1.pos, stop2.pos).make_polygons(Distance::meters(20.0)),
+        );
+    }
+    world.draw_master_batch(ctx, trip_order_batch);
 
     world.initialize_hover(ctx);
     world
