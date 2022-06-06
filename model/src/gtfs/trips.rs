@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use geom::Time;
 use serde::{Deserialize, Serialize};
 
-use super::{RouteID, ShapeID, StopTime};
+use super::{RouteID, ShapeID, StopID, StopTime};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct TripID(String);
@@ -18,6 +19,19 @@ pub struct Trip {
     pub outbound_direction: bool,
 
     pub stop_times: Vec<StopTime>,
+}
+
+impl Trip {
+    /// Panics if this trip doesn't visit this stop. Assumes the trip doesn't visit the same stop
+    /// twice.
+    pub fn arrival_at(&self, stop_id: &StopID) -> Time {
+        for st in &self.stop_times {
+            if &st.stop_id == stop_id {
+                return st.arrival_time;
+            }
+        }
+        panic!("{:?} doesn't visit {:?}", self.trip_id, stop_id);
+    }
 }
 
 pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<TripID, Trip>> {

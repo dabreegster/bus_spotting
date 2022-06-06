@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate anyhow;
+#[allow(unused)]
 #[macro_use]
 extern crate log;
 

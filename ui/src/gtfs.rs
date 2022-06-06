@@ -1,5 +1,6 @@
 use geom::{Circle, Distance, Pt2D};
-use widgetry::mapspace::{ObjectID, World};
+use widgetry::mapspace::{ObjectID, World, WorldOutcome};
+use widgetry::tools::PopupMsg;
 use widgetry::{
     Choice, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
@@ -113,11 +114,38 @@ impl ViewGTFS {
 
         self.world = make_world(ctx, app, trip);
     }
+
+    fn on_click_stop(&self, ctx: &mut EventCtx, app: &App, stop_idx: usize) -> Transition {
+        let route = &app.model.gtfs.routes[&self.route];
+        let variant = if let Some(variant) = self.variant {
+            &route.variants[variant.0]
+        } else {
+            return Transition::Keep;
+        };
+        let stop_id = &route.trips[&self.trip].stop_times[stop_idx].stop_id;
+
+        // Show the schedule for this stop
+        let mut txt = Text::new();
+        txt.add_line(Line(format!("Schedule for route {}", route.describe())).small_heading());
+        // TODO Add generic stop info
+        for trip in &variant.trips {
+            let trip = &route.trips[trip];
+            txt.add_line(Line(trip.arrival_at(stop_id).to_string()));
+            if trip.trip_id == self.trip {
+                txt.append(Line(" (current trip)"));
+            }
+        }
+
+        // TODO The world tooltip sticks around, oops
+        Transition::Push(PopupMsg::new_state_for_txt(ctx, txt))
+    }
 }
 
 impl State<App> for ViewGTFS {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
-        self.world.event(ctx);
+        if let WorldOutcome::ClickedObject(Obj::Stop(idx)) = self.world.event(ctx) {
+            return self.on_click_stop(ctx, app, idx);
+        }
 
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => {
@@ -215,6 +243,7 @@ fn make_world(ctx: &mut EventCtx, app: &App, trip: &Trip) -> World<Obj> {
             .draw_color(Color::BLUE)
             .hover_alpha(0.5)
             .tooltip(txt)
+            .clickable()
             .build(ctx);
     }
 

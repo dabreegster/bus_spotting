@@ -23,12 +23,24 @@ pub struct Route {
 pub struct RouteVariant {
     pub route_id: RouteID,
     pub variant_id: RouteVariantID,
+    // TODO Assuming these're sorted by time
     pub trips: Vec<TripID>,
     pub headsign: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RouteVariantID(pub usize);
+
+impl Route {
+    pub fn describe(&self) -> String {
+        for x in [&self.short_name, &self.long_name, &self.description] {
+            if let Some(x) = x {
+                return x.to_string();
+            }
+        }
+        format!("{:?}", self.route_id)
+    }
+}
 
 pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<RouteID, Route>> {
     let mut routes = BTreeMap::new();
