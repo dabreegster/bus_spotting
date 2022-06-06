@@ -1,3 +1,4 @@
+pub mod describe;
 mod file_loader;
 mod main_menu;
 mod speed;

@@ -7,7 +7,7 @@ use widgetry::{
 
 use model::gtfs::{RouteID, RouteVariantID, Trip, TripID};
 
-use crate::components::MainMenu;
+use crate::components::{describe, MainMenu};
 use crate::{App, Transition};
 
 pub struct ViewGTFS {
@@ -60,17 +60,7 @@ impl ViewGTFS {
             ),
         ])];
 
-        let mut txt = Text::new();
-        if let Some(ref x) = route.short_name {
-            txt.add_line(Line(format!("Short name: {x}")));
-        }
-        if let Some(ref x) = route.long_name {
-            txt.add_line(Line(format!("Long name: {x}")));
-        }
-        if let Some(ref x) = route.description {
-            txt.add_line(Line(format!("Description: {x}")));
-        }
-        col.push(txt.into_widget(ctx));
+        col.push(describe::route(route).into_widget(ctx));
 
         let mut variant_choices = vec![Choice::new("no variant / all trips", None)];
         for v in &route.variants {
@@ -135,7 +125,8 @@ impl ViewGTFS {
         // Show the schedule for this stop
         let mut txt = Text::new();
         txt.add_line(Line(format!("Schedule for route {}", route.describe())).small_heading());
-        // TODO Add generic stop info
+        txt.extend(describe::stop(&app.model.gtfs.stops[stop_id]));
+        txt.add_line(Line(""));
         for trip in &variant.trips {
             let trip = &route.trips[trip];
             txt.add_line(Line(trip.arrival_at(stop_id).to_string()));
@@ -233,17 +224,7 @@ fn make_world(ctx: &mut EventCtx, app: &App, trip: &Trip) -> World<Obj> {
             "Departure time: {}",
             stop_time.departure_time
         )));
-        // TODO Share with other tool
-        txt.add_line(format!("{:?}", stop.stop_id));
-        if let Some(ref name) = stop.name {
-            txt.add_line(Line(format!("Name: {name}")));
-        }
-        if let Some(ref code) = stop.code {
-            txt.add_line(Line(format!("Code: {code}")));
-        }
-        if let Some(ref description) = stop.description {
-            txt.add_line(Line(format!("Description: {description}")));
-        }
+        txt.extend(describe::stop(stop));
 
         world
             .add(Obj::Stop(idx))

@@ -8,7 +8,7 @@ use widgetry::{
 
 use model::VehicleID;
 
-use crate::components::{MainMenu, TimeControls};
+use crate::components::{describe, MainMenu, TimeControls};
 use crate::{App, Transition};
 
 pub struct BusReplay {
@@ -117,24 +117,13 @@ fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
         let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
 
         for (idx, stop) in app.model.gtfs.stops.values().enumerate() {
-            let mut txt = Text::from(format!("{:?}", stop.stop_id));
-            if let Some(ref name) = stop.name {
-                txt.add_line(Line(format!("Name: {name}")));
-            }
-            if let Some(ref code) = stop.code {
-                txt.add_line(Line(format!("Code: {code}")));
-            }
-            if let Some(ref description) = stop.description {
-                txt.add_line(Line(format!("Description: {description}")));
-            }
-
             world
                 // TODO Need to assign numeric IDs in the model
                 .add(Obj::Stop(idx))
                 .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
                 .draw_color(Color::BLUE)
                 .hover_alpha(0.5)
-                .tooltip(txt)
+                .tooltip(describe::stop(stop))
                 .build(ctx);
         }
     }
