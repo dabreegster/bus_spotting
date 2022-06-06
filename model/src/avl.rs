@@ -7,7 +7,10 @@ use serde::Deserialize;
 
 use crate::{Trajectory, VehicleName};
 
-pub fn load<R: std::io::Read>(reader: R) -> Result<(GPSBounds, BTreeMap<VehicleName, Trajectory>)> {
+pub fn load<R: std::io::Read>(
+    reader: R,
+    gps_bounds: &GPSBounds,
+) -> Result<BTreeMap<VehicleName, Trajectory>> {
     // Read raw data
     let mut data_per_vehicle: BTreeMap<VehicleName, Vec<(LonLat, Time)>> = BTreeMap::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {
@@ -29,14 +32,6 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<(GPSBounds, BTreeMap<VehicleN
             .push((pos, time));
     }
 
-    // Calculate bounds from this one file. We'll probably do this from GTFS instead.
-    let mut gps_bounds = GPSBounds::new();
-    for points in data_per_vehicle.values() {
-        for (pos, _) in points {
-            gps_bounds.update(*pos);
-        }
-    }
-
     // Calculate trajectories
     let mut results = BTreeMap::new();
     for (vehicle_name, raw_pts) in data_per_vehicle {
@@ -46,7 +41,7 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<(GPSBounds, BTreeMap<VehicleN
         }
         results.insert(vehicle_name, Trajectory::new(points)?);
     }
-    Ok((gps_bounds, results))
+    Ok(results)
 }
 
 #[derive(Deserialize)]

@@ -41,6 +41,10 @@ impl Model {
     pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Self> {
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
 
+        timer.start("loading GTFS");
+        let (gtfs, gps_bounds) = GTFS::load_from_dir(&mut archive)?;
+        timer.stop("loading GTFS");
+
         // TODO Handle many AVL files. Use an arbitrary one for now.
         timer.start("loading AVL");
         let avl_path = archive
@@ -48,7 +52,7 @@ impl Model {
             .find(|x| x.starts_with("avl/") && x.ends_with(".csv"))
             .unwrap()
             .to_string();
-        let (gps_bounds, trajectories) = avl::load(archive.by_name(&avl_path)?)?;
+        let trajectories = avl::load(archive.by_name(&avl_path)?, &gps_bounds)?;
         let mut vehicles = Vec::new();
         for (original_id, trajectory) in trajectories {
             vehicles.push(Vehicle {
@@ -58,10 +62,6 @@ impl Model {
             });
         }
         timer.stop("loading AVL");
-
-        timer.start("loading GTFS");
-        let gtfs = GTFS::load_from_dir(&gps_bounds, &mut archive)?;
-        timer.stop("loading GTFS");
 
         Ok(Self {
             bounds: gps_bounds.to_bounds(),

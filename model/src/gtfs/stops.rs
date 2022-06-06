@@ -16,10 +16,17 @@ pub struct Stop {
     pub description: Option<String>,
 }
 
-pub fn load<R: std::io::Read>(gps_bounds: &GPSBounds, reader: R) -> Result<BTreeMap<StopID, Stop>> {
-    let mut stops = BTreeMap::new();
+pub fn load<R: std::io::Read>(reader: R) -> Result<(BTreeMap<StopID, Stop>, GPSBounds)> {
+    let mut gps_bounds = GPSBounds::new();
+    let mut records = Vec::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
+        gps_bounds.update(LonLat::new(rec.stop_lon, rec.stop_lat));
+        records.push(rec);
+    }
+
+    let mut stops = BTreeMap::new();
+    for rec in records {
         if stops.contains_key(&rec.stop_id) {
             bail!("Duplicate {:?}", rec.stop_id);
         }
@@ -27,14 +34,14 @@ pub fn load<R: std::io::Read>(gps_bounds: &GPSBounds, reader: R) -> Result<BTree
             rec.stop_id.clone(),
             Stop {
                 stop_id: rec.stop_id,
-                pos: LonLat::new(rec.stop_lon, rec.stop_lat).to_pt(gps_bounds),
+                pos: LonLat::new(rec.stop_lon, rec.stop_lat).to_pt(&gps_bounds),
                 code: rec.stop_code,
                 name: rec.stop_name,
                 description: rec.stop_desc,
             },
         );
     }
-    Ok(stops)
+    Ok((stops, gps_bounds))
 }
 
 #[derive(Deserialize)]

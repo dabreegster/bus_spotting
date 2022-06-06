@@ -25,11 +25,11 @@ pub struct GTFS {
 
 impl GTFS {
     pub fn load_from_dir(
-        gps_bounds: &GPSBounds,
         archive: &mut ZipArchive<std::io::Cursor<Vec<u8>>>,
-    ) -> Result<Self> {
+    ) -> Result<(Self, GPSBounds)> {
         let mut gtfs = Self::empty();
-        gtfs.stops = stops::load(gps_bounds, archive.by_name("gtfs/stops.txt")?)?;
+        let (stops, gps_bounds) = stops::load(archive.by_name("gtfs/stops.txt")?)?;
+        gtfs.stops = stops;
         gtfs.routes = routes::load(archive.by_name("gtfs/routes.txt")?)?;
 
         let trips = trips::load(archive.by_name("gtfs/trips.txt")?)?;
@@ -54,7 +54,7 @@ impl GTFS {
             );
         }
 
-        Ok(gtfs)
+        Ok((gtfs, gps_bounds))
     }
 
     pub fn empty() -> Self {
