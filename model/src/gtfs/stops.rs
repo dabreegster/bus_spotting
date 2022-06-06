@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use fs_err::File;
 use geom::{GPSBounds, LonLat, Pt2D};
 use serde::{Deserialize, Serialize};
 
@@ -17,9 +16,9 @@ pub struct Stop {
     pub description: Option<String>,
 }
 
-pub fn load(gps_bounds: &GPSBounds, path: String) -> Result<BTreeMap<StopID, Stop>> {
+pub fn load<R: std::io::Read>(gps_bounds: &GPSBounds, reader: R) -> Result<BTreeMap<StopID, Stop>> {
     let mut stops = BTreeMap::new();
-    for rec in csv::Reader::from_reader(File::open(path)?).deserialize() {
+    for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
         if stops.contains_key(&rec.stop_id) {
             bail!("Duplicate {:?}", rec.stop_id);

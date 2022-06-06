@@ -18,6 +18,12 @@ pub struct ViewGTFS {
 
 impl ViewGTFS {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
+        // TODO Slight hack. If we're on an empty model, this viewer will crash, so just redirect
+        // to the other mode for now.
+        if app.model.gtfs.routes.is_empty() {
+            return crate::bus_replay::BusReplay::new_state(ctx, app);
+        }
+
         // Start with the first route and trip
         let route = app.model.gtfs.routes.values().next().unwrap();
         let trip = route.trips.keys().next().unwrap();

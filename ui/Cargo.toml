@@ -23,3 +23,4 @@ rfd = "0.8.0"
 structopt = "0.3.23"
 wasm-bindgen = { version = "0.2.70", optional = true }
 widgetry = { git = "https://github.com/dabreegster/abstreet" }
+fs-err = "2.7.0"

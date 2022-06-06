@@ -457,6 +457,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-utils"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bf124c720b7686e3c2663cf54062ab0f68a88af2fb6a030e87e30bf721fcb38"
+dependencies = [
+ "cfg-if 1.0.0",
+ "lazy_static",
+]
+
+[[package]]
 name = "csv"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1552,13 +1562,14 @@ dependencies = [
 name = "model"
 version = "0.1.0"
 dependencies = [
+ "abstutil",
  "anyhow",
  "chrono",
  "csv",
- "fs-err",
  "geom",
  "log",
  "serde",
+ "zip",
 ]
 
 [[package]]
@@ -2609,6 +2620,7 @@ dependencies = [
  "abstio",
  "abstutil",
  "anyhow",
+ "fs-err",
  "futures-channel",
  "geom",
  "log",
@@ -3203,3 +3215,15 @@ name = "xmlparser"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "114ba2b24d2167ef6d67d7d04c8cc86522b87f490025f39f0303b7db5bf5e3d8"
+
+[[package]]
+name = "zip"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf225bcf73bb52cbb496e70475c7bd7a3f769df699c0020f6c7bd9a96dcf0b8d"
+dependencies = [
+ "byteorder",
+ "crc32fast",
+ "crossbeam-utils",
+ "flate2",
+]

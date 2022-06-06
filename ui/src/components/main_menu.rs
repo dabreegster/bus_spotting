@@ -2,6 +2,8 @@ use anyhow::Result;
 use widgetry::tools::PopupMsg;
 use widgetry::{EventCtx, HorizontalAlignment, Line, Panel, VerticalAlignment, Widget};
 
+use model::Model;
+
 use crate::components::FileLoader;
 use crate::{App, Transition};
 
@@ -48,10 +50,12 @@ fn import_data(ctx: &mut EventCtx) -> Transition {
         ctx,
         Box::new(|ctx, _, maybe_bytes: Result<Option<Vec<u8>>>| {
             match maybe_bytes {
-                Ok(Some(bytes)) => {
-                    info!("got {} bytes", bytes.len());
+                Ok(Some(bytes)) => ctx.loading_screen("import model", |_, timer| {
+                    let result = Model::import_zip_bytes(bytes, timer);
+                    // TODO Handle result
+                    info!("did import work? {}", result.is_ok());
                     Transition::Pop
-                }
+                }),
                 // User didn't pick a file
                 Ok(None) => Transition::Pop,
                 Err(err) => {

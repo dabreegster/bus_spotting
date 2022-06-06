@@ -7,6 +7,7 @@ mod avl;
 pub mod gtfs;
 mod trajectory;
 
+use abstutil::Timer;
 use anyhow::Result;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
@@ -37,8 +38,17 @@ pub struct Vehicle {
 }
 
 impl Model {
-    pub fn import(avl_path: &str, gtfs_dir: &str) -> Result<Self> {
-        let (gps_bounds, trajectories) = avl::load(avl_path)?;
+    pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Self> {
+        let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
+
+        // TODO Handle many AVL files. Use an arbitrary one for now.
+        timer.start("loading AVL");
+        let avl_path = archive
+            .file_names()
+            .find(|x| x.starts_with("avl/") && x.ends_with(".csv"))
+            .unwrap()
+            .to_string();
+        let (gps_bounds, trajectories) = avl::load(archive.by_name(&avl_path)?)?;
         let mut vehicles = Vec::new();
         for (original_id, trajectory) in trajectories {
             vehicles.push(Vehicle {
@@ -47,7 +57,12 @@ impl Model {
                 trajectory,
             });
         }
-        let gtfs = GTFS::load_from_dir(&gps_bounds, gtfs_dir)?;
+        timer.stop("loading AVL");
+
+        timer.start("loading GTFS");
+        let gtfs = GTFS::load_from_dir(&gps_bounds, &mut archive)?;
+        timer.stop("loading GTFS");
+
         Ok(Self {
             bounds: gps_bounds.to_bounds(),
             gps_bounds,

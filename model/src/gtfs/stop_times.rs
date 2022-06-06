@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use fs_err::File;
 use geom::Time;
 use serde::{Deserialize, Serialize};
 
@@ -14,9 +13,9 @@ pub struct StopTime {
     pub stop_id: StopID,
 }
 
-pub fn load(path: String) -> Result<BTreeMap<TripID, Vec<StopTime>>> {
+pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<TripID, Vec<StopTime>>> {
     let mut stop_times = BTreeMap::new();
-    for rec in csv::Reader::from_reader(File::open(path)?).deserialize() {
+    for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
         let arrival_time = Time::parse(&rec.arrival_time)?;
         let departure_time = Time::parse(&rec.departure_time)?;

@@ -2,16 +2,15 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use chrono::{NaiveDateTime, Timelike};
-use fs_err::File;
 use geom::{Duration, GPSBounds, LonLat, Pt2D, Time};
 use serde::Deserialize;
 
 use crate::{Trajectory, VehicleName};
 
-pub fn load(path: &str) -> Result<(GPSBounds, BTreeMap<VehicleName, Trajectory>)> {
+pub fn load<R: std::io::Read>(reader: R) -> Result<(GPSBounds, BTreeMap<VehicleName, Trajectory>)> {
     // Read raw data
     let mut data_per_vehicle: BTreeMap<VehicleName, Vec<(LonLat, Time)>> = BTreeMap::new();
-    for rec in csv::Reader::from_reader(File::open(path)?).deserialize() {
+    for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: AVL = rec?;
 
         let datetime = NaiveDateTime::parse_from_str(&rec.datetime, "%Y-%m-%d %H:%M:%S")?;

@@ -5,10 +5,11 @@ authors = ["Dustin Carlino <dabreegster@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+abstutil = { git = "https://github.com/dabreegster/abstreet" }
 anyhow = "1.0.38"
 chrono = "0.4.19"
 csv = "1.1.4"
-fs-err = "2.6.0"
 geom = { git = "https://github.com/dabreegster/abstreet" }
 log = "0.4.14"
 serde = "1.0.123"
+zip = { version = "0.6.2", default-features = false, features=["deflate"] }

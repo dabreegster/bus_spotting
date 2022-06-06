@@ -20,30 +20,26 @@ struct Args {
     /// The path to a previously built and serialized model
     #[structopt(long)]
     model: Option<String>,
-    /// The path to an AVL CSV file
+    /// The path to a .zip file with raw data to import
     #[structopt(long)]
-    avl: Option<String>,
-    /// The path to a GTFS directory
-    #[structopt(long)]
-    gtfs: Option<String>,
+    import_zip: Option<String>,
 }
 
 impl Args {
+    // TODO These args only make sense on native, because they read files
     fn load(mut self, timer: &mut Timer) -> Result<Model> {
         if let Some(path) = self.model.take() {
-            if self.avl.is_some() || self.gtfs.is_some() {
-                bail!("If --model is specified, nothing will be imported");
+            if self.import_zip.is_some() {
+                bail!("You can't specify both --model and --import-zip");
             }
             return abstio::maybe_read_binary::<Model>(path, timer);
         }
-        if self.avl.is_none() && self.gtfs.is_none() {
+        if self.import_zip.is_none() {
             return Ok(Model::empty());
         }
-        if self.avl.is_none() || self.gtfs.is_none() {
-            bail!("Both --avl and --gtfs needed to import a model");
-        }
-        let model = Model::import(&self.avl.take().unwrap(), &self.gtfs.take().unwrap())?;
-        // TODO Don't save to a fixed path; maybe use the date
+        let bytes = fs_err::read(self.import_zip.take().unwrap())?;
+        let model = Model::import_zip_bytes(bytes, timer)?;
+        // TODO In the browser, make them download the file
         abstio::write_binary("data/output/model.bin".to_string(), &model);
         Ok(model)
     }

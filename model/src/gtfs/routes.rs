@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use fs_err::File;
 use serde::{Deserialize, Serialize};
 
 use super::{Trip, TripID};
@@ -19,9 +18,9 @@ pub struct Route {
     pub trips: BTreeMap<TripID, Trip>,
 }
 
-pub fn load(path: String) -> Result<BTreeMap<RouteID, Route>> {
+pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<RouteID, Route>> {
     let mut routes = BTreeMap::new();
-    for rec in csv::Reader::from_reader(File::open(path)?).deserialize() {
+    for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
         if routes.contains_key(&rec.route_id) {
             bail!("Duplicate {:?}", rec.route_id);

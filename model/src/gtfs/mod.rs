@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use geom::GPSBounds;
 use serde::{Deserialize, Serialize};
+use zip::ZipArchive;
 
 pub use routes::{Route, RouteID};
 pub use shapes::ShapeID;
@@ -23,14 +24,16 @@ pub struct GTFS {
 }
 
 impl GTFS {
-    pub fn load_from_dir(gps_bounds: &GPSBounds, path: &str) -> Result<Self> {
-        let mut gtfs = Self {
-            stops: stops::load(gps_bounds, format!("{path}/stops.txt"))?,
-            routes: routes::load(format!("{path}/routes.txt"))?,
-        };
+    pub fn load_from_dir(
+        gps_bounds: &GPSBounds,
+        archive: &mut ZipArchive<std::io::Cursor<Vec<u8>>>,
+    ) -> Result<Self> {
+        let mut gtfs = Self::empty();
+        gtfs.stops = stops::load(gps_bounds, archive.by_name("gtfs/stops.txt")?)?;
+        gtfs.routes = routes::load(archive.by_name("gtfs/routes.txt")?)?;
 
-        let trips = trips::load(format!("{path}/trips.txt"))?;
-        let mut stop_times = stop_times::load(format!("{path}/stop_times.txt"))?;
+        let trips = trips::load(archive.by_name("gtfs/trips.txt")?)?;
+        let mut stop_times = stop_times::load(archive.by_name("gtfs/stop_times.txt")?)?;
 
         for (trip_id, mut trip) in trips {
             trip.stop_times = match stop_times.remove(&trip_id) {
