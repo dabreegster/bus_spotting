@@ -11,7 +11,7 @@ use abstutil::Timer;
 use anyhow::Result;
 use geom::{Duration, Time};
 use structopt::StructOpt;
-use widgetry::{Settings, SharedAppState};
+use widgetry::{EventCtx, Settings, SharedAppState};
 
 use model::Model;
 
@@ -52,16 +52,7 @@ fn run(settings: Settings) {
 
     widgetry::run(settings, move |ctx| {
         let model = ctx.loading_screen("initialize model", |_, timer| args.load(timer).unwrap());
-
-        let bounds = &model.bounds;
-        ctx.canvas.map_dims = (bounds.max_x, bounds.max_y);
-        ctx.canvas.center_on_map_pt(bounds.center());
-
-        let app = App {
-            model,
-            time: Time::START_OF_DAY,
-            time_increment: Duration::minutes(10),
-        };
+        let app = App::new(ctx, model);
         let states = vec![crate::gtfs::ViewGTFS::new_state(ctx, &app)];
         (app, states)
     });
@@ -91,3 +82,17 @@ pub struct App {
 impl SharedAppState for App {}
 
 pub type Transition = widgetry::Transition<App>;
+
+impl App {
+    pub fn new(ctx: &mut EventCtx, model: Model) -> Self {
+        let bounds = &model.bounds;
+        ctx.canvas.map_dims = (bounds.max_x, bounds.max_y);
+        ctx.canvas.center_on_map_pt(bounds.center());
+
+        Self {
+            model,
+            time: Time::START_OF_DAY,
+            time_increment: Duration::minutes(10),
+        }
+    }
+}
