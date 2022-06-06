@@ -16,7 +16,19 @@ pub struct Route {
     pub description: Option<String>,
 
     pub trips: BTreeMap<TripID, Trip>,
+    pub variants: Vec<RouteVariant>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct RouteVariant {
+    pub route_id: RouteID,
+    pub variant_id: RouteVariantID,
+    pub trips: Vec<TripID>,
+    pub headsign: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RouteVariantID(pub usize);
 
 pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<RouteID, Route>> {
     let mut routes = BTreeMap::new();
@@ -34,6 +46,7 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<RouteID, Route>> {
                 description: rec.route_desc,
 
                 trips: BTreeMap::new(),
+                variants: Vec::new(),
             },
         );
     }

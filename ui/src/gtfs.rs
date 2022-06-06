@@ -4,7 +4,7 @@ use widgetry::{
     Choice, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
-use model::gtfs::{RouteID, Trip, TripID};
+use model::gtfs::{RouteID, RouteVariantID, Trip, TripID};
 
 use crate::components::MainMenu;
 use crate::{App, Transition};
@@ -12,6 +12,7 @@ use crate::{App, Transition};
 pub struct ViewGTFS {
     panel: Panel,
     route: RouteID,
+    variant: Option<RouteVariantID>,
     trip: TripID,
     world: World<Obj>,
 }
@@ -32,6 +33,7 @@ impl ViewGTFS {
             panel: crate::components::MainMenu::panel(ctx),
             route: route.route_id.clone(),
             trip: trip.clone(),
+            variant: None,
             world: World::unbounded(),
         };
         state.on_selection_change(ctx, app);
@@ -69,19 +71,43 @@ impl ViewGTFS {
         }
         col.push(txt.into_widget(ctx));
 
+        let mut variant_choices = vec![Choice::new("no variant / all trips", None)];
+        for v in &route.variants {
+            let name = match v.headsign {
+                Some(ref x) => format!("{:?} ({x})", v.variant_id),
+                None => format!("{:?}", v.variant_id),
+            };
+            variant_choices.push(Choice::new(
+                format!("{} - {} trips", name, v.trips.len()),
+                Some(v.variant_id),
+            ));
+        }
         col.push(Widget::row(vec![
-            format!("{} trips", route.trips.len()).text_widget(ctx),
+            format!("{} variants", route.variants.len()).text_widget(ctx),
+            Widget::dropdown(ctx, "variant", self.variant, variant_choices),
+        ]));
+
+        // TODO Can we avoid the cloning?
+        let filtered_trips = if let Some(variant) = self.variant {
+            route.variants[variant.0].trips.clone()
+        } else {
+            route.trips.keys().cloned().collect()
+        };
+        col.push(Widget::row(vec![
+            format!("{} trips", filtered_trips.len()).text_widget(ctx),
             Widget::dropdown(
                 ctx,
                 "trip",
                 self.trip.clone(),
-                route
-                    .trips
-                    .keys()
-                    .map(|t| Choice::new(format!("{:?}", t), t.clone()))
+                filtered_trips
+                    .into_iter()
+                    .map(|t| Choice::new(format!("{:?}", t), t))
                     .collect(),
             ),
         ]));
+        if let Some(ref x) = route.trips[&self.trip].headsign {
+            col.push(format!("Headsign: {x}").text_widget(ctx));
+        }
 
         self.panel.replace(ctx, "contents", Widget::col(col));
 
@@ -111,6 +137,15 @@ impl State<App> for ViewGTFS {
                             .next()
                             .unwrap()
                             .clone();
+                        self.variant = None;
+                    }
+                    "variant" => {
+                        self.variant = self.panel.dropdown_value("variant");
+                        let route = &app.model.gtfs.routes[&self.route];
+                        self.trip = match self.variant {
+                            Some(variant) => route.variants[variant.0].trips[0].clone(),
+                            None => route.trips.keys().next().unwrap().clone(),
+                        };
                     }
                     "trip" => {
                         self.trip = self.panel.dropdown_value("trip");

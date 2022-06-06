@@ -11,7 +11,7 @@ use geom::GPSBounds;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
-pub use routes::{Route, RouteID};
+pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
 pub use stops::{Stop, StopID};
@@ -54,6 +54,10 @@ impl GTFS {
             );
         }
 
+        for route in gtfs.routes.values_mut() {
+            group_variants(route);
+        }
+
         Ok((gtfs, gps_bounds))
     }
 
@@ -65,14 +69,37 @@ impl GTFS {
     }
 }
 
-// TODO are routes one or both directions? (probably both)
 // TODO is block_id a (useful) hint of the vehicle mapping?
 
 // TODO next steps:
 // - assign cheap numeric IDs to everything (or at least the things in World)
 // - shapes: ID -> polyline
-//
-// then group "route patterns" or "trip groups"
-// - per route, group by [stop IDs]
-// - check if those always share a shape?
-// - in practice, how many patterns per route? just directional and express/local
+
+fn group_variants(route: &mut Route) {
+    // TODO Also group by shape ID, outbound direction?
+    // in practice, how many patterns per route? just directional and express/local?
+    type Key = (Vec<StopID>, Option<String>);
+
+    let mut variants: BTreeMap<Key, Vec<TripID>> = BTreeMap::new();
+    for trip in route.trips.values() {
+        let stops: Vec<StopID> = trip
+            .stop_times
+            .iter()
+            .map(|st| st.stop_id.clone())
+            .collect();
+        let key = (stops, trip.headsign.clone());
+        variants
+            .entry(key)
+            .or_insert_with(Vec::new)
+            .push(trip.trip_id.clone());
+    }
+
+    for ((_, headsign), trips) in variants {
+        route.variants.push(RouteVariant {
+            route_id: route.route_id.clone(),
+            variant_id: RouteVariantID(route.variants.len()),
+            trips,
+            headsign,
+        });
+    }
+}
