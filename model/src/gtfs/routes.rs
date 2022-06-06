@@ -15,6 +15,7 @@ pub struct Route {
     pub long_name: Option<String>,
     pub description: Option<String>,
 
+    // TODO Once we have our own cheap trip IDs, consider sorting by time
     pub trips: BTreeMap<TripID, Trip>,
     pub variants: Vec<RouteVariant>,
 }
@@ -23,7 +24,7 @@ pub struct Route {
 pub struct RouteVariant {
     pub route_id: RouteID,
     pub variant_id: RouteVariantID,
-    // TODO Assuming these're sorted by time
+    // Sorted by time
     pub trips: Vec<TripID>,
     pub headsign: Option<String>,
 }

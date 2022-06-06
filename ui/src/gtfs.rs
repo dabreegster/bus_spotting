@@ -102,7 +102,15 @@ impl ViewGTFS {
                 self.trip.clone(),
                 filtered_trips
                     .into_iter()
-                    .map(|t| Choice::new(format!("{:?}", t), t))
+                    .map(|t| {
+                        Choice::new(
+                            format!(
+                                "{:?} - starting {}",
+                                t, route.trips[&t].stop_times[0].arrival_time
+                            ),
+                            t,
+                        )
+                    })
                     .collect(),
             ),
         ]));

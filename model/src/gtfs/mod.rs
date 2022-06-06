@@ -94,7 +94,9 @@ fn group_variants(route: &mut Route) {
             .push(trip.trip_id.clone());
     }
 
-    for ((_, headsign), trips) in variants {
+    for ((_, headsign), mut trips) in variants {
+        trips.sort_by_key(|t| route.trips[t].stop_times[0].arrival_time);
+
         route.variants.push(RouteVariant {
             route_id: route.route_id.clone(),
             variant_id: RouteVariantID(route.variants.len()),
