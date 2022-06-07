@@ -37,5 +37,10 @@ pub fn service(service: &Service) -> Text {
         "{} - {}",
         service.start_date, service.end_date
     )));
+    let extra = service.extra_days.len();
+    let removed = service.removed_days.len();
+    if extra + removed > 0 {
+        txt.add_line(Line(format!("({extra} days added, {removed} removed)")));
+    }
     txt
 }

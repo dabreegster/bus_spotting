@@ -1,6 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
+use chrono::NaiveDate;
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -22,9 +23,11 @@ pub struct Service {
     pub friday: bool,
     pub saturday: bool,
     pub sunday: bool,
-    // TODO Real types...
-    pub start_date: String,
-    pub end_date: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+
+    pub extra_days: BTreeSet<NaiveDate>,
+    pub removed_days: BTreeSet<NaiveDate>,
 }
 
 impl Calendar {
@@ -98,12 +101,35 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<Calendar> {
                 friday: rec.friday,
                 saturday: rec.saturday,
                 sunday: rec.sunday,
-                start_date: rec.start_date,
-                end_date: rec.end_date,
+                start_date: NaiveDate::parse_from_str(&rec.start_date, "%Y%m%d")?,
+                end_date: NaiveDate::parse_from_str(&rec.end_date, "%Y%m%d")?,
+
+                extra_days: BTreeSet::new(),
+                removed_days: BTreeSet::new(),
             },
         );
     }
     Ok(calendar)
+}
+
+pub fn load_exceptions<R: std::io::Read>(calendar: &mut Calendar, reader: R) -> Result<()> {
+    for rec in csv::Reader::from_reader(reader).deserialize() {
+        let rec: DateRecord = rec?;
+        let service = if let Some(x) = calendar.services.get_mut(&rec.service_id) {
+            x
+        } else {
+            bail!("Exception for unknown {:?}", rec.service_id);
+        };
+        let date = NaiveDate::parse_from_str(&rec.date, "%Y%m%d")?;
+        if rec.exception_type == 1 {
+            service.extra_days.insert(date);
+        } else if rec.exception_type == 2 {
+            service.removed_days.insert(date);
+        } else {
+            bail!("Unknown exception_type {}", rec.exception_type);
+        }
+    }
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -136,4 +162,11 @@ fn parse_bool<'de, D: Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
         return Ok(false);
     }
     Err(serde::de::Error::custom(format!("Unknown bool value {n}")))
+}
+
+#[derive(Deserialize)]
+struct DateRecord {
+    service_id: ServiceID,
+    date: String,
+    exception_type: u8,
 }

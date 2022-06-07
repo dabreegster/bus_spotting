@@ -62,6 +62,10 @@ impl GTFS {
         }
 
         gtfs.calendar = calendar::load(archive.by_name("gtfs/calendar.txt")?)?;
+        calendar::load_exceptions(
+            &mut gtfs.calendar,
+            archive.by_name("gtfs/calendar_dates.txt")?,
+        )?;
 
         Ok((gtfs, gps_bounds))
     }
