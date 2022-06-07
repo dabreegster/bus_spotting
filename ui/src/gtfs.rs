@@ -193,6 +193,10 @@ impl State<App> for ViewGTFS {
         self.panel.draw(g);
         self.world.draw(g);
     }
+
+    fn recreate(&mut self, ctx: &mut EventCtx, app: &mut App) -> Box<dyn State<App>> {
+        Self::new_state(ctx, app)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -64,8 +64,7 @@ fn load_model(ctx: &mut EventCtx) -> Transition {
                     {
                         Ok(model) => {
                             *app = App::new(ctx, model);
-                            // TODO And replace?
-                            Transition::Pop
+                            Transition::Multi(vec![Transition::Pop, Transition::Recreate])
                         }
                         Err(err) => Transition::Replace(PopupMsg::new_state(
                             ctx,
@@ -103,8 +102,7 @@ fn import_data(ctx: &mut EventCtx) -> Transition {
                             }
 
                             *app = App::new(ctx, model);
-                            // TODO And replace?
-                            Transition::Pop
+                            Transition::Multi(vec![Transition::Pop, Transition::Recreate])
                         }
                         Err(err) => Transition::Replace(PopupMsg::new_state(
                             ctx,
