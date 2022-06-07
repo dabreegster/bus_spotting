@@ -1,6 +1,6 @@
 use widgetry::{Line, Text};
 
-use model::gtfs::{Route, Stop};
+use model::gtfs::{Route, Service, Stop};
 
 pub fn stop(stop: &Stop) -> Text {
     let mut txt = Text::from(format!("{:?}", stop.stop_id));
@@ -27,5 +27,15 @@ pub fn route(route: &Route) -> Text {
     if let Some(ref x) = route.description {
         txt.add_line(Line(format!("Description: {x}")));
     }
+    txt
+}
+
+pub fn service(service: &Service) -> Text {
+    let mut txt = Text::from(format!("{:?}", service.service_id));
+    txt.add_line(Line(format!("Operates {}", service.describe_days())));
+    txt.add_line(Line(format!(
+        "{} - {}",
+        service.start_date, service.end_date
+    )));
     txt
 }

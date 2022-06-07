@@ -69,7 +69,12 @@ impl ViewGTFS {
                 None => format!("{:?}", v.variant_id),
             };
             variant_choices.push(Choice::new(
-                format!("{} - {} trips", name, v.trips.len()),
+                format!(
+                    "{} - {}, {} trips",
+                    name,
+                    app.model.gtfs.calendar.services[&v.service_id].describe_days(),
+                    v.trips.len()
+                ),
                 Some(v.variant_id),
             ));
         }
@@ -104,10 +109,12 @@ impl ViewGTFS {
                     .collect(),
             ),
         ]));
-        if let Some(ref x) = route.trips[&self.trip].headsign {
+        if let Some(ref x) = trip.headsign {
             col.push(format!("Headsign: {x}").text_widget(ctx));
         }
-        col.push(format!("{:?}", route.trips[&self.trip].service_id).text_widget(ctx));
+        col.push(
+            describe::service(&app.model.gtfs.calendar.services[&trip.service_id]).into_widget(ctx),
+        );
 
         self.panel.replace(ctx, "contents", Widget::col(col));
 

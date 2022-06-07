@@ -12,7 +12,7 @@ use geom::GPSBounds;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
-pub use calendar::ServiceID;
+pub use calendar::{Calendar, Service, ServiceID};
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
@@ -23,6 +23,7 @@ pub use trips::{Trip, TripID};
 pub struct GTFS {
     pub stops: BTreeMap<StopID, Stop>,
     pub routes: BTreeMap<RouteID, Route>,
+    pub calendar: Calendar,
 }
 
 impl GTFS {
@@ -60,6 +61,8 @@ impl GTFS {
             group_variants(route);
         }
 
+        gtfs.calendar = calendar::load(archive.by_name("gtfs/calendar.txt")?)?;
+
         Ok((gtfs, gps_bounds))
     }
 
@@ -67,6 +70,9 @@ impl GTFS {
         Self {
             stops: BTreeMap::new(),
             routes: BTreeMap::new(),
+            calendar: Calendar {
+                services: BTreeMap::new(),
+            },
         }
     }
 }
