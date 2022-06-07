@@ -15,6 +15,7 @@ wasm = ["wasm-bindgen", "widgetry/wasm-backend"]
 anyhow = "1.0.38"
 abstio = { git = "https://github.com/dabreegster/abstreet" }
 abstutil = { git = "https://github.com/dabreegster/abstreet" }
+base64 = "0.13.0"
 futures-channel = { version = "0.3.12"}
 geom = { git = "https://github.com/dabreegster/abstreet" }
 log = "0.4.14"

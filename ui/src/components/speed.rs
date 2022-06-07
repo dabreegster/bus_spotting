@@ -56,7 +56,7 @@ impl TimeControls {
             .aligned(HorizontalAlignment::Left, VerticalAlignment::Bottom)
             .build(ctx),
             time: app.time,
-            paused: false,
+            paused: true,
             setting: SpeedSetting::Realtime,
         };
         time.update_controls(ctx, app);

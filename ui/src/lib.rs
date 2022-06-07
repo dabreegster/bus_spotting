@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate anyhow;
-#[allow(unused)]
 #[macro_use]
 extern crate log;
 
@@ -33,14 +32,16 @@ impl Args {
             if self.import_zip.is_some() {
                 bail!("You can't specify both --model and --import-zip");
             }
-            return abstio::maybe_read_binary::<Model>(path, timer);
+
+            let bytes = fs_err::read(path)?;
+            let decoded = base64::decode(bytes)?;
+            return abstutil::from_binary::<Model>(&decoded);
         }
         if self.import_zip.is_none() {
             return Ok(Model::empty());
         }
         let bytes = fs_err::read(self.import_zip.take().unwrap())?;
         let model = Model::import_zip_bytes(bytes, timer)?;
-        // TODO In the browser, make them download the file
         abstio::write_binary("data/output/model.bin".to_string(), &model);
         Ok(model)
     }
