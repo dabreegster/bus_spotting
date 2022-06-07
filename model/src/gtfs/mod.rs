@@ -12,7 +12,7 @@ use geom::GPSBounds;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
-pub use calendar::{Calendar, Service, ServiceID};
+pub use calendar::{Calendar, DaysOfWeek, Service, ServiceID};
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;

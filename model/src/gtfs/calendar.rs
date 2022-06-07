@@ -16,13 +16,7 @@ pub struct Calendar {
 #[derive(Serialize, Deserialize)]
 pub struct Service {
     pub service_id: ServiceID,
-    pub monday: bool,
-    pub tuesday: bool,
-    pub wednesday: bool,
-    pub thursday: bool,
-    pub friday: bool,
-    pub saturday: bool,
-    pub sunday: bool,
+    pub days_of_week: DaysOfWeek,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
 
@@ -30,12 +24,35 @@ pub struct Service {
     pub removed_days: BTreeSet<NaiveDate>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DaysOfWeek {
+    pub monday: bool,
+    pub tuesday: bool,
+    pub wednesday: bool,
+    pub thursday: bool,
+    pub friday: bool,
+    pub saturday: bool,
+    pub sunday: bool,
+}
+
 impl Calendar {
     // TODO get all the valid service IDs for a date. UI can use that to filter stuff.
 }
 
-impl Service {
-    pub fn describe_days(&self) -> String {
+impl DaysOfWeek {
+    pub fn all() -> Self {
+        Self {
+            monday: true,
+            tuesday: true,
+            wednesday: true,
+            thursday: true,
+            friday: true,
+            saturday: true,
+            sunday: true,
+        }
+    }
+
+    pub fn describe(&self) -> String {
         let weekdays = [
             self.monday,
             self.tuesday,
@@ -94,13 +111,15 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<Calendar> {
             rec.service_id.clone(),
             Service {
                 service_id: rec.service_id,
-                monday: rec.monday,
-                tuesday: rec.tuesday,
-                wednesday: rec.wednesday,
-                thursday: rec.thursday,
-                friday: rec.friday,
-                saturday: rec.saturday,
-                sunday: rec.sunday,
+                days_of_week: DaysOfWeek {
+                    monday: rec.monday,
+                    tuesday: rec.tuesday,
+                    wednesday: rec.wednesday,
+                    thursday: rec.thursday,
+                    friday: rec.friday,
+                    saturday: rec.saturday,
+                    sunday: rec.sunday,
+                },
                 start_date: NaiveDate::parse_from_str(&rec.start_date, "%Y%m%d")?,
                 end_date: NaiveDate::parse_from_str(&rec.end_date, "%Y%m%d")?,
 

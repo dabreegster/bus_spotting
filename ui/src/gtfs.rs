@@ -7,11 +7,12 @@ use widgetry::{
 
 use model::gtfs::{RouteID, RouteVariantID, Trip, TripID};
 
-use crate::components::{describe, MainMenu};
+use crate::components::{describe, DateFilter, MainMenu};
 use crate::{App, Transition};
 
 pub struct ViewGTFS {
     panel: Panel,
+    date_filter: DateFilter,
     route: RouteID,
     variant: Option<RouteVariantID>,
     trip: TripID,
@@ -32,6 +33,7 @@ impl ViewGTFS {
 
         let mut state = Self {
             panel: crate::components::MainMenu::panel(ctx),
+            date_filter: DateFilter::None,
             route: route.route_id.clone(),
             trip: trip.clone(),
             variant: None,
@@ -45,7 +47,11 @@ impl ViewGTFS {
         let route = &app.model.gtfs.routes[&self.route];
         let trip = &route.trips[&self.trip];
 
-        let mut col = vec![Widget::row(vec![
+        let mut col = Vec::new();
+
+        col.push(self.date_filter.to_controls(ctx).section(ctx));
+
+        col.push(Widget::row(vec![
             format!("{} routes", app.model.gtfs.routes.len()).text_widget(ctx),
             Widget::dropdown(
                 ctx,
@@ -58,7 +64,7 @@ impl ViewGTFS {
                     .map(|r| Choice::new(format!("{:?}", r), r.clone()))
                     .collect(),
             ),
-        ])];
+        ]));
 
         col.push(describe::route(route).into_widget(ctx));
 
@@ -72,7 +78,9 @@ impl ViewGTFS {
                 format!(
                     "{} - {}, {} trips",
                     name,
-                    app.model.gtfs.calendar.services[&v.service_id].describe_days(),
+                    app.model.gtfs.calendar.services[&v.service_id]
+                        .days_of_week
+                        .describe(),
                     v.trips.len()
                 ),
                 Some(v.variant_id),
@@ -116,7 +124,8 @@ impl ViewGTFS {
             describe::service(&app.model.gtfs.calendar.services[&trip.service_id]).into_widget(ctx),
         );
 
-        self.panel.replace(ctx, "contents", Widget::col(col));
+        self.panel
+            .replace(ctx, "contents", Widget::col(col).section(ctx));
 
         self.world = make_world(ctx, app, trip);
     }
@@ -185,7 +194,14 @@ impl State<App> for ViewGTFS {
                     "trip" => {
                         self.trip = self.panel.dropdown_value("trip");
                     }
-                    _ => unreachable!(),
+                    _ => {
+                        // If the user sets an impossible date, this won't run, and the controls
+                        // will still be fixed at the last valid state
+                        if let Some(filter) = DateFilter::from_controls(&self.panel) {
+                            self.date_filter = filter;
+                        }
+                        // TODO Reset everything else...
+                    }
                 }
                 self.on_selection_change(ctx, app);
             }

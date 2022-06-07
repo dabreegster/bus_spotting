@@ -32,7 +32,10 @@ pub fn route(route: &Route) -> Text {
 
 pub fn service(service: &Service) -> Text {
     let mut txt = Text::from(format!("{:?}", service.service_id));
-    txt.add_line(Line(format!("Operates {}", service.describe_days())));
+    txt.add_line(Line(format!(
+        "Operates {}",
+        service.days_of_week.describe()
+    )));
     txt.add_line(Line(format!(
         "{} - {}",
         service.start_date, service.end_date

@@ -2622,6 +2622,7 @@ dependencies = [
  "abstutil",
  "anyhow",
  "base64",
+ "chrono",
  "fs-err",
  "futures-channel",
  "geom",
