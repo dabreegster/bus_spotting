@@ -107,6 +107,7 @@ impl ViewGTFS {
         if let Some(ref x) = route.trips[&self.trip].headsign {
             col.push(format!("Headsign: {x}").text_widget(ctx));
         }
+        col.push(format!("{:?}", route.trips[&self.trip].service_id).text_widget(ctx));
 
         self.panel.replace(ctx, "contents", Widget::col(col));
 

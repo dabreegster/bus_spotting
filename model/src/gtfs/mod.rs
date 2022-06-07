@@ -1,3 +1,4 @@
+mod calendar;
 mod routes;
 mod shapes;
 mod stop_times;
@@ -11,6 +12,7 @@ use geom::GPSBounds;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
+pub use calendar::ServiceID;
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
@@ -78,7 +80,9 @@ impl GTFS {
 fn group_variants(route: &mut Route) {
     // TODO Also group by shape ID, outbound direction?
     // in practice, how many patterns per route? just directional and express/local?
-    type Key = (Vec<StopID>, Option<String>);
+    //
+    // (Stops, headsign, service)
+    type Key = (Vec<StopID>, Option<String>, ServiceID);
 
     let mut variants: BTreeMap<Key, Vec<TripID>> = BTreeMap::new();
     for trip in route.trips.values() {
@@ -87,14 +91,14 @@ fn group_variants(route: &mut Route) {
             .iter()
             .map(|st| st.stop_id.clone())
             .collect();
-        let key = (stops, trip.headsign.clone());
+        let key = (stops, trip.headsign.clone(), trip.service_id.clone());
         variants
             .entry(key)
             .or_insert_with(Vec::new)
             .push(trip.trip_id.clone());
     }
 
-    for ((_, headsign), mut trips) in variants {
+    for ((_, headsign, service_id), mut trips) in variants {
         trips.sort_by_key(|t| route.trips[t].stop_times[0].arrival_time);
 
         route.variants.push(RouteVariant {
@@ -102,6 +106,7 @@ fn group_variants(route: &mut Route) {
             variant_id: RouteVariantID(route.variants.len()),
             trips,
             headsign,
+            service_id,
         });
     }
 }

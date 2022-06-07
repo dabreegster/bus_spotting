@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use super::{Trip, TripID};
+use super::{ServiceID, Trip, TripID};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteID(String);
@@ -27,6 +27,7 @@ pub struct RouteVariant {
     // Sorted by time
     pub trips: Vec<TripID>,
     pub headsign: Option<String>,
+    pub service_id: ServiceID,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
