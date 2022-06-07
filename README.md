@@ -18,9 +18,9 @@ visualization.
 
 ## Status
 
-Minimal proof-of-concept only. If we decide to proceed, I'll deploy to a web
-format (with users feeding in their own local data) immediately and provide
-instructions for running it.
+See the [user guide](user_guide.md). This project is under development during
+June and July 2022. When the dust settles, I'll write up documentation for
+everything.
 
 ## Design
 
