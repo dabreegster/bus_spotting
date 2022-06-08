@@ -5,6 +5,7 @@ extern crate log;
 
 mod avl;
 pub mod gtfs;
+mod ticketing;
 mod trajectory;
 
 use abstutil::Timer;
@@ -13,6 +14,7 @@ use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
 use self::gtfs::GTFS;
+pub use self::ticketing::{CardID, Journey, JourneyLeg};
 pub use self::trajectory::Trajectory;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -28,6 +30,7 @@ pub struct Model {
     // TODO TiVec
     pub vehicles: Vec<Vehicle>,
     pub gtfs: GTFS,
+    pub journeys: Vec<Journey>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,11 +66,21 @@ impl Model {
         }
         timer.stop("loading AVL");
 
+        timer.start("loading BIL");
+        let bil_path = archive
+            .file_names()
+            .find(|x| x.starts_with("bil/") && x.ends_with(".csv"))
+            .unwrap()
+            .to_string();
+        let journeys = ticketing::load(archive.by_name(&bil_path)?, &gps_bounds)?;
+        timer.stop("loading BIL");
+
         Ok(Self {
             bounds: gps_bounds.to_bounds(),
             gps_bounds,
             vehicles,
             gtfs,
+            journeys,
         })
     }
 
@@ -78,6 +91,7 @@ impl Model {
             gps_bounds: GPSBounds::new(),
             vehicles: Vec::new(),
             gtfs: GTFS::empty(),
+            journeys: Vec::new(),
         }
     }
 }
