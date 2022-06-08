@@ -20,8 +20,9 @@ pub struct Journey {
 pub struct JourneyLeg {
     // Sometime after boarding
     pub time: Time,
-    pub route_short_name: String,
     pub pos: Pt2D,
+    pub route_short_name: String,
+    pub vehicle_name: VehicleName,
 }
 
 pub fn load<R: std::io::Read>(reader: R, gps_bounds: &GPSBounds) -> Result<Vec<Journey>> {
@@ -44,6 +45,7 @@ pub fn load<R: std::io::Read>(reader: R, gps_bounds: &GPSBounds) -> Result<Vec<J
                 time,
                 pos: LonLat::new(rec.longitude, rec.latitude).to_pt(gps_bounds),
                 route_short_name: rec.route_short_name,
+                vehicle_name: rec.vehicle_name,
             });
     }
 

@@ -56,6 +56,9 @@ fn run(settings: Settings) {
 
     widgetry::run(settings, move |ctx| {
         let model = ctx.loading_screen("initialize model", |_, timer| args.load(timer).unwrap());
+        // TODO tmp
+        model.segment();
+
         let app = App::new(ctx, model);
         let states = vec![crate::gtfs::ViewGTFS::new_state(ctx, &app)];
         (app, states)
