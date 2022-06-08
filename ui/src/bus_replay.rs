@@ -82,8 +82,6 @@ impl State<App> for BusReplay {
     }
 
     fn draw(&self, g: &mut GfxCtx, _: &App) {
-        g.clear(Color::BLACK);
-
         self.panel.draw(g);
         self.time_controls.draw(g);
         self.world.draw(g);

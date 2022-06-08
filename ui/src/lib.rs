@@ -11,7 +11,7 @@ use abstutil::Timer;
 use anyhow::Result;
 use geom::{Duration, Time};
 use structopt::StructOpt;
-use widgetry::{EventCtx, Settings, SharedAppState};
+use widgetry::{Color, EventCtx, GfxCtx, Settings, SharedAppState};
 
 use model::Model;
 
@@ -86,7 +86,11 @@ pub struct App {
     time_increment: Duration,
 }
 
-impl SharedAppState for App {}
+impl SharedAppState for App {
+    fn draw_default(&self, g: &mut GfxCtx) {
+        g.clear(Color::BLACK);
+    }
+}
 
 pub type Transition = widgetry::Transition<App>;
 

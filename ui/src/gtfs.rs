@@ -2,7 +2,8 @@ use geom::{Circle, Distance, Line, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::PopupMsg;
 use widgetry::{
-    Choice, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
+    include_labeled_bytes, lctrl, Autocomplete, Choice, Color, EventCtx, GeomBatch, GfxCtx, Key,
+    Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
 use model::gtfs::{RouteID, RouteVariantID, Trip, TripID};
@@ -64,6 +65,11 @@ impl ViewGTFS {
                     .map(|r| Choice::new(format!("{:?}", r), r.clone()))
                     .collect(),
             ),
+            ctx.style()
+                .btn_plain
+                .icon_bytes(include_labeled_bytes!("../assets/search.svg"))
+                .hotkey(lctrl(Key::F))
+                .build_widget(ctx, "search for a route"),
         ]));
 
         col.push(describe::route(route).into_widget(ctx));
@@ -168,7 +174,12 @@ impl State<App> for ViewGTFS {
                 if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
                     return t;
                 } else {
-                    unreachable!()
+                    match x.as_ref() {
+                        "search for a route" => {
+                            return Transition::Push(SearchForRoute::new_state(ctx, app));
+                        }
+                        _ => unreachable!(),
+                    }
                 }
             }
             Outcome::Changed(x) => {
@@ -212,8 +223,6 @@ impl State<App> for ViewGTFS {
     }
 
     fn draw(&self, g: &mut GfxCtx, _: &App) {
-        g.clear(Color::BLACK);
-
         self.panel.draw(g);
         self.world.draw(g);
     }
@@ -277,4 +286,69 @@ fn make_world(ctx: &mut EventCtx, app: &App, trip: &Trip) -> World<Obj> {
 
     world.initialize_hover(ctx);
     world
+}
+
+struct SearchForRoute {
+    panel: Panel,
+}
+
+impl SearchForRoute {
+    fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
+        let mut entries = Vec::new();
+        for route in app.model.gtfs.routes.values() {
+            entries.push((route.describe(), route.route_id.clone()));
+        }
+        Box::new(Self {
+            panel: Panel::new_builder(Widget::col(vec![
+                Widget::row(vec![
+                    Line("Search for a route").small_heading().into_widget(ctx),
+                    ctx.style().btn_close_widget(ctx),
+                ]),
+                Autocomplete::new_widget(ctx, entries, 10).named("search"),
+            ]))
+            .build(ctx),
+        })
+    }
+}
+
+impl State<App> for SearchForRoute {
+    fn event(&mut self, ctx: &mut EventCtx, _: &mut App) -> Transition {
+        match self.panel.event(ctx) {
+            Outcome::Clicked(x) => match x.as_ref() {
+                "close" => {
+                    return Transition::Pop;
+                }
+                _ => unreachable!(),
+            },
+            _ => {}
+        }
+
+        if let Some(mut routes) = self.panel.autocomplete_done::<RouteID>("search") {
+            if routes.is_empty() {
+                return Transition::Pop;
+            }
+            let route = routes.remove(0);
+            return Transition::Multi(vec![
+                Transition::Pop,
+                Transition::ModifyState(Box::new(move |state, ctx, app| {
+                    let state = state.downcast_mut::<ViewGTFS>().unwrap();
+                    state.route = route;
+                    state.trip = app.model.gtfs.routes[&state.route]
+                        .trips
+                        .keys()
+                        .next()
+                        .unwrap()
+                        .clone();
+                    state.variant = None;
+                    state.on_selection_change(ctx, app);
+                })),
+            ]);
+        }
+
+        Transition::Keep
+    }
+
+    fn draw(&self, g: &mut GfxCtx, _: &App) {
+        self.panel.draw(g);
+    }
 }
