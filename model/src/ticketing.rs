@@ -58,7 +58,7 @@ struct BIL {
     datetime: String,
     #[serde(rename = "CODVEICULO")]
     vehicle_name: VehicleName,
-    #[serde(rename = "DESCLINHA")]
+    #[serde(rename = "CODLINHA")]
     route_short_name: String,
     #[serde(rename = "NUMEROCARTAO")]
     card_id: CardID,

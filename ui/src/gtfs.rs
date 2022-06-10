@@ -61,8 +61,13 @@ impl ViewGTFS {
                 app.model
                     .gtfs
                     .routes
-                    .keys()
-                    .map(|r| Choice::new(format!("{:?}", r), r.clone()))
+                    .values()
+                    .map(|r| {
+                        Choice::new(
+                            format!("{:?} - {}", r.route_id, r.describe()),
+                            r.route_id.clone(),
+                        )
+                    })
                     .collect(),
             ),
             ctx.style()
