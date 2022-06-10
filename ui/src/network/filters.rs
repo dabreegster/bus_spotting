@@ -6,11 +6,18 @@ use crate::components::{date_filter, describe};
 use crate::App;
 
 pub struct Filters {
-    date_filter: DateFilter,
-    variant: Option<RouteVariantID>,
+    pub date_filter: DateFilter,
+    pub variant: Option<RouteVariantID>,
 }
 
 impl Filters {
+    pub fn new() -> Self {
+        Self {
+            date_filter: DateFilter::None,
+            variant: None,
+        }
+    }
+
     pub fn to_controls(&self, ctx: &mut EventCtx, app: &App) -> Widget {
         let mut col = Vec::new();
         col.push(date_filter::to_controls(ctx, &self.date_filter).section(ctx));
