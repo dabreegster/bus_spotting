@@ -1,12 +1,13 @@
 mod filters;
+mod search;
 
-use geom::{Circle, Distance, Pt2D};
+use std::collections::BTreeSet;
+
+use geom::{Circle, Distance, Line, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::{
-    Autocomplete, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, Widget,
-};
+use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Outcome, Panel, State};
 
-use model::gtfs::{DateFilter, RouteVariantID};
+use model::gtfs::{RouteVariantID, StopID};
 
 use self::filters::Filters;
 use crate::components::{describe, MainMenu};
@@ -63,13 +64,19 @@ impl State<App> for Viewer {
                 } else {
                     match x.as_ref() {
                         "search for a route variant" => {
-                            return Transition::Push(SearchForRouteVariant::new_state(ctx, app));
+                            return Transition::Push(search::SearchForRouteVariant::new_state(
+                                ctx,
+                                app,
+                                app.model
+                                    .gtfs
+                                    .variants_matching_dates(&self.filters.date_filter),
+                            ));
                         }
                         _ => unreachable!(),
                     }
                 }
             }
-            Outcome::Changed(x) => {
+            Outcome::Changed(_x) => {
                 // If the user sets an impossible date, this won't run, and the controls will still
                 // be fixed at the last valid state
                 if let Some(filters) = Filters::from_controls(app, &self.panel) {
@@ -107,22 +114,34 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
         GeomBatch::from(vec![(Color::grey(0.1), app.model.bounds.get_rectangle())]),
     );
 
+    // Draw every route variant. Track what stops we visit
+    let mut stops: BTreeSet<&StopID> = BTreeSet::new();
+    let mut batch = GeomBatch::new();
+    for id in variants {
+        let variant = app.model.gtfs.variant(id);
+        let trip = &app.model.gtfs.routes[&variant.route_id].trips[&variant.trips[0]];
+        for pair in trip.stop_times.windows(2) {
+            let stop1 = &app.model.gtfs.stops[&pair[0].stop_id];
+            let stop2 = &app.model.gtfs.stops[&pair[1].stop_id];
+            if let Ok(line) = Line::new(stop1.pos, stop2.pos) {
+                batch.push(Color::RED, line.make_polygons(Distance::meters(20.0)));
+            }
+
+            stops.insert(&stop1.stop_id);
+            stops.insert(&stop2.stop_id);
+        }
+    }
+    world.draw_master_batch(ctx, batch);
+
     // TODO We really need unzoomed circles
     let radius = Distance::meters(50.0);
     // Optimization
     let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
 
-    // TODO Only stops visited by some route
-    for (idx, stop) in app.model.gtfs.stops.values().enumerate() {
-        let mut txt = Text::new();
-        // TODO Only if we have a variant?
-        /*txt.add_line(format!("Stop {}/{}", idx + 1, trip.stop_times.len()));
-        txt.add_line(Line(format!("Arrival time: {}", stop_time.arrival_time)));
-        txt.add_line(Line(format!(
-            "Departure time: {}",
-            stop_time.departure_time
-        )));*/
-        txt.extend(describe::stop(stop));
+    // Only draw visited stops
+    for (idx, id) in stops.into_iter().enumerate() {
+        let stop = &app.model.gtfs.stops[id];
+        let txt = describe::stop(stop);
 
         world
             .add(Obj::Stop(idx))
@@ -134,82 +153,6 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
             .build(ctx);
     }
 
-    /*let mut trip_order_batch = GeomBatch::new();
-    for pair in trip.stop_times.windows(2) {
-        let stop1 = &app.model.gtfs.stops[&pair[0].stop_id];
-        let stop2 = &app.model.gtfs.stops[&pair[1].stop_id];
-        trip_order_batch.push(
-            Color::RED,
-            Line::must_new(stop1.pos, stop2.pos).make_polygons(Distance::meters(20.0)),
-        );
-    }
-    world.draw_master_batch(ctx, trip_order_batch);*/
-
     world.initialize_hover(ctx);
     world
-}
-
-struct SearchForRouteVariant {
-    panel: Panel,
-}
-
-impl SearchForRouteVariant {
-    fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
-        let mut entries = Vec::new();
-        for route in app.model.gtfs.routes.values() {
-            for variant in &route.variants {
-                entries.push((variant.describe(&app.model.gtfs), variant.variant_id));
-            }
-        }
-        Box::new(Self {
-            panel: Panel::new_builder(Widget::col(vec![
-                Widget::row(vec![
-                    Line("Search for a route variant")
-                        .small_heading()
-                        .into_widget(ctx),
-                    ctx.style().btn_close_widget(ctx),
-                ]),
-                Autocomplete::new_widget(ctx, entries, 10).named("search"),
-            ]))
-            .build(ctx),
-        })
-    }
-}
-
-impl State<App> for SearchForRouteVariant {
-    fn event(&mut self, ctx: &mut EventCtx, _: &mut App) -> Transition {
-        match self.panel.event(ctx) {
-            Outcome::Clicked(x) => match x.as_ref() {
-                "close" => {
-                    return Transition::Pop;
-                }
-                _ => unreachable!(),
-            },
-            _ => {}
-        }
-
-        if let Some(mut variants) = self.panel.autocomplete_done::<RouteVariantID>("search") {
-            if variants.is_empty() {
-                return Transition::Pop;
-            }
-            let variant = variants.remove(0);
-            return Transition::Multi(vec![
-                Transition::Pop,
-                Transition::ModifyState(Box::new(move |state, ctx, app| {
-                    let state = state.downcast_mut::<Viewer>().unwrap();
-                    state.filters = Filters {
-                        date_filter: DateFilter::None,
-                        variant: Some(variant),
-                    };
-                    state.on_filter_change(ctx, app);
-                })),
-            ]);
-        }
-
-        Transition::Keep
-    }
-
-    fn draw(&self, g: &mut GfxCtx, _: &App) {
-        self.panel.draw(g);
-    }
 }

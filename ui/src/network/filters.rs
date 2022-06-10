@@ -1,4 +1,4 @@
-use widgetry::{include_labeled_bytes, lctrl, Choice, EventCtx, Key, Panel, TextExt, Widget};
+use widgetry::{include_labeled_bytes, lctrl, Choice, EventCtx, Key, Line, Panel, TextExt, Widget};
 
 use model::gtfs::{DateFilter, RouteVariantID};
 
@@ -41,6 +41,14 @@ impl Filters {
                 .hotkey(lctrl(Key::F))
                 .build_widget(ctx, "search for a route variant"),
         ]));
+        col.push(
+            Line(format!(
+                "{} total route variants",
+                app.model.gtfs.all_variants().len()
+            ))
+            .secondary()
+            .into_widget(ctx),
+        );
 
         if let Some(v) = self.variant {
             let variant = app.model.gtfs.variant(v);

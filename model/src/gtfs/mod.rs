@@ -57,8 +57,9 @@ impl GTFS {
             );
         }
 
+        let mut id_counter = 0;
         for route in gtfs.routes.values_mut() {
-            group_variants(route);
+            group_variants(&mut id_counter, route);
         }
 
         gtfs.calendar = calendar::load(archive.by_name("gtfs/calendar.txt")?)?;
@@ -104,6 +105,13 @@ impl GTFS {
         }
         panic!("Unknown {:?}", id);
     }
+
+    pub fn all_variants(&self) -> Vec<RouteVariantID> {
+        self.routes
+            .values()
+            .flat_map(|route| route.variants.iter().map(|v| v.variant_id))
+            .collect()
+    }
 }
 
 // TODO is block_id a (useful) hint of the vehicle mapping?
@@ -112,7 +120,7 @@ impl GTFS {
 // - assign cheap numeric IDs to everything (or at least the things in World)
 // - shapes: ID -> polyline
 
-fn group_variants(route: &mut Route) {
+fn group_variants(id_counter: &mut usize, route: &mut Route) {
     // TODO Also group by shape ID, outbound direction?
     // in practice, how many patterns per route? just directional and express/local?
     //
@@ -138,10 +146,11 @@ fn group_variants(route: &mut Route) {
 
         route.variants.push(RouteVariant {
             route_id: route.route_id.clone(),
-            variant_id: RouteVariantID(route.variants.len()),
+            variant_id: RouteVariantID(*id_counter),
             trips,
             headsign,
             service_id,
         });
+        *id_counter += 1;
     }
 }
