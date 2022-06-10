@@ -42,7 +42,7 @@ impl MainMenu {
                 ));
             }
             "Explore GTFS" => {
-                return Some(Transition::Replace(crate::gtfs::ViewGTFS::new_state(
+                return Some(Transition::Replace(crate::network::Viewer::new_state(
                     ctx, app,
                 )));
             }

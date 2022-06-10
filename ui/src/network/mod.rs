@@ -1,3 +1,5 @@
+mod filters;
+
 use geom::{Circle, Distance, Line, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::PopupMsg;
@@ -6,21 +8,21 @@ use widgetry::{
     Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
-use model::gtfs::{RouteID, RouteVariantID, Trip, TripID};
+use model::gtfs::{DateFilter, RouteID, RouteVariantID, Trip, TripID};
 
-use crate::components::{describe, DateFilter, MainMenu};
+use crate::components::{date_filter, describe, MainMenu};
 use crate::{App, Transition};
 
-pub struct ViewGTFS {
+pub struct Viewer {
     panel: Panel,
+    world: World<Obj>,
     date_filter: DateFilter,
     route: RouteID,
     variant: Option<RouteVariantID>,
     trip: TripID,
-    world: World<Obj>,
 }
 
-impl ViewGTFS {
+impl Viewer {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         // TODO Slight hack. If we're on an empty model, this viewer will crash, so just redirect
         // to the other mode for now.
@@ -50,7 +52,7 @@ impl ViewGTFS {
 
         let mut col = Vec::new();
 
-        col.push(self.date_filter.to_controls(ctx).section(ctx));
+        col.push(date_filter::to_controls(ctx, &self.date_filter).section(ctx));
 
         col.push(Widget::row(vec![
             format!("{} routes", app.model.gtfs.routes.len()).text_widget(ctx),
@@ -72,7 +74,7 @@ impl ViewGTFS {
             ),
             ctx.style()
                 .btn_plain
-                .icon_bytes(include_labeled_bytes!("../assets/search.svg"))
+                .icon_bytes(include_labeled_bytes!("../../assets/search.svg"))
                 .hotkey(lctrl(Key::F))
                 .build_widget(ctx, "search for a route"),
         ]));
@@ -168,7 +170,7 @@ impl ViewGTFS {
     }
 }
 
-impl State<App> for ViewGTFS {
+impl State<App> for Viewer {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
         if let WorldOutcome::ClickedObject(Obj::Stop(idx)) = self.world.event(ctx) {
             return self.on_click_stop(ctx, app, idx);
@@ -213,7 +215,7 @@ impl State<App> for ViewGTFS {
                     _ => {
                         // If the user sets an impossible date, this won't run, and the controls
                         // will still be fixed at the last valid state
-                        if let Some(filter) = DateFilter::from_controls(&self.panel) {
+                        if let Some(filter) = date_filter::from_controls(&self.panel) {
                             self.date_filter = filter;
                         }
                         // TODO Reset everything else...
@@ -336,7 +338,7 @@ impl State<App> for SearchForRoute {
             return Transition::Multi(vec![
                 Transition::Pop,
                 Transition::ModifyState(Box::new(move |state, ctx, app| {
-                    let state = state.downcast_mut::<ViewGTFS>().unwrap();
+                    let state = state.downcast_mut::<Viewer>().unwrap();
                     state.route = route;
                     state.trip = app.model.gtfs.routes[&state.route]
                         .trips

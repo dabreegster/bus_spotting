@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate, Weekday};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -35,8 +35,43 @@ pub struct DaysOfWeek {
     pub sunday: bool,
 }
 
+pub enum DateFilter {
+    None,
+    SingleDay(NaiveDate),
+    Daily(DaysOfWeek),
+}
+
 impl Calendar {
-    // TODO get all the valid service IDs for a date. UI can use that to filter stuff.
+    pub fn services_matching_dates(&self, filter: &DateFilter) -> BTreeSet<&ServiceID> {
+        let mut result = BTreeSet::new();
+        for service in self.services.values() {
+            if service.matches_date(filter) {
+                result.insert(&service.service_id);
+            }
+        }
+        result
+    }
+}
+
+impl Service {
+    pub fn matches_date(&self, filter: &DateFilter) -> bool {
+        match filter {
+            DateFilter::None => true,
+            DateFilter::SingleDay(day) => {
+                if self.extra_days.contains(day) {
+                    return true;
+                }
+                if self.removed_days.contains(day) {
+                    return false;
+                }
+                if day < &self.start_date || day > &self.end_date {
+                    return false;
+                }
+                self.days_of_week.includes(day)
+            }
+            DateFilter::Daily(days_of_week) => self.days_of_week.overlaps(days_of_week),
+        }
+    }
 }
 
 impl DaysOfWeek {
@@ -95,6 +130,29 @@ impl DaysOfWeek {
             }
         }
         result
+    }
+
+    pub fn overlaps(&self, other: &DaysOfWeek) -> bool {
+        (self.monday && other.monday)
+            || (self.tuesday && other.tuesday)
+            || (self.wednesday && other.wednesday)
+            || (self.thursday && other.thursday)
+            || (self.friday && other.friday)
+            || (self.saturday && other.saturday)
+            || (self.sunday && other.sunday)
+    }
+
+    pub fn includes(&self, day: &NaiveDate) -> bool {
+        match day.weekday() {
+            // TODO Maybe just store a set of these in the first place
+            Weekday::Mon => self.monday,
+            Weekday::Tue => self.tuesday,
+            Weekday::Wed => self.wednesday,
+            Weekday::Thu => self.thursday,
+            Weekday::Fri => self.friday,
+            Weekday::Sat => self.saturday,
+            Weekday::Sun => self.sunday,
+        }
     }
 }
 

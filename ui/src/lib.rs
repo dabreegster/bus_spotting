@@ -5,7 +5,7 @@ extern crate log;
 
 mod bus_replay;
 mod components;
-mod gtfs;
+mod network;
 
 use abstutil::Timer;
 use anyhow::Result;
@@ -60,7 +60,7 @@ fn run(settings: Settings) {
         model.segment();
 
         let app = App::new(ctx, model);
-        let states = vec![crate::gtfs::ViewGTFS::new_state(ctx, &app)];
+        let states = vec![crate::network::Viewer::new_state(ctx, &app)];
         (app, states)
     });
 }

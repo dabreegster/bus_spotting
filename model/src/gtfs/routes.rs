@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use super::{ServiceID, Trip, TripID};
+use super::{ServiceID, Trip, TripID, GTFS};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteID(String);
@@ -41,6 +41,24 @@ impl Route {
             }
         }
         format!("{:?}", self.route_id)
+    }
+}
+
+impl RouteVariant {
+    pub fn describe(&self, gtfs: &GTFS) -> String {
+        let headsign = match self.headsign {
+            Some(ref x) => format!("{:?} ({x})", self.variant_id),
+            None => format!("{:?}", self.variant_id),
+        };
+        format!(
+            " {} {} - {}, {} trips",
+            gtfs.routes[&self.route_id].describe(),
+            headsign,
+            gtfs.calendar.services[&self.service_id]
+                .days_of_week
+                .describe(),
+            self.trips.len()
+        )
     }
 }
 

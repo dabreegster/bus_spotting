@@ -12,7 +12,7 @@ use geom::GPSBounds;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
-pub use calendar::{Calendar, DaysOfWeek, Service, ServiceID};
+pub use calendar::{Calendar, DateFilter, DaysOfWeek, Service, ServiceID};
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
@@ -78,6 +78,31 @@ impl GTFS {
                 services: BTreeMap::new(),
             },
         }
+    }
+
+    pub fn variants_matching_dates(&self, filter: &DateFilter) -> Vec<RouteVariantID> {
+        let services = self.calendar.services_matching_dates(filter);
+        let mut variants = Vec::new();
+        for route in self.routes.values() {
+            for variant in &route.variants {
+                if services.contains(&variant.service_id) {
+                    variants.push(variant.variant_id);
+                }
+            }
+        }
+        variants
+    }
+
+    pub fn variant(&self, id: RouteVariantID) -> &RouteVariant {
+        // TODO If the ID encodes the route, we can be much better
+        for route in self.routes.values() {
+            for variant in &route.variants {
+                if variant.variant_id == id {
+                    return variant;
+                }
+            }
+        }
+        panic!("Unknown {:?}", id);
     }
 }
 
