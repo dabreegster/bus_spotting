@@ -164,7 +164,7 @@ impl TimeControls {
 
         self.panel
             .slider_mut("time slider")
-            .set_percent(ctx, self.time.to_percent(end_of_day()));
+            .set_percent(ctx, self.time.to_percent(end_of_day()).min(1.0));
     }
 
     // May update app.time

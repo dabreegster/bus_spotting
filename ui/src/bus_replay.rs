@@ -23,7 +23,7 @@ impl BusReplay {
         let mut state = Self {
             panel: crate::components::MainMenu::panel(ctx),
             time_controls: TimeControls::new(ctx, app),
-            world: World::unbounded(),
+            world: make_static_world(ctx, app),
             hover_path: Cached::new(),
         };
         state.on_time_change(ctx, app);
@@ -31,8 +31,7 @@ impl BusReplay {
     }
 
     fn on_time_change(&mut self, ctx: &mut EventCtx, app: &App) {
-        let (world, stats) = make_world_and_stats(ctx, app);
-        self.world = world;
+        let stats = update_world(ctx, app, &mut self.world);
         self.time_controls.panel.replace(ctx, "stats", stats);
     }
 }
@@ -102,8 +101,9 @@ enum Obj {
 }
 impl ObjectID for Obj {}
 
-fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
+fn make_static_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
     let mut world = World::bounded(&app.model.bounds);
+
     // Show the bounds of the world
     world.draw_master_batch(
         ctx,
@@ -113,71 +113,77 @@ fn make_world_and_stats(ctx: &mut EventCtx, app: &App) -> (World<Obj>, Widget) {
     // TODO We really need unzoomed circles
     let radius = Distance::meters(50.0);
 
-    // Stops -- these never change; could we avoid rebuilding every time?
-    {
-        // Optimization
-        let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
+    // Optimization
+    let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
 
-        for (idx, stop) in app.model.gtfs.stops.values().enumerate() {
+    for (idx, stop) in app.model.gtfs.stops.values().enumerate() {
+        world
+            // TODO Need to assign numeric IDs in the model
+            .add(Obj::Stop(idx))
+            .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
+            .draw_color(Color::BLUE)
+            .hover_alpha(0.5)
+            .tooltip(describe::stop(stop))
+            .build(ctx);
+    }
+
+    world.initialize_hover(ctx);
+
+    world
+}
+
+// Returns stats
+fn update_world(ctx: &mut EventCtx, app: &App, world: &mut World<Obj>) -> Widget {
+    // Delete all existing vehicles
+    for vehicle in &app.model.vehicles {
+        world.maybe_delete(Obj::Bus(vehicle.id));
+    }
+
+    // TODO UnitFmt::metric()?
+    let metric = UnitFmt {
+        round_durations: false,
+        metric: true,
+    };
+    let radius = Distance::meters(50.0);
+
+    let mut away = 0;
+    let mut idling = 0;
+    let mut moving = 0;
+
+    for vehicle in &app.model.vehicles {
+        if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
+            if speed == Speed::ZERO {
+                idling += 1;
+            } else {
+                moving += 1;
+            }
+
             world
-                // TODO Need to assign numeric IDs in the model
-                .add(Obj::Stop(idx))
-                .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
-                .draw_color(Color::BLUE)
+                .add(Obj::Bus(vehicle.id))
+                .hitbox(Circle::new(pos, radius).to_polygon())
+                .draw_color(Color::RED)
                 .hover_alpha(0.5)
-                .tooltip(describe::stop(stop))
+                .tooltip(Text::from(format!(
+                    "{:?} currently has speed {}",
+                    vehicle.original_id,
+                    speed.to_string(&metric)
+                )))
                 .build(ctx);
+        } else {
+            away += 1;
         }
     }
 
-    // Vehicles
-    let stats = {
-        // TODO UnitFmt::metric()?
-        let metric = UnitFmt {
-            round_durations: false,
-            metric: true,
-        };
+    world.initialize_hover(ctx);
 
-        let mut away = 0;
-        let mut idling = 0;
-        let mut moving = 0;
-
-        for vehicle in &app.model.vehicles {
-            if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
-                if speed == Speed::ZERO {
-                    idling += 1;
-                } else {
-                    moving += 1;
-                }
-
-                world
-                    .add(Obj::Bus(vehicle.id))
-                    .hitbox(Circle::new(pos, radius).to_polygon())
-                    .draw_color(Color::RED)
-                    .hover_alpha(0.5)
-                    .tooltip(Text::from(format!(
-                        "{:?} currently has speed {}",
-                        vehicle.original_id,
-                        speed.to_string(&metric)
-                    )))
-                    .build(ctx);
-            } else {
-                away += 1;
-            }
-        }
-        world.initialize_hover(ctx);
-
-        Text::from_multiline(vec![
-            Line(format!("Away: {}", prettyprint_usize(away))),
-            Line(format!("Idling: {}", prettyprint_usize(idling))),
-            Line(format!("Moving: {}", prettyprint_usize(moving))),
-            Line(format!(
-                "Stops: {}",
-                prettyprint_usize(app.model.gtfs.stops.len())
-            )),
-        ])
-        .into_widget(ctx)
-    };
-
-    (world, stats)
+    Text::from_multiline(vec![
+        Line(format!("Away: {}", prettyprint_usize(away))),
+        Line(format!("Idling: {}", prettyprint_usize(idling))),
+        Line(format!("Moving: {}", prettyprint_usize(moving))),
+        Line(format!(
+            "Stops: {}",
+            prettyprint_usize(app.model.gtfs.stops.len())
+        )),
+    ])
+    .into_widget(ctx)
 }
