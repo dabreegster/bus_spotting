@@ -30,7 +30,7 @@ pub struct RouteVariant {
     pub service_id: ServiceID,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteVariantID(pub usize);
 
 impl Route {

@@ -3,9 +3,9 @@ mod search;
 
 use std::collections::BTreeSet;
 
-use geom::{Circle, Distance, Line, Pt2D};
+use geom::{Circle, Distance, PolyLine, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Outcome, Panel, State};
+use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text};
 
 use model::gtfs::{RouteVariantID, StopID};
 
@@ -103,6 +103,7 @@ impl State<App> for Viewer {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Obj {
     Stop(usize),
+    Route(RouteVariantID),
 }
 impl ObjectID for Obj {}
 
@@ -116,22 +117,32 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
 
     // Draw every route variant. Track what stops we visit
     let mut stops: BTreeSet<&StopID> = BTreeSet::new();
-    let mut batch = GeomBatch::new();
     for id in variants {
         let variant = app.model.gtfs.variant(id);
         let trip = &app.model.gtfs.routes[&variant.route_id].trips[&variant.trips[0]];
-        for pair in trip.stop_times.windows(2) {
-            let stop1 = &app.model.gtfs.stops[&pair[0].stop_id];
-            let stop2 = &app.model.gtfs.stops[&pair[1].stop_id];
-            if let Ok(line) = Line::new(stop1.pos, stop2.pos) {
-                batch.push(Color::RED, line.make_polygons(Distance::meters(20.0)));
-            }
+        let mut pts = Vec::new();
+        for stop_time in &trip.stop_times {
+            let stop = &app.model.gtfs.stops[&stop_time.stop_id];
+            pts.push(stop.pos);
+            stops.insert(&stop.stop_id);
+        }
 
-            stops.insert(&stop1.stop_id);
-            stops.insert(&stop2.stop_id);
+        if let Ok(pl) = PolyLine::new(pts) {
+            let mut txt = Text::new();
+            txt.add_line(Line(variant.describe(&app.model.gtfs)));
+
+            // TODO Most variants overlap. Maybe perturb the lines a bit, or use the overlapping
+            // path trick
+            world
+                .add(Obj::Route(id))
+                .hitbox(pl.make_polygons(Distance::meters(20.0)))
+                .draw_color(Color::RED)
+                .hover_alpha(0.5)
+                .tooltip(txt)
+                .clickable()
+                .build(ctx);
         }
     }
-    world.draw_master_batch(ctx, batch);
 
     // TODO We really need unzoomed circles
     let radius = Distance::meters(50.0);
