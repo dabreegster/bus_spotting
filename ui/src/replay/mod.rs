@@ -1,3 +1,5 @@
+mod events;
+
 use abstutil::prettyprint_usize;
 use geom::{Circle, Distance, Pt2D, Speed, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
@@ -8,35 +10,46 @@ use widgetry::{
 
 use model::VehicleID;
 
+use self::events::Events;
 use crate::components::{describe, MainMenu, TimeControls};
 use crate::{App, Transition};
 
-pub struct BusReplay {
+pub struct Replay {
     panel: Panel,
     time_controls: TimeControls,
     world: World<Obj>,
     hover_path: Cached<Obj, Drawable>,
+    events: Events,
+    prev_events: usize,
 }
 
-impl BusReplay {
+impl Replay {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
             panel: crate::components::MainMenu::panel(ctx),
             time_controls: TimeControls::new(ctx, app),
             world: make_static_world(ctx, app),
             hover_path: Cached::new(),
+            events: Events::ticketing(&app.model),
+            prev_events: 0,
         };
         state.on_time_change(ctx, app);
         Box::new(state)
     }
 
     fn on_time_change(&mut self, ctx: &mut EventCtx, app: &App) {
-        let stats = update_world(ctx, app, &mut self.world);
+        let stats = update_world(
+            ctx,
+            app,
+            &mut self.world,
+            &self.events,
+            &mut self.prev_events,
+        );
         self.time_controls.panel.replace(ctx, "stats", stats);
     }
 }
 
-impl State<App> for BusReplay {
+impl State<App> for Replay {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
         let prev_time = app.time;
         self.time_controls.event(ctx, app);
@@ -59,7 +72,7 @@ impl State<App> for BusReplay {
                     );
                     ctx.upload(batch)
                 }
-                Obj::Stop(_) => Drawable::empty(ctx),
+                Obj::Stop(_) | Obj::Event(_) => Drawable::empty(ctx),
             });
 
         if !self.time_controls.is_paused() {
@@ -98,6 +111,7 @@ impl State<App> for BusReplay {
 enum Obj {
     Bus(VehicleID),
     Stop(usize),
+    Event(usize),
 }
 impl ObjectID for Obj {}
 
@@ -133,11 +147,24 @@ fn make_static_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
 }
 
 // Returns stats
-fn update_world(ctx: &mut EventCtx, app: &App, world: &mut World<Obj>) -> Widget {
+fn update_world(
+    ctx: &mut EventCtx,
+    app: &App,
+    world: &mut World<Obj>,
+    events: &Events,
+    prev_events: &mut usize,
+) -> Widget {
     // Delete all existing vehicles
     for vehicle in &app.model.vehicles {
         world.maybe_delete(Obj::Bus(vehicle.id));
     }
+
+    // TODO We really need to be able to mix and match Worlds, or have a concept of layers.
+    // Or... just pass a callback and say whether to retain objects or not.
+    for ev in 0..*prev_events {
+        world.delete(Obj::Event(ev));
+    }
+    *prev_events = 0;
 
     // TODO UnitFmt::metric()?
     let metric = UnitFmt {
@@ -172,6 +199,17 @@ fn update_world(ctx: &mut EventCtx, app: &App, world: &mut World<Obj>) -> Widget
         } else {
             away += 1;
         }
+    }
+
+    for ev in events.events_at(app.time) {
+        world
+            .add(Obj::Event(*prev_events))
+            .hitbox(Circle::new(ev.pos, radius).to_polygon())
+            .draw_color(Color::GREEN)
+            .hover_alpha(0.5)
+            .tooltip(Text::from(&ev.description))
+            .build(ctx);
+        *prev_events += 1;
     }
 
     world.initialize_hover(ctx);

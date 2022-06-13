@@ -3,9 +3,9 @@ extern crate anyhow;
 #[macro_use]
 extern crate log;
 
-mod bus_replay;
 mod components;
 mod network;
+mod replay;
 mod stop;
 
 use abstutil::Timer;

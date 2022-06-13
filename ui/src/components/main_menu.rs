@@ -19,7 +19,7 @@ impl MainMenu {
             ]),
             // TODO Not sure how this should work yet
             Widget::row(vec![
-                ctx.style().btn_solid.text("Bus replay").build_def(ctx),
+                ctx.style().btn_solid.text("Replay").build_def(ctx),
                 ctx.style().btn_solid.text("Explore GTFS").build_def(ctx),
             ]),
             Widget::placeholder(ctx, "contents"),
@@ -36,10 +36,10 @@ impl MainMenu {
             "Import data" => {
                 return Some(import_data(ctx));
             }
-            "Bus replay" => {
-                return Some(Transition::Replace(
-                    crate::bus_replay::BusReplay::new_state(ctx, app),
-                ));
+            "Replay" => {
+                return Some(Transition::Replace(crate::replay::Replay::new_state(
+                    ctx, app,
+                )));
             }
             "Explore GTFS" => {
                 return Some(Transition::Replace(crate::network::Viewer::new_state(
