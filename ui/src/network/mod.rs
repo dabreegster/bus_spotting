@@ -17,6 +17,9 @@ pub struct Viewer {
     panel: Panel,
     world: World<Obj>,
     filters: Filters,
+
+    // TODO Hack before we have cheap stop IDs in the model
+    stop_ids: Vec<StopID>,
 }
 
 impl Viewer {
@@ -25,29 +28,46 @@ impl Viewer {
             panel: crate::components::MainMenu::panel(ctx),
             world: World::unbounded(),
             filters: Filters::new(),
+
+            stop_ids: Vec::new(),
         };
         state.on_filter_change(ctx, app);
         Box::new(state)
+    }
+
+    fn selected_variants(&self, app: &App) -> BTreeSet<RouteVariantID> {
+        if let Some(v) = self.filters.variant {
+            vec![v].into_iter().collect()
+        } else {
+            app.model
+                .gtfs
+                .variants_matching_dates(&self.filters.date_filter)
+        }
     }
 
     fn on_filter_change(&mut self, ctx: &mut EventCtx, app: &App) {
         let controls = self.filters.to_controls(ctx, app);
         self.panel.replace(ctx, "contents", controls);
 
-        let variants = if let Some(v) = self.filters.variant {
-            vec![v].into_iter().collect()
-        } else {
-            app.model
-                .gtfs
-                .variants_matching_dates(&self.filters.date_filter)
-        };
-        self.world = make_world(ctx, app, variants);
+        let (world, stop_ids) = make_world(ctx, app, self.selected_variants(app));
+        self.world = world;
+        self.stop_ids = stop_ids;
     }
 
-    // TODO Start a new state for this. Find every variant visiting this stop, show info
-    // TODO Also to even put these in the world, we'll need a cheaper stop ID
-    fn on_click_stop(&self, _: &mut EventCtx, _: &App, _stop_idx: usize) -> Transition {
-        Transition::Keep
+    fn on_click_stop(&self, ctx: &mut EventCtx, app: &App, stop_idx: usize) -> Transition {
+        let stop_id = &self.stop_ids[stop_idx];
+        let stop = &app.model.gtfs.stops[stop_id];
+
+        let variants = stop
+            .route_variants
+            .intersection(&self.selected_variants(app))
+            .cloned()
+            .collect::<Vec<RouteVariantID>>();
+
+        let first = variants[0];
+        Transition::Push(crate::stop::StopInfo::new_state(
+            ctx, app, stop, variants, first,
+        ))
     }
 }
 
@@ -111,7 +131,7 @@ fn make_world(
     ctx: &mut EventCtx,
     app: &App,
     selected_variants: BTreeSet<RouteVariantID>,
-) -> World<Obj> {
+) -> (World<Obj>, Vec<StopID>) {
     let mut world = World::bounded(&app.model.bounds);
     // Show the bounds of the world
     world.draw_master_batch(
@@ -153,6 +173,7 @@ fn make_world(
     let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
 
     // Only draw visited stops
+    let mut stop_ids = Vec::new();
     for (idx, id) in stops.into_iter().enumerate() {
         let stop = &app.model.gtfs.stops[id];
         let mut txt = describe::stop(stop);
@@ -172,8 +193,9 @@ fn make_world(
             .tooltip(txt)
             .clickable()
             .build(ctx);
+        stop_ids.push(id.clone());
     }
 
     world.initialize_hover(ctx);
-    world
+    (world, stop_ids)
 }

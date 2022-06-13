@@ -6,6 +6,7 @@ extern crate log;
 mod bus_replay;
 mod components;
 mod network;
+mod stop;
 
 use abstutil::Timer;
 use anyhow::Result;
