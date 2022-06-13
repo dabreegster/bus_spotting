@@ -1,6 +1,6 @@
 use geom::{Duration, Pt2D, Time};
 
-use model::Model;
+use model::{Model, VehicleName};
 
 pub struct Events {
     events: Vec<Event>,
@@ -9,6 +9,7 @@ pub struct Events {
 pub struct Event {
     pub time: Time,
     pub pos: Pt2D,
+    pub vehicle_name: VehicleName,
     pub description: String,
 }
 
@@ -26,6 +27,7 @@ impl Events {
                 events.push(Event {
                     time: leg.time,
                     pos: leg.pos,
+                    vehicle_name: leg.vehicle_name.clone(),
                     description: format!(
                         "{boarding} on {} using {:?}",
                         leg.route_short_name, leg.vehicle_name
@@ -37,8 +39,7 @@ impl Events {
         Self { events }
     }
 
-    pub fn events_at(&self, time2: Time) -> Vec<&Event> {
-        let lookback = Duration::seconds(10.0);
+    pub fn events_at(&self, time2: Time, lookback: Duration) -> Vec<&Event> {
         let time1 = time2.clamped_sub(lookback);
 
         // TODO Binary search, or use another data structure, or make this be a stateful cursor

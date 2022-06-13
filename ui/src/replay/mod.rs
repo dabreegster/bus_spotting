@@ -1,7 +1,7 @@
 mod events;
 
 use abstutil::prettyprint_usize;
-use geom::{Circle, Distance, Pt2D, Speed, UnitFmt};
+use geom::{Circle, Distance, Duration, Pt2D, Speed, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text,
@@ -201,13 +201,34 @@ fn update_world(
         }
     }
 
-    for ev in events.events_at(app.time) {
+    let lookback = Duration::seconds(10.0);
+
+    for ev in events.events_at(app.time, lookback) {
+        let mut txt = Text::from(&ev.description);
+        // 0 when the event occurs, then increases to 1
+        let decay = (app.time - ev.time) / lookback;
+
+        // Where's the bus at this time?
+        let mut hover = GeomBatch::new();
+        hover.push(Color::GREEN, Circle::new(ev.pos, radius).to_polygon());
+        if let Some(vehicle) = app.model.lookup_vehicle(&ev.vehicle_name) {
+            if let Some((pos, _)) = vehicle.trajectory.interpolate(app.time) {
+                if let Ok(line) = geom::Line::new(ev.pos, pos) {
+                    hover.push(Color::YELLOW, line.make_polygons(Distance::meters(15.0)));
+                    txt.add_line(format!(
+                        "Bus is {} away from ticketing event",
+                        line.length()
+                    ));
+                }
+            }
+        }
+
         world
             .add(Obj::Event(*prev_events))
             .hitbox(Circle::new(ev.pos, radius).to_polygon())
-            .draw_color(Color::GREEN)
-            .hover_alpha(0.5)
-            .tooltip(Text::from(&ev.description))
+            .draw_color(Color::GREEN.alpha(1.0 - decay as f32))
+            .draw_hovered(hover)
+            .tooltip(txt)
             .build(ctx);
         *prev_events += 1;
     }

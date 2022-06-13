@@ -95,4 +95,8 @@ impl Model {
             journeys: Vec::new(),
         }
     }
+
+    pub fn lookup_vehicle(&self, name: &VehicleName) -> Option<&Vehicle> {
+        self.vehicles.iter().find(|v| &v.original_id == name)
+    }
 }
