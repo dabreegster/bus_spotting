@@ -112,6 +112,19 @@ impl GTFS {
             .flat_map(|route| route.variants.iter().map(|v| v.variant_id))
             .collect()
     }
+
+    pub fn variants_for_stop(&self, stop: &StopID) -> Vec<RouteVariantID> {
+        // TODO Don't worry about efficiency or even readability yet.
+        let mut result = Vec::new();
+        for route in self.routes.values() {
+            for variant in &route.variants {
+                if variant.stops(self).contains(stop) {
+                    result.push(variant.variant_id);
+                }
+            }
+        }
+        result
+    }
 }
 
 // TODO is block_id a (useful) hint of the vehicle mapping?

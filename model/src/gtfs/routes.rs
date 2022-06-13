@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use super::{ServiceID, Trip, TripID, GTFS};
+use super::{ServiceID, StopID, Trip, TripID, GTFS};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteID(String);
@@ -16,6 +16,7 @@ pub struct Route {
     pub description: Option<String>,
 
     // TODO Once we have our own cheap trip IDs, consider sorting by time
+    // TODO Store these in the variants directly
     pub trips: BTreeMap<TripID, Trip>,
     pub variants: Vec<RouteVariant>,
 }
@@ -59,6 +60,14 @@ impl RouteVariant {
                 .describe(),
             self.trips.len()
         )
+    }
+
+    pub fn stops(&self, gtfs: &GTFS) -> Vec<StopID> {
+        let mut stops = Vec::new();
+        for st in &gtfs.routes[&self.route_id].trips[&self.trips[0]].stop_times {
+            stops.push(st.stop_id.clone());
+        }
+        stops
     }
 }
 

@@ -108,6 +108,8 @@ enum Obj {
 impl ObjectID for Obj {}
 
 fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> World<Obj> {
+    let timer = abstutil::Timer::new("make world");  // TODO tmp
+
     let mut world = World::bounded(&app.model.bounds);
     // Show the bounds of the world
     world.draw_master_batch(
@@ -152,7 +154,11 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
     // Only draw visited stops
     for (idx, id) in stops.into_iter().enumerate() {
         let stop = &app.model.gtfs.stops[id];
-        let txt = describe::stop(stop);
+        let mut txt = describe::stop(stop);
+        txt.add_line(format!(
+            "{} route variants",
+            app.model.gtfs.variants_for_stop(id).len()
+        ));
 
         world
             .add(Obj::Stop(idx))
