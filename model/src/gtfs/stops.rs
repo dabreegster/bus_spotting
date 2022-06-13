@@ -1,8 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
 use geom::{GPSBounds, LonLat, Pt2D};
 use serde::{Deserialize, Serialize};
+
+use super::RouteVariantID;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct StopID(String);
@@ -14,6 +16,10 @@ pub struct Stop {
     pub code: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
+
+    // Derived data, but useful to store directly. We can consider lazily filling this out if the
+    // serialized size is high.
+    pub route_variants: BTreeSet<RouteVariantID>,
 }
 
 pub fn load<R: std::io::Read>(reader: R) -> Result<(BTreeMap<StopID, Stop>, GPSBounds)> {
@@ -38,6 +44,8 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<(BTreeMap<StopID, Stop>, GPSB
                 code: rec.stop_code,
                 name: rec.stop_name,
                 description: rec.stop_desc,
+
+                route_variants: BTreeSet::new(),
             },
         );
     }

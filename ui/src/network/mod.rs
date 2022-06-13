@@ -112,8 +112,6 @@ fn make_world(
     app: &App,
     selected_variants: BTreeSet<RouteVariantID>,
 ) -> World<Obj> {
-    let timer = abstutil::Timer::new("make world"); // TODO tmp
-
     let mut world = World::bounded(&app.model.bounds);
     // Show the bounds of the world
     world.draw_master_batch(
@@ -160,9 +158,7 @@ fn make_world(
         let mut txt = describe::stop(stop);
         txt.add_line(format!(
             "{} route variants",
-            app.model
-                .gtfs
-                .variants_for_stop(id)
+            stop.route_variants
                 .intersection(&selected_variants)
                 .collect::<Vec<_>>()
                 .len()

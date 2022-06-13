@@ -66,6 +66,19 @@ impl GTFS {
             );
         }
 
+        // Find all variants per stop
+        for route in gtfs.routes.values() {
+            for variant in &route.variants {
+                for stop in variant.stops() {
+                    gtfs.stops
+                        .get_mut(&stop)
+                        .unwrap()
+                        .route_variants
+                        .insert(variant.variant_id);
+                }
+            }
+        }
+
         gtfs.calendar = calendar::load(archive.by_name("gtfs/calendar.txt")?)?;
         calendar::load_exceptions(
             &mut gtfs.calendar,
@@ -115,19 +128,6 @@ impl GTFS {
             .values()
             .flat_map(|route| route.variants.iter().map(|v| v.variant_id))
             .collect()
-    }
-
-    pub fn variants_for_stop(&self, stop: &StopID) -> BTreeSet<RouteVariantID> {
-        // TODO Don't worry about efficiency or even readability yet.
-        let mut result = BTreeSet::new();
-        for route in self.routes.values() {
-            for variant in &route.variants {
-                if variant.stops().contains(stop) {
-                    result.insert(variant.variant_id);
-                }
-            }
-        }
-        result
     }
 }
 
