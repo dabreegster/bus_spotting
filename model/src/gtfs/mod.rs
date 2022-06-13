@@ -38,16 +38,16 @@ impl GTFS {
         let trips = trips::load(archive.by_name("gtfs/trips.txt")?)?;
         let mut stop_times = stop_times::load(archive.by_name("gtfs/stop_times.txt")?)?;
 
+        let mut trips_per_route: BTreeMap<RouteID, Vec<Trip>> = BTreeMap::new();
         for (trip_id, mut trip) in trips {
             trip.stop_times = match stop_times.remove(&trip_id) {
                 Some(list) => list,
                 None => bail!("Trip {trip_id:?} has no stop times"),
             };
-            gtfs.routes
-                .get_mut(&trip.route_id)
-                .unwrap()
-                .trips
-                .insert(trip_id, trip);
+            trips_per_route
+                .entry(trip.route_id.clone())
+                .or_insert_with(Vec::new)
+                .push(trip);
         }
 
         if !stop_times.is_empty() {
@@ -59,7 +59,11 @@ impl GTFS {
 
         let mut id_counter = 0;
         for route in gtfs.routes.values_mut() {
-            group_variants(&mut id_counter, route);
+            group_variants(
+                &mut id_counter,
+                route,
+                trips_per_route.remove(&route.route_id).unwrap(),
+            );
         }
 
         gtfs.calendar = calendar::load(archive.by_name("gtfs/calendar.txt")?)?;
@@ -118,7 +122,7 @@ impl GTFS {
         let mut result = BTreeSet::new();
         for route in self.routes.values() {
             for variant in &route.variants {
-                if variant.stops(self).contains(stop) {
+                if variant.stops().contains(stop) {
                     result.insert(variant.variant_id);
                 }
             }
@@ -133,29 +137,26 @@ impl GTFS {
 // - assign cheap numeric IDs to everything (or at least the things in World)
 // - shapes: ID -> polyline
 
-fn group_variants(id_counter: &mut usize, route: &mut Route) {
+fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
     // TODO Also group by shape ID, outbound direction?
     // in practice, how many patterns per route? just directional and express/local?
     //
     // (Stops, headsign, service)
     type Key = (Vec<StopID>, Option<String>, ServiceID);
 
-    let mut variants: BTreeMap<Key, Vec<TripID>> = BTreeMap::new();
-    for trip in route.trips.values() {
+    let mut variants: BTreeMap<Key, Vec<Trip>> = BTreeMap::new();
+    for trip in trips {
         let stops: Vec<StopID> = trip
             .stop_times
             .iter()
             .map(|st| st.stop_id.clone())
             .collect();
         let key = (stops, trip.headsign.clone(), trip.service_id.clone());
-        variants
-            .entry(key)
-            .or_insert_with(Vec::new)
-            .push(trip.trip_id.clone());
+        variants.entry(key).or_insert_with(Vec::new).push(trip);
     }
 
     for ((_, headsign, service_id), mut trips) in variants {
-        trips.sort_by_key(|t| route.trips[t].stop_times[0].arrival_time);
+        trips.sort_by_key(|t| t.stop_times[0].arrival_time);
 
         route.variants.push(RouteVariant {
             route_id: route.route_id.clone(),

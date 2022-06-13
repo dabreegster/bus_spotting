@@ -125,9 +125,8 @@ fn make_world(
     let mut stops: BTreeSet<&StopID> = BTreeSet::new();
     for id in &selected_variants {
         let variant = app.model.gtfs.variant(*id);
-        let trip = &app.model.gtfs.routes[&variant.route_id].trips[&variant.trips[0]];
         let mut pts = Vec::new();
-        for stop_time in &trip.stop_times {
+        for stop_time in &variant.trips[0].stop_times {
             let stop = &app.model.gtfs.stops[&stop_time.stop_id];
             pts.push(stop.pos);
             stops.insert(&stop.stop_id);
