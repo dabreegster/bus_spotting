@@ -5,7 +5,7 @@ mod stop_times;
 mod stops;
 mod trips;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
 use geom::GPSBounds;
@@ -81,13 +81,13 @@ impl GTFS {
         }
     }
 
-    pub fn variants_matching_dates(&self, filter: &DateFilter) -> Vec<RouteVariantID> {
+    pub fn variants_matching_dates(&self, filter: &DateFilter) -> BTreeSet<RouteVariantID> {
         let services = self.calendar.services_matching_dates(filter);
-        let mut variants = Vec::new();
+        let mut variants = BTreeSet::new();
         for route in self.routes.values() {
             for variant in &route.variants {
                 if services.contains(&variant.service_id) {
-                    variants.push(variant.variant_id);
+                    variants.insert(variant.variant_id);
                 }
             }
         }
@@ -113,13 +113,13 @@ impl GTFS {
             .collect()
     }
 
-    pub fn variants_for_stop(&self, stop: &StopID) -> Vec<RouteVariantID> {
+    pub fn variants_for_stop(&self, stop: &StopID) -> BTreeSet<RouteVariantID> {
         // TODO Don't worry about efficiency or even readability yet.
-        let mut result = Vec::new();
+        let mut result = BTreeSet::new();
         for route in self.routes.values() {
             for variant in &route.variants {
                 if variant.stops(self).contains(stop) {
-                    result.push(variant.variant_id);
+                    result.insert(variant.variant_id);
                 }
             }
         }

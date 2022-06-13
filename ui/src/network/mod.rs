@@ -35,7 +35,7 @@ impl Viewer {
         self.panel.replace(ctx, "contents", controls);
 
         let variants = if let Some(v) = self.filters.variant {
-            vec![v]
+            vec![v].into_iter().collect()
         } else {
             app.model
                 .gtfs
@@ -107,8 +107,12 @@ enum Obj {
 }
 impl ObjectID for Obj {}
 
-fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> World<Obj> {
-    let timer = abstutil::Timer::new("make world");  // TODO tmp
+fn make_world(
+    ctx: &mut EventCtx,
+    app: &App,
+    selected_variants: BTreeSet<RouteVariantID>,
+) -> World<Obj> {
+    let timer = abstutil::Timer::new("make world"); // TODO tmp
 
     let mut world = World::bounded(&app.model.bounds);
     // Show the bounds of the world
@@ -119,8 +123,8 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
 
     // Draw every route variant. Track what stops we visit
     let mut stops: BTreeSet<&StopID> = BTreeSet::new();
-    for id in variants {
-        let variant = app.model.gtfs.variant(id);
+    for id in &selected_variants {
+        let variant = app.model.gtfs.variant(*id);
         let trip = &app.model.gtfs.routes[&variant.route_id].trips[&variant.trips[0]];
         let mut pts = Vec::new();
         for stop_time in &trip.stop_times {
@@ -136,7 +140,7 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
             // TODO Most variants overlap. Maybe perturb the lines a bit, or use the overlapping
             // path trick
             world
-                .add(Obj::Route(id))
+                .add(Obj::Route(*id))
                 .hitbox(pl.make_polygons(Distance::meters(20.0)))
                 .draw_color(Color::RED)
                 .hover_alpha(0.5)
@@ -157,7 +161,12 @@ fn make_world(ctx: &mut EventCtx, app: &App, variants: Vec<RouteVariantID>) -> W
         let mut txt = describe::stop(stop);
         txt.add_line(format!(
             "{} route variants",
-            app.model.gtfs.variants_for_stop(id).len()
+            app.model
+                .gtfs
+                .variants_for_stop(id)
+                .intersection(&selected_variants)
+                .collect::<Vec<_>>()
+                .len()
         ));
 
         world

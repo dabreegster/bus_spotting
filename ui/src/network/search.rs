@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use widgetry::{Autocomplete, EventCtx, GfxCtx, Line, Outcome, Panel, State, Widget};
 
 use model::gtfs::{DateFilter, RouteVariantID};
@@ -14,7 +16,7 @@ impl SearchForRouteVariant {
     pub fn new_state(
         ctx: &mut EventCtx,
         app: &App,
-        variants: Vec<RouteVariantID>,
+        variants: BTreeSet<RouteVariantID>,
     ) -> Box<dyn State<App>> {
         let mut entries = Vec::new();
         for id in variants {
