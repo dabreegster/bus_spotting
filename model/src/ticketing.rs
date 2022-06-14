@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use chrono::{NaiveDateTime, Timelike};
+use chrono::{NaiveDate, NaiveDateTime, Timelike};
 use geom::{Duration, GPSBounds, LonLat, Pt2D, Time};
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +25,10 @@ pub struct JourneyLeg {
     pub vehicle_name: VehicleName,
 }
 
-pub fn load<R: std::io::Read>(reader: R, gps_bounds: &GPSBounds) -> Result<Vec<Journey>> {
+pub fn load<R: std::io::Read>(
+    reader: R,
+    gps_bounds: &GPSBounds,
+) -> Result<(Vec<Journey>, NaiveDate)> {
     let mut per_card: BTreeMap<CardID, Vec<JourneyLeg>> = BTreeMap::new();
     let mut main_date = None;
 
@@ -63,7 +66,10 @@ pub fn load<R: std::io::Read>(reader: R, gps_bounds: &GPSBounds) -> Result<Vec<J
             });
     }
 
-    Ok(per_card.into_iter().flat_map(split_into_journeys).collect())
+    Ok((
+        per_card.into_iter().flat_map(split_into_journeys).collect(),
+        main_date.unwrap(),
+    ))
 }
 
 #[derive(Deserialize)]

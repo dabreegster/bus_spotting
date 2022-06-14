@@ -5,7 +5,7 @@ use geom::{Circle, Distance, Duration, Pt2D, Speed, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text,
-    UpdateType, Widget,
+    TextExt, UpdateType, Widget,
 };
 
 use model::VehicleID;
@@ -33,6 +33,9 @@ impl Replay {
             events: Events::ticketing(&app.model),
             prev_events: 0,
         };
+        let label = format!("Date: {}", app.model.main_date).text_widget(ctx);
+        state.panel.replace(ctx, "contents", label);
+
         state.on_time_change(ctx, app);
         Box::new(state)
     }
