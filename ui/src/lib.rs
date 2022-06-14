@@ -56,9 +56,12 @@ fn run(settings: Settings) {
     let args = Args::from_iter(abstutil::cli_args());
 
     widgetry::run(settings, move |ctx| {
-        let model = ctx.loading_screen("initialize model", |_, timer| args.load(timer).unwrap());
-        // TODO tmp
-        model.segment().unwrap();
+        let model = ctx.loading_screen("initialize model", |_, timer| {
+            let model = args.load(timer).unwrap();
+            // TODO tmp
+            model.segment(timer).unwrap();
+            model
+        });
 
         let app = App::new(ctx, model);
         let states = vec![crate::network::Viewer::new_state(ctx, &app)];
