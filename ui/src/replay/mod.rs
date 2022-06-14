@@ -1,6 +1,7 @@
 mod events;
 
 use abstutil::prettyprint_usize;
+use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
@@ -8,6 +9,7 @@ use widgetry::{
     TextExt, UpdateType, Widget,
 };
 
+use model::gtfs::DateFilter;
 use model::VehicleID;
 
 use self::events::Events;
@@ -33,7 +35,12 @@ impl Replay {
             events: Events::ticketing(&app.model),
             prev_events: 0,
         };
-        let label = format!("Date: {}", app.model.main_date).text_widget(ctx);
+        let label = format!(
+            "Date: {} ({})",
+            app.model.main_date,
+            app.model.main_date.weekday()
+        )
+        .text_widget(ctx);
         state.panel.replace(ctx, "contents", label);
 
         state.on_time_change(ctx, app);
@@ -226,12 +233,20 @@ fn update_world(
             }
         }
         // What routes match?
+        let services = app
+            .model
+            .gtfs
+            .calendar
+            .services_matching_dates(&DateFilter::SingleDay(app.model.main_date));
         let mut matching_routes = 0;
         for route in app.model.gtfs.routes.values() {
             if route.short_name.as_ref() != Some(&ev.route_short_name) {
                 continue;
             }
             for variant in &route.variants {
+                if !services.contains(&variant.service_id) {
+                    continue;
+                }
                 matching_routes += 1;
                 if let Ok(pl) = variant.polyline(&app.model.gtfs) {
                     hover.push(Color::PURPLE, pl.make_polygons(Distance::meters(10.0)));
