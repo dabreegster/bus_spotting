@@ -14,11 +14,16 @@ To use this tool, you need to:
 The easiest method is to download the file shared privately. (It contains
 non-public data, so only project stakeholders have access.)
 
-You can create the zip archive yourself. It must contain two folders:
+You can create the zip archive yourself. It must contain at least one folder:
 
 - `gtfs`, containing the 9 CSV files from `google_transit-02-2019` (from the
   Google Drive folder)
+
+It can optionally contain two more folders:
+
 - `avl`, containing the AVL file for one day
+  - You can include multiple files, but only one will be imported right now
+- `bil`, containing the BIL ticketing file for one day
   - You can include multiple files, but only one will be imported right now
 
 ## Importing the data

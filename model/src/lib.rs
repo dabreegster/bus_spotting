@@ -50,30 +50,35 @@ impl Model {
         timer.stop("loading GTFS");
 
         // TODO Handle many AVL files. Use an arbitrary one for now.
+        let mut vehicles = Vec::new();
         timer.start("loading AVL");
-        let avl_path = archive
+        // Indirection for the borrow checker
+        let maybe_avl_path = archive
             .file_names()
             .find(|x| x.starts_with("avl/") && x.ends_with(".csv"))
-            .unwrap()
-            .to_string();
-        let trajectories = avl::load(archive.by_name(&avl_path)?, &gps_bounds)?;
-        let mut vehicles = Vec::new();
-        for (original_id, trajectory) in trajectories {
-            vehicles.push(Vehicle {
-                id: VehicleID(vehicles.len()),
-                original_id,
-                trajectory,
-            });
+            .map(|x| x.to_string());
+        if let Some(avl_path) = maybe_avl_path {
+            let trajectories = avl::load(archive.by_name(&avl_path)?, &gps_bounds)?;
+            for (original_id, trajectory) in trajectories {
+                vehicles.push(Vehicle {
+                    id: VehicleID(vehicles.len()),
+                    original_id,
+                    trajectory,
+                });
+            }
         }
         timer.stop("loading AVL");
 
         timer.start("loading BIL");
-        let bil_path = archive
+        let maybe_bil_path = archive
             .file_names()
             .find(|x| x.starts_with("bil/") && x.ends_with(".csv"))
-            .unwrap()
-            .to_string();
-        let journeys = ticketing::load(archive.by_name(&bil_path)?, &gps_bounds)?;
+            .map(|x| x.to_string());
+        let journeys = if let Some(bil_path) = maybe_bil_path {
+            ticketing::load(archive.by_name(&bil_path)?, &gps_bounds)?
+        } else {
+            Vec::new()
+        };
         timer.stop("loading BIL");
 
         Ok(Self {
