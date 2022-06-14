@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
 
+use anyhow::Result;
 use geom::Time;
 
 use crate::{Model, VehicleName};
 
 impl Model {
     // TODO Not sure what this should fill out yet.
-    pub fn segment(&self) {
+    pub fn segment(&self) -> Result<()> {
         // We're assuming the model only represents one day right now
 
         let mut vehicles: BTreeMap<VehicleName, Assignment> = BTreeMap::new();
@@ -37,6 +38,27 @@ impl Model {
                 println!("  - from {t1} to {t2}: {route}");
             }
         }
+
+        // Manually debug vehicles assigned to multiple routes with apparent overlap
+        // To understand best, then do `sort -n vehicle_assignment.csv`
+        if false && cfg!(not(target_arch = "wasm32")) {
+            use std::fs::File;
+            use std::io::Write;
+
+            let mut f = File::create("vehicle_assignment.csv")?;
+            writeln!(f, "time,route_short_name")?;
+            let debug = VehicleName("03279".to_string());
+
+            for journey in &self.journeys {
+                for leg in &journey.legs {
+                    if leg.vehicle_name == debug {
+                        writeln!(f, "{},{}", leg.time.inner_seconds(), leg.route_short_name)?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
