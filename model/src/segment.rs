@@ -255,6 +255,8 @@ impl PossibleMatch {
         for journey in &model.journeys {
             for leg in &journey.legs {
                 if leg.route_short_name == route_short_name && leg.time >= t1 && leg.time <= t2 {
+                    // TODO When shapes double back on themselves, this will likely oscillate in
+                    // weird ways
                     if let Some((dist, _)) =
                         route_pl.dist_along_of_point(route_pl.project_pt(leg.pos))
                     {

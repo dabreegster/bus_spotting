@@ -8,7 +8,7 @@ mod trips;
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
-use geom::GPSBounds;
+use geom::{GPSBounds, PolyLine};
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
@@ -24,6 +24,7 @@ pub struct GTFS {
     pub stops: BTreeMap<StopID, Stop>,
     pub routes: BTreeMap<RouteID, Route>,
     pub calendar: Calendar,
+    pub shapes: BTreeMap<ShapeID, PolyLine>,
 }
 
 impl GTFS {
@@ -34,6 +35,9 @@ impl GTFS {
         let (stops, gps_bounds) = stops::load(archive.by_name("gtfs/stops.txt")?)?;
         gtfs.stops = stops;
         gtfs.routes = routes::load(archive.by_name("gtfs/routes.txt")?)?;
+        if let Ok(file) = archive.by_name("gtfs/shapes.txt") {
+            gtfs.shapes = shapes::load(file, &gps_bounds)?;
+        }
 
         let trips = trips::load(archive.by_name("gtfs/trips.txt")?)?;
         let mut stop_times = stop_times::load(archive.by_name("gtfs/stop_times.txt")?)?;
@@ -95,6 +99,7 @@ impl GTFS {
             calendar: Calendar {
                 services: BTreeMap::new(),
             },
+            shapes: BTreeMap::new(),
         }
     }
 
@@ -131,18 +136,9 @@ impl GTFS {
     }
 }
 
-// TODO is block_id a (useful) hint of the vehicle mapping?
-
-// TODO next steps:
-// - assign cheap numeric IDs to everything (or at least the things in World)
-// - shapes: ID -> polyline
-
 fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
-    // TODO Also group by shape ID, outbound direction?
-    // in practice, how many patterns per route? just directional and express/local?
-    //
-    // (Stops, headsign, service)
-    type Key = (Vec<StopID>, Option<String>, ServiceID);
+    // (Stops, headsign, service, shape)
+    type Key = (Vec<StopID>, Option<String>, ServiceID, ShapeID);
 
     let mut variants: BTreeMap<Key, Vec<Trip>> = BTreeMap::new();
     for trip in trips {
@@ -151,11 +147,16 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
             .iter()
             .map(|st| st.stop_id.clone())
             .collect();
-        let key = (stops, trip.headsign.clone(), trip.service_id.clone());
+        let key = (
+            stops,
+            trip.headsign.clone(),
+            trip.service_id.clone(),
+            trip.shape_id.clone(),
+        );
         variants.entry(key).or_insert_with(Vec::new).push(trip);
     }
 
-    for ((_, headsign, service_id), mut trips) in variants {
+    for ((_, headsign, service_id, shape_id), mut trips) in variants {
         trips.sort_by_key(|t| t.stop_times[0].arrival_time);
 
         route.variants.push(RouteVariant {
@@ -164,6 +165,7 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
             trips,
             headsign,
             service_id,
+            shape_id,
         });
         *id_counter += 1;
     }

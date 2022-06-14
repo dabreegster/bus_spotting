@@ -4,7 +4,7 @@ use anyhow::Result;
 use geom::PolyLine;
 use serde::{Deserialize, Serialize};
 
-use super::{ServiceID, StopID, Trip, GTFS};
+use super::{ServiceID, ShapeID, StopID, Trip, GTFS};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteID(String);
@@ -27,6 +27,7 @@ pub struct RouteVariant {
     pub trips: Vec<Trip>,
     pub headsign: Option<String>,
     pub service_id: ServiceID,
+    pub shape_id: ShapeID,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -68,8 +69,12 @@ impl RouteVariant {
             .collect()
     }
 
-    /// Calculated from straight lines between stops
+    /// If GTFS has a shape, use that. Otherwise calculated from straight lines between stops
     pub fn polyline(&self, gtfs: &GTFS) -> Result<PolyLine> {
+        if let Some(pl) = gtfs.shapes.get(&self.shape_id) {
+            return Ok(pl.clone());
+        }
+
         let mut pts = Vec::new();
         for stop_time in &self.trips[0].stop_times {
             pts.push(gtfs.stops[&stop_time.stop_id].pos);
