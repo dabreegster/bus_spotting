@@ -5,12 +5,12 @@ use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, UnitFmt};
 use widgetry::mapspace::{ObjectID, World};
 use widgetry::{
-    Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text,
-    TextExt, UpdateType, Widget,
+    Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State, Text,
+    TextExt, Toggle, UpdateType, Widget,
 };
 
 use model::gtfs::DateFilter;
-use model::VehicleID;
+use model::{Vehicle, VehicleID};
 
 use self::events::Events;
 use crate::components::{describe, MainMenu, TimeControls};
@@ -35,13 +35,17 @@ impl Replay {
             events: Events::ticketing(&app.model),
             prev_events: 0,
         };
-        let label = format!(
-            "Date: {} ({})",
-            app.model.main_date,
-            app.model.main_date.weekday()
-        )
-        .text_widget(ctx);
-        state.panel.replace(ctx, "contents", label);
+        let controls = Widget::col(vec![
+            format!(
+                "Date: {} ({})",
+                app.model.main_date,
+                app.model.main_date.weekday()
+            )
+            .text_widget(ctx),
+            // TODO The order of these always feels so backwards...
+            Toggle::choice(ctx, "trajectory source", "BIL", "AVL", Key::T, false),
+        ]);
+        state.panel.replace(ctx, "contents", controls);
 
         state.on_time_change(ctx, app);
         Box::new(state)
@@ -54,6 +58,7 @@ impl Replay {
             &mut self.world,
             &self.events,
             &mut self.prev_events,
+            self.panel.is_checked("trajectory source"),
         );
         self.time_controls.panel.replace(ctx, "stats", stats);
     }
@@ -72,11 +77,17 @@ impl State<App> for Replay {
         self.hover_path
             .update(self.world.get_hovering(), |obj| match obj {
                 Obj::Bus(id) => {
+                    let vehicle = &app.model.vehicles[id.0];
+                    let trajectory = if self.panel.is_checked("trajectory source") {
+                        vehicle.alt_trajectory.as_ref().unwrap()
+                    } else {
+                        &vehicle.trajectory
+                    };
+
                     let mut batch = GeomBatch::new();
                     batch.push(
                         Color::CYAN,
-                        app.model.vehicles[id.0]
-                            .trajectory
+                        trajectory
                             .as_polyline()
                             .make_polygons(Distance::meters(5.0)),
                     );
@@ -96,6 +107,10 @@ impl State<App> for Replay {
                 } else {
                     unreachable!()
                 }
+            }
+            Outcome::Changed(_) => {
+                // Trajectory source
+                self.on_time_change(ctx, app);
             }
             _ => {}
         }
@@ -163,6 +178,7 @@ fn update_world(
     world: &mut World<Obj>,
     events: &Events,
     prev_events: &mut usize,
+    use_alt_trajectory_source: bool,
 ) -> Widget {
     // Delete all existing vehicles
     for vehicle in &app.model.vehicles {
@@ -187,8 +203,20 @@ fn update_world(
     let mut idling = 0;
     let mut moving = 0;
 
+    let get_vehicle_state = |vehicle: &Vehicle| {
+        if use_alt_trajectory_source {
+            if let Some(ref trajectory) = vehicle.alt_trajectory {
+                trajectory.interpolate(app.time)
+            } else {
+                None
+            }
+        } else {
+            vehicle.trajectory.interpolate(app.time)
+        }
+    };
+
     for vehicle in &app.model.vehicles {
-        if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
+        if let Some((pos, speed)) = get_vehicle_state(vehicle) {
             if speed == Speed::ZERO {
                 idling += 1;
             } else {
@@ -222,7 +250,7 @@ fn update_world(
         hover.push(Color::GREEN, Circle::new(ev.pos, radius).to_polygon());
         // Where's the bus at this time?
         if let Some(vehicle) = app.model.lookup_vehicle(&ev.vehicle_name) {
-            if let Some((pos, _)) = vehicle.trajectory.interpolate(app.time) {
+            if let Some((pos, _)) = get_vehicle_state(vehicle) {
                 if let Ok(line) = geom::Line::new(ev.pos, pos) {
                     hover.push(Color::YELLOW, line.make_polygons(Distance::meters(15.0)));
                     txt.add_line(format!(

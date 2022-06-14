@@ -57,9 +57,10 @@ fn run(settings: Settings) {
 
     widgetry::run(settings, move |ctx| {
         let model = ctx.loading_screen("initialize model", |_, timer| {
-            let model = args.load(timer).unwrap();
+            let mut model = args.load(timer).unwrap();
             // TODO tmp
             model.segment(timer).unwrap();
+            model.set_alt_trajectories_from_ticketing();
             model
         });
 
