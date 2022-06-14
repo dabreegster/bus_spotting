@@ -204,13 +204,13 @@ fn update_world(
     let lookback = Duration::seconds(10.0);
 
     for ev in events.events_at(app.time, lookback) {
-        let mut txt = Text::from(&ev.description);
+        let mut txt = Text::from(ev.describe());
         // 0 when the event occurs, then increases to 1
         let decay = (app.time - ev.time) / lookback;
 
-        // Where's the bus at this time?
         let mut hover = GeomBatch::new();
         hover.push(Color::GREEN, Circle::new(ev.pos, radius).to_polygon());
+        // Where's the bus at this time?
         if let Some(vehicle) = app.model.lookup_vehicle(&ev.vehicle_name) {
             if let Some((pos, _)) = vehicle.trajectory.interpolate(app.time) {
                 if let Ok(line) = geom::Line::new(ev.pos, pos) {
@@ -222,6 +222,20 @@ fn update_world(
                 }
             }
         }
+        // What routes match?
+        let mut matching_routes = 0;
+        for route in app.model.gtfs.routes.values() {
+            if route.short_name.as_ref() != Some(&ev.route_short_name) {
+                continue;
+            }
+            for variant in &route.variants {
+                matching_routes += 1;
+                if let Ok(pl) = variant.polyline(&app.model.gtfs) {
+                    hover.push(Color::PURPLE, pl.make_polygons(Distance::meters(10.0)));
+                }
+            }
+        }
+        txt.add_line(format!("{matching_routes} route variants match"));
 
         world
             .add(Obj::Event(*prev_events))

@@ -3,7 +3,7 @@ mod search;
 
 use std::collections::BTreeSet;
 
-use geom::{Circle, Distance, PolyLine, Pt2D};
+use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text};
 
@@ -143,14 +143,11 @@ fn make_world(
     let mut stops: BTreeSet<&StopID> = BTreeSet::new();
     for id in &selected_variants {
         let variant = app.model.gtfs.variant(*id);
-        let mut pts = Vec::new();
         for stop_time in &variant.trips[0].stop_times {
-            let stop = &app.model.gtfs.stops[&stop_time.stop_id];
-            pts.push(stop.pos);
-            stops.insert(&stop.stop_id);
+            stops.insert(&stop_time.stop_id);
         }
 
-        if let Ok(pl) = PolyLine::new(pts) {
+        if let Ok(pl) = variant.polyline(&app.model.gtfs) {
             let mut txt = Text::new();
             txt.add_line(Line(variant.describe(&app.model.gtfs)));
 

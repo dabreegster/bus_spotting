@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use geom::PolyLine;
 use serde::{Deserialize, Serialize};
 
 use super::{ServiceID, StopID, Trip, GTFS};
@@ -65,6 +66,15 @@ impl RouteVariant {
             .iter()
             .map(|st| st.stop_id.clone())
             .collect()
+    }
+
+    /// Calculated from straight lines between stops
+    pub fn polyline(&self, gtfs: &GTFS) -> Result<PolyLine> {
+        let mut pts = Vec::new();
+        for stop_time in &self.trips[0].stop_times {
+            pts.push(gtfs.stops[&stop_time.stop_id].pos);
+        }
+        PolyLine::new(pts)
     }
 }
 

@@ -10,7 +10,22 @@ pub struct Event {
     pub time: Time,
     pub pos: Pt2D,
     pub vehicle_name: VehicleName,
-    pub description: String,
+    pub route_short_name: String,
+    pub first_boarding: bool,
+}
+
+impl Event {
+    pub fn describe(&self) -> String {
+        let boarding = if self.first_boarding {
+            "first boarding"
+        } else {
+            "transfer"
+        };
+        format!(
+            "{} on {} using {:?}",
+            boarding, self.route_short_name, self.vehicle_name
+        )
+    }
 }
 
 impl Events {
@@ -18,20 +33,12 @@ impl Events {
         let mut events = Vec::new();
         for journey in &model.journeys {
             for (idx, leg) in journey.legs.iter().enumerate() {
-                let boarding = if idx == 0 {
-                    "first boarding"
-                } else {
-                    "transfer"
-                };
-
                 events.push(Event {
                     time: leg.time,
                     pos: leg.pos,
                     vehicle_name: leg.vehicle_name.clone(),
-                    description: format!(
-                        "{boarding} on {} using {:?}",
-                        leg.route_short_name, leg.vehicle_name
-                    ),
+                    route_short_name: leg.route_short_name.clone(),
+                    first_boarding: idx == 0,
                 });
             }
         }
