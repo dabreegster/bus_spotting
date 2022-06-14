@@ -27,17 +27,33 @@ impl Model {
             // TODO Check for overlaps
         }
 
+        let mut one_route = 0;
+        let mut multiple_routes_normal = 0;
+        let mut multiple_routes_overlapping = 0;
         for (vehicle, assignment) in vehicles {
             // Most serve 1 route; that's the simple case for matching
             if assignment.segments.len() == 1 {
+                one_route += 1;
                 continue;
             }
 
-            println!("{:?} serves {} routes", vehicle, assignment.segments.len());
+            if !assignment.has_overlaps() {
+                multiple_routes_normal += 1;
+                continue;
+            }
+
+            multiple_routes_overlapping += 1;
+            println!(
+                "{:?} serves {} routes, partly overlapping",
+                vehicle,
+                assignment.segments.len()
+            );
             for (t1, t2, route) in assignment.segments {
                 println!("  - from {t1} to {t2}: {route}");
             }
         }
+
+        println!("{one_route} vehicles serve 1 route, {multiple_routes_normal} serve multiple normally, {multiple_routes_overlapping} have weird overlaps");
 
         // Manually debug vehicles assigned to multiple routes with apparent overlap
         // To understand best, then do `sort -n vehicle_assignment.csv`
@@ -92,5 +108,18 @@ impl Assignment {
 
         // This vehicle is serving another route. Start an empty interval for it.
         self.segments.push((time, time, route.to_string()));
+    }
+
+    // Checks for unusual situations worth debugging further. Assumes segments have been sorted.
+    fn has_overlaps(&self) -> bool {
+        for pair in self.segments.windows(2) {
+            let (_t1, t2, _) = pair[0];
+            let (t3, _t4, _) = pair[1];
+
+            if t3 < t2 {
+                return true;
+            }
+        }
+        false
     }
 }
