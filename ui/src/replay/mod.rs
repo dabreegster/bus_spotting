@@ -26,7 +26,7 @@ pub struct Replay {
 impl Replay {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
-            panel: crate::components::MainMenu::panel(ctx),
+            panel: crate::components::MainMenu::panel(ctx, crate::components::Mode::Replay),
             time_controls: TimeControls::new(ctx, app),
             world: make_static_world(ctx, app),
             hover_path: Cached::new(),

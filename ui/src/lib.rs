@@ -82,7 +82,11 @@ pub fn run_wasm() {
 
 pub struct App {
     model: Model,
-    // TODO Maybe this is per-mode state
+
+    // Mostly applies to the network viewer now, but we want to preserve it when switching modes
+    filters: network::Filters,
+
+    // Sticky state for the replayer
     time: Time,
     time_increment: Duration,
 }
@@ -103,6 +107,9 @@ impl App {
 
         Self {
             model,
+
+            filters: network::Filters::new(),
+
             time: Time::START_OF_DAY,
             time_increment: Duration::minutes(10),
         }

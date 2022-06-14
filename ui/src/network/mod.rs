@@ -9,14 +9,13 @@ use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, 
 
 use model::gtfs::{RouteVariantID, StopID};
 
-use self::filters::Filters;
+pub use self::filters::Filters;
 use crate::components::{describe, MainMenu};
 use crate::{App, Transition};
 
 pub struct Viewer {
     panel: Panel,
     world: World<Obj>,
-    filters: Filters,
 
     // TODO Hack before we have cheap stop IDs in the model
     stop_ids: Vec<StopID>,
@@ -25,9 +24,8 @@ pub struct Viewer {
 impl Viewer {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
-            panel: crate::components::MainMenu::panel(ctx),
+            panel: crate::components::MainMenu::panel(ctx, crate::components::Mode::Network),
             world: World::unbounded(),
-            filters: Filters::new(),
 
             stop_ids: Vec::new(),
         };
@@ -35,18 +33,19 @@ impl Viewer {
         Box::new(state)
     }
 
+    // TODO Could move to App
     fn selected_variants(&self, app: &App) -> BTreeSet<RouteVariantID> {
-        if let Some(v) = self.filters.variant {
+        if let Some(v) = app.filters.variant {
             vec![v].into_iter().collect()
         } else {
             app.model
                 .gtfs
-                .variants_matching_dates(&self.filters.date_filter)
+                .variants_matching_dates(&app.filters.date_filter)
         }
     }
 
     fn on_filter_change(&mut self, ctx: &mut EventCtx, app: &App) {
-        let controls = self.filters.to_controls(ctx, app);
+        let controls = app.filters.to_controls(ctx, app);
         self.panel.replace(ctx, "contents", controls);
 
         let (world, stop_ids) = make_world(ctx, app, self.selected_variants(app));
@@ -89,7 +88,7 @@ impl State<App> for Viewer {
                                 app,
                                 app.model
                                     .gtfs
-                                    .variants_matching_dates(&self.filters.date_filter),
+                                    .variants_matching_dates(&app.filters.date_filter),
                             ));
                         }
                         _ => unreachable!(),
@@ -100,7 +99,7 @@ impl State<App> for Viewer {
                 // If the user sets an impossible date, this won't run, and the controls will still
                 // be fixed at the last valid state
                 if let Some(filters) = Filters::from_controls(app, &self.panel) {
-                    self.filters = filters;
+                    app.filters = filters;
                     self.on_filter_change(ctx, app);
                 }
             }

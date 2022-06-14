@@ -58,12 +58,15 @@ impl State<App> for SearchForRouteVariant {
             return Transition::Multi(vec![
                 Transition::Pop,
                 Transition::ModifyState(Box::new(move |state, ctx, app| {
-                    let state = state.downcast_mut::<Viewer>().unwrap();
-                    state.filters = Filters {
+                    app.filters = Filters {
                         date_filter: DateFilter::None,
                         variant: Some(variant),
                     };
-                    state.on_filter_change(ctx, app);
+
+                    state
+                        .downcast_mut::<Viewer>()
+                        .unwrap()
+                        .on_filter_change(ctx, app);
                 })),
             ]);
         }

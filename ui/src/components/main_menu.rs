@@ -1,6 +1,6 @@
 use anyhow::Result;
 use widgetry::tools::PopupMsg;
-use widgetry::{EventCtx, HorizontalAlignment, Line, Panel, VerticalAlignment, Widget};
+use widgetry::{EventCtx, HorizontalAlignment, Key, Line, Panel, VerticalAlignment, Widget};
 
 use model::Model;
 
@@ -9,19 +9,45 @@ use crate::{App, Transition};
 
 pub struct MainMenu;
 
+pub enum Mode {
+    Replay,
+    Network,
+}
+
 impl MainMenu {
-    pub fn panel(ctx: &mut EventCtx) -> Panel {
+    pub fn panel(ctx: &mut EventCtx, mode: Mode) -> Panel {
         Panel::new_builder(Widget::col(vec![
             Line("Bus Spotting").small_heading().into_widget(ctx),
             Widget::row(vec![
                 ctx.style().btn_outline.text("Load model").build_def(ctx),
                 ctx.style().btn_outline.text("Import data").build_def(ctx),
             ]),
-            // TODO Not sure how this should work yet
-            Widget::row(vec![
-                ctx.style().btn_solid.text("Replay").build_def(ctx),
-                ctx.style().btn_solid.text("Explore GTFS").build_def(ctx),
-            ]),
+            match mode {
+                Mode::Replay => Widget::row(vec![
+                    ctx.style()
+                        .btn_solid
+                        .text("Replay")
+                        .disabled(true)
+                        .build_def(ctx),
+                    ctx.style()
+                        .btn_solid
+                        .text("Network")
+                        .hotkey(Key::Tab)
+                        .build_def(ctx),
+                ]),
+                Mode::Network => Widget::row(vec![
+                    ctx.style()
+                        .btn_solid
+                        .text("Replay")
+                        .hotkey(Key::Tab)
+                        .build_def(ctx),
+                    ctx.style()
+                        .btn_solid
+                        .text("Network")
+                        .disabled(true)
+                        .build_def(ctx),
+                ]),
+            },
             Widget::placeholder(ctx, "contents"),
         ]))
         .aligned(HorizontalAlignment::Left, VerticalAlignment::Top)
@@ -41,7 +67,7 @@ impl MainMenu {
                     ctx, app,
                 )));
             }
-            "Explore GTFS" => {
+            "Network" => {
                 return Some(Transition::Replace(crate::network::Viewer::new_state(
                     ctx, app,
                 )));

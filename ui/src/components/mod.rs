@@ -5,5 +5,5 @@ mod main_menu;
 mod speed;
 
 pub use file_loader::FileLoader;
-pub use main_menu::MainMenu;
+pub use main_menu::{MainMenu, Mode};
 pub use speed::TimeControls;
