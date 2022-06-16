@@ -3,7 +3,7 @@ use widgetry::{Line, Text};
 use model::gtfs::{Route, Service, Stop};
 
 pub fn stop(stop: &Stop) -> Text {
-    let mut txt = Text::from(format!("{:?}", stop.stop_id));
+    let mut txt = Text::from(format!("{:?} ({:?})", stop.orig_id, stop.id));
     if let Some(ref name) = stop.name {
         txt.add_line(Line(format!("Name: {name}")));
     }

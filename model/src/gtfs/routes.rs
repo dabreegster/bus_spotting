@@ -65,7 +65,7 @@ impl RouteVariant {
         self.trips[0]
             .stop_times
             .iter()
-            .map(|st| st.stop_id.clone())
+            .map(|st| st.stop_id)
             .collect()
     }
 

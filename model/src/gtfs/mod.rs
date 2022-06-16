@@ -1,4 +1,5 @@
 mod calendar;
+mod ids;
 mod routes;
 mod shapes;
 mod stop_times;
@@ -13,10 +14,11 @@ use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
 pub use calendar::{Calendar, DateFilter, DaysOfWeek, Service, ServiceID};
+pub use ids::{orig, IDMapping, StopID};
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
-pub use stops::{Stop, StopID};
+pub use stops::Stop;
 pub use trips::{Trip, TripID};
 
 #[derive(Serialize, Deserialize)]
@@ -32,7 +34,7 @@ impl GTFS {
         archive: &mut ZipArchive<std::io::Cursor<Vec<u8>>>,
     ) -> Result<(Self, GPSBounds)> {
         let mut gtfs = Self::empty();
-        let (stops, gps_bounds) = stops::load(archive.by_name("gtfs/stops.txt")?)?;
+        let (stops, stop_ids, gps_bounds) = stops::load(archive.by_name("gtfs/stops.txt")?)?;
         gtfs.stops = stops;
         gtfs.routes = routes::load(archive.by_name("gtfs/routes.txt")?)?;
         if let Ok(file) = archive.by_name("gtfs/shapes.txt") {
@@ -40,7 +42,7 @@ impl GTFS {
         }
 
         let trips = trips::load(archive.by_name("gtfs/trips.txt")?)?;
-        let mut stop_times = stop_times::load(archive.by_name("gtfs/stop_times.txt")?)?;
+        let mut stop_times = stop_times::load(archive.by_name("gtfs/stop_times.txt")?, &stop_ids)?;
 
         let mut trips_per_route: BTreeMap<RouteID, Vec<Trip>> = BTreeMap::new();
         for (trip_id, mut trip) in trips {
@@ -142,11 +144,7 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
 
     let mut variants: BTreeMap<Key, Vec<Trip>> = BTreeMap::new();
     for trip in trips {
-        let stops: Vec<StopID> = trip
-            .stop_times
-            .iter()
-            .map(|st| st.stop_id.clone())
-            .collect();
+        let stops: Vec<StopID> = trip.stop_times.iter().map(|st| st.stop_id).collect();
         let key = (
             stops,
             trip.headsign.clone(),

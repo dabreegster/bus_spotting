@@ -49,7 +49,7 @@ impl StopInfo {
             ]))
             .build(ctx),
             variants,
-            stop_id: stop.stop_id.clone(),
+            stop_id: stop.id,
         })
     }
 }
@@ -94,7 +94,7 @@ fn schedule(ctx: &mut EventCtx, stop: &Stop, variant: &RouteVariant) -> Widget {
     txt.add_line(Line("Schedule").small_heading());
     txt.add_line(Line(""));
     for trip in &variant.trips {
-        txt.add_line(Line(trip.arrival_at(&stop.stop_id).to_string()));
+        txt.add_line(Line(trip.arrival_at(stop.id).to_string()));
     }
     txt.into_widget(ctx)
 }

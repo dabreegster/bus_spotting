@@ -4,7 +4,7 @@ use anyhow::Result;
 use geom::Time;
 use serde::{Deserialize, Serialize};
 
-use super::{StopID, TripID};
+use super::{orig, IDMapping, StopID, TripID};
 
 #[derive(Serialize, Deserialize)]
 pub struct StopTime {
@@ -13,7 +13,10 @@ pub struct StopTime {
     pub stop_id: StopID,
 }
 
-pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<TripID, Vec<StopTime>>> {
+pub fn load<R: std::io::Read>(
+    reader: R,
+    stop_ids: &IDMapping,
+) -> Result<BTreeMap<TripID, Vec<StopTime>>> {
     let mut stop_times = BTreeMap::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
@@ -30,7 +33,7 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<TripID, Vec<StopTime
                 StopTime {
                     arrival_time,
                     departure_time,
-                    stop_id: rec.stop_id,
+                    stop_id: stop_ids.lookup(&rec.stop_id)?,
                 },
             ));
     }
@@ -52,6 +55,6 @@ struct Record {
     trip_id: TripID,
     arrival_time: String,
     departure_time: String,
-    stop_id: StopID,
+    stop_id: orig::StopID,
     stop_sequence: usize,
 }

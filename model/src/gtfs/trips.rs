@@ -25,9 +25,9 @@ pub struct Trip {
 impl Trip {
     /// Panics if this trip doesn't visit this stop. Assumes the trip doesn't visit the same stop
     /// twice.
-    pub fn arrival_at(&self, stop_id: &StopID) -> Time {
+    pub fn arrival_at(&self, stop_id: StopID) -> Time {
         for st in &self.stop_times {
-            if &st.stop_id == stop_id {
+            if st.stop_id == stop_id {
                 return st.arrival_time;
             }
         }
