@@ -66,6 +66,8 @@ impl Replay {
 
 impl State<App> for Replay {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
+        app.sync_mapbox(ctx);
+
         let prev_time = app.time;
         self.time_controls.event(ctx, app);
         if app.time != prev_time {
@@ -142,12 +144,6 @@ impl ObjectID for Obj {}
 
 fn make_static_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
     let mut world = World::bounded(&app.model.bounds);
-
-    // Show the bounds of the world
-    world.draw_master_batch(
-        ctx,
-        GeomBatch::from(vec![(Color::grey(0.1), app.model.bounds.get_rectangle())]),
-    );
 
     // TODO We really need unzoomed circles
     let radius = Distance::meters(50.0);

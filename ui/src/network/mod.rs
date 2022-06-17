@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 
 use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text};
+use widgetry::{Color, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text};
 
 use model::gtfs::{RouteVariantID, StopID};
 
@@ -65,6 +65,8 @@ impl Viewer {
 
 impl State<App> for Viewer {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
+        app.sync_mapbox(ctx);
+
         if let WorldOutcome::ClickedObject(Obj::Stop(id)) = self.world.event(ctx) {
             return self.on_click_stop(ctx, app, id);
         }
@@ -125,11 +127,6 @@ fn make_world(
     selected_variants: BTreeSet<RouteVariantID>,
 ) -> World<Obj> {
     let mut world = World::bounded(&app.model.bounds);
-    // Show the bounds of the world
-    world.draw_master_batch(
-        ctx,
-        GeomBatch::from(vec![(Color::grey(0.1), app.model.bounds.get_rectangle())]),
-    );
 
     // Draw every route variant. Track what stops we visit
     let mut stops: BTreeSet<StopID> = BTreeSet::new();

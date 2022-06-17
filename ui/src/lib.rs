@@ -10,7 +10,7 @@ mod stop;
 
 use abstutil::Timer;
 use anyhow::Result;
-use geom::{Duration, Time};
+use geom::{Bounds, Duration, Time};
 use structopt::StructOpt;
 use widgetry::{Color, EventCtx, GfxCtx, Settings, SharedAppState};
 
@@ -84,6 +84,13 @@ pub fn run_wasm() {
     run(Settings::new("Bus Spotting").root_dom_element_id("loading".to_string()));
 }
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = window)]
+    fn sync_mapbox_canvas(lon1: f64, lat1: f64, lon2: f64, lat2: f64);
+}
+
 pub struct App {
     model: Model,
 
@@ -93,11 +100,17 @@ pub struct App {
     // Sticky state for the replayer
     time: Time,
     time_increment: Duration,
+
+    // Avoid syncing when bounds match
+    #[allow(unused)]
+    mapbox_bounds: Bounds,
 }
 
 impl SharedAppState for App {
     fn draw_default(&self, g: &mut GfxCtx) {
-        g.clear(Color::BLACK);
+        if cfg!(not(target_arch = "wasm32")) {
+            g.clear(Color::BLACK);
+        }
     }
 }
 
@@ -116,6 +129,26 @@ impl App {
 
             time: Time::START_OF_DAY,
             time_increment: Duration::minutes(10),
+
+            mapbox_bounds: Bounds::new(),
+        }
+    }
+
+    #[allow(unused)]
+    pub fn sync_mapbox(&mut self, ctx: &mut EventCtx) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            // This method is usually called for every single event, but the camera hasn't always
+            // moved
+            let bounds = ctx.canvas.get_screen_bounds();
+            if self.mapbox_bounds == bounds {
+                return;
+            }
+            self.mapbox_bounds = bounds;
+
+            let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(&self.model.gps_bounds);
+            let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(&self.model.gps_bounds);
+            sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
         }
     }
 }
