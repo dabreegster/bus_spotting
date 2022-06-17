@@ -74,4 +74,25 @@ impl Trajectory {
         // segments instead of doing this?
         PolyLine::unchecked_new(pts)
     }
+
+    // Returns all the (times, snapped points) when the trajectory passes within some threshold of
+    // the point.
+    pub fn times_near_pos(&self, pos: Pt2D, threshold: Distance) -> Vec<(Time, Pt2D)> {
+        // TODO Maybe FindClosest
+        let mut hits = Vec::new();
+        for pair in self.inner.windows(2) {
+            if let Ok(pl) = PolyLine::new(vec![pair[0].0, pair[1].0]) {
+                let pt_on_pl = pl.project_pt(pos);
+                if pos.dist_to(pt_on_pl) < threshold {
+                    if let Some((dist, _)) = pl.dist_along_of_point(pl.project_pt(pos)) {
+                        let pct = dist / pl.length();
+                        let t1 = pair[0].1;
+                        let t2 = pair[1].1;
+                        hits.push((t1 + pct * (t2 - t1), pt_on_pl));
+                    }
+                }
+            }
+        }
+        hits
+    }
 }

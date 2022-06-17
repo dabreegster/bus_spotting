@@ -9,7 +9,7 @@ use widgetry::{
     TextExt, Toggle, UpdateType, Widget,
 };
 
-use model::gtfs::DateFilter;
+use model::gtfs::{DateFilter, StopID};
 use model::{Vehicle, VehicleID};
 
 use self::events::Events;
@@ -26,6 +26,7 @@ pub struct Replay {
     selected_vehicle: Option<VehicleID>,
     show_path: Cached<VehicleID, Drawable>,
     show_alt_position: Cached<VehicleID, Drawable>,
+    snap_to_trajectory: Cached<Pt2D, (Text, Drawable)>,
 }
 
 impl Replay {
@@ -40,6 +41,7 @@ impl Replay {
             selected_vehicle: None,
             show_path: Cached::new(),
             show_alt_position: Cached::new(),
+            snap_to_trajectory: Cached::new(),
         };
         let controls = Widget::col(vec![
             format!(
@@ -168,6 +170,39 @@ impl State<App> for Replay {
             ctx.upload(batch)
         });
 
+        self.snap_to_trajectory
+            .update(ctx.canvas.get_cursor_in_map_space(), |pt| {
+                let mut txt = Text::new();
+                let mut batch = GeomBatch::new();
+
+                if let Some(id) = self.selected_vehicle {
+                    let vehicle = &app.model.vehicles[id.0];
+                    if let Some(trajectory) = if self.panel.is_checked("trajectory source") {
+                        vehicle.alt_trajectory.as_ref()
+                    } else {
+                        Some(&vehicle.trajectory)
+                    } {
+                        let hits = trajectory.times_near_pos(pt, Distance::meters(30.0));
+                        if !hits.is_empty() {
+                            batch.push(
+                                Color::CYAN,
+                                Circle::new(hits[0].1, Distance::meters(30.0)).to_polygon(),
+                            );
+                            let n = hits.len();
+                            for (idx, (time, _)) in hits.into_iter().enumerate() {
+                                txt.add_line(Line(format!("Here at {time}")));
+                                if idx == 4 {
+                                    txt.append(Line(format!(" (and {} more times)", n - 5)));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                (txt, ctx.upload(batch))
+            });
+
         Transition::Keep
     }
 
@@ -181,6 +216,10 @@ impl State<App> for Replay {
         if let Some(draw) = self.show_alt_position.value() {
             g.redraw(draw);
         }
+        if let Some((txt, draw)) = self.snap_to_trajectory.value() {
+            g.redraw(draw);
+            g.draw_mouse_tooltip(txt.clone());
+        }
     }
 
     fn recreate(&mut self, ctx: &mut EventCtx, app: &mut App) -> Box<dyn State<App>> {
@@ -191,7 +230,7 @@ impl State<App> for Replay {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Obj {
     Bus(VehicleID),
-    Stop(usize),
+    Stop(StopID),
     Event(usize),
 }
 impl ObjectID for Obj {}
@@ -205,10 +244,9 @@ fn make_static_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
     // Optimization
     let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
 
-    for (idx, stop) in app.model.gtfs.stops.values().enumerate() {
+    for stop in app.model.gtfs.stops.values() {
         world
-            // TODO Need to assign numeric IDs in the model
-            .add(Obj::Stop(idx))
+            .add(Obj::Stop(stop.id))
             .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
             .draw_color(Color::BLUE)
             .hover_alpha(0.5)
