@@ -65,6 +65,7 @@ impl Viewer {
 
 impl State<App> for Viewer {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
+        app.savestate_mode = crate::SavestateMode::NetworkViewer;
         app.sync_mapbox(ctx);
 
         if let WorldOutcome::ClickedObject(Obj::Stop(id)) = self.world.event(ctx) {

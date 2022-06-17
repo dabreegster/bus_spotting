@@ -22,6 +22,7 @@ geom = { git = "https://github.com/dabreegster/abstreet" }
 log = "0.4.14"
 model = { path = "../model" }
 rfd = "0.8.0"
+serde = "1.0.123"
 structopt = "0.3.23"
 wasm-bindgen = { version = "0.2.70", optional = true }
 widgetry = { git = "https://github.com/dabreegster/abstreet" }

@@ -11,10 +11,11 @@ mod stop;
 use abstutil::Timer;
 use anyhow::Result;
 use geom::{Bounds, Duration, Time};
+use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
-use widgetry::{Color, EventCtx, GfxCtx, Settings, SharedAppState};
+use widgetry::{Canvas, Color, EventCtx, GfxCtx, Settings, SharedAppState};
 
-use model::Model;
+use model::{Model, VehicleID};
 
 #[derive(StructOpt)]
 struct Args {
@@ -64,8 +65,26 @@ fn run(settings: Settings) {
             model
         });
 
-        let app = App::new(ctx, model);
-        let states = vec![crate::network::Viewer::new_state(ctx, &app)];
+        let mut app = App::new(ctx, model);
+
+        let mut states = vec![crate::network::Viewer::new_state(ctx, &app)];
+
+        // This only makes sense on native, with the same model used across different runs.
+        // before_quit is never called on web, and web starts with an empty model.
+        if let Ok(savestate) = abstio::maybe_read_json::<Savestate>(
+            "data/save.json".to_string(),
+            &mut Timer::throwaway(),
+        ) {
+            ctx.canvas.cam_x = savestate.cam_x;
+            ctx.canvas.cam_y = savestate.cam_y;
+            ctx.canvas.cam_zoom = savestate.cam_zoom;
+            if let SavestateMode::Replayer(time, _selected_vehicle) = savestate.mode {
+                app.time = time;
+                // TODO Also restore selected_vehicle
+                states = vec![crate::replay::Replay::new_state(ctx, &app)];
+            }
+        }
+
         (app, states)
     });
 }
@@ -104,6 +123,8 @@ pub struct App {
     // Avoid syncing when bounds match
     #[allow(unused)]
     mapbox_bounds: Bounds,
+
+    savestate_mode: SavestateMode,
 }
 
 impl SharedAppState for App {
@@ -111,6 +132,16 @@ impl SharedAppState for App {
         if cfg!(not(target_arch = "wasm32")) {
             g.clear(Color::BLACK);
         }
+    }
+
+    fn before_quit(&self, canvas: &Canvas) {
+        let ss = Savestate {
+            cam_x: canvas.cam_x,
+            cam_y: canvas.cam_y,
+            cam_zoom: canvas.cam_zoom,
+            mode: self.savestate_mode.clone(),
+        };
+        abstio::write_json("data/save.json".to_string(), &ss);
     }
 }
 
@@ -131,6 +162,8 @@ impl App {
             time_increment: Duration::minutes(10),
 
             mapbox_bounds: Bounds::new(),
+
+            savestate_mode: SavestateMode::NetworkViewer,
         }
     }
 
@@ -151,4 +184,18 @@ impl App {
             sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Savestate {
+    cam_x: f64,
+    cam_y: f64,
+    cam_zoom: f64,
+    mode: SavestateMode,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub enum SavestateMode {
+    NetworkViewer,
+    Replayer(Time, Option<VehicleID>),
 }

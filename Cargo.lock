@@ -2827,6 +2827,7 @@ dependencies = [
  "log",
  "model",
  "rfd",
+ "serde",
  "structopt",
  "wasm-bindgen",
  "widgetry",
