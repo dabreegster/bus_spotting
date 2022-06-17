@@ -76,6 +76,26 @@ impl State<App> for Replay {
 
         self.world.event(ctx);
 
+        if !self.time_controls.is_paused() {
+            ctx.request_update(UpdateType::Game);
+        }
+
+        match self.panel.event(ctx) {
+            Outcome::Clicked(x) => {
+                if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
+                    return t;
+                } else {
+                    unreachable!()
+                }
+            }
+            Outcome::Changed(_) => {
+                // Trajectory source
+                self.on_time_change(ctx, app);
+                self.hover_path.clear();
+            }
+            _ => {}
+        }
+
         self.hover_path
             .update(self.world.get_hovering(), |obj| match obj {
                 Obj::Bus(id) => {
@@ -97,25 +117,6 @@ impl State<App> for Replay {
                 }
                 Obj::Stop(_) | Obj::Event(_) => Drawable::empty(ctx),
             });
-
-        if !self.time_controls.is_paused() {
-            ctx.request_update(UpdateType::Game);
-        }
-
-        match self.panel.event(ctx) {
-            Outcome::Clicked(x) => {
-                if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
-                    return t;
-                } else {
-                    unreachable!()
-                }
-            }
-            Outcome::Changed(_) => {
-                // Trajectory source
-                self.on_time_change(ctx, app);
-            }
-            _ => {}
-        }
 
         Transition::Keep
     }
