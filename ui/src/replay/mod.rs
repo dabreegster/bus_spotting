@@ -100,19 +100,32 @@ impl State<App> for Replay {
             .update(self.world.get_hovering(), |obj| match obj {
                 Obj::Bus(id) => {
                     let vehicle = &app.model.vehicles[id.0];
-                    let trajectory = if self.panel.is_checked("trajectory source") {
-                        vehicle.alt_trajectory.as_ref().unwrap()
-                    } else {
-                        &vehicle.trajectory
-                    };
+                    let (main_trajectory, alt_trajectory) =
+                        if self.panel.is_checked("trajectory source") {
+                            (
+                                vehicle.alt_trajectory.as_ref().unwrap(),
+                                Some(&vehicle.trajectory),
+                            )
+                        } else {
+                            (&vehicle.trajectory, vehicle.alt_trajectory.as_ref())
+                        };
 
                     let mut batch = GeomBatch::new();
                     batch.push(
                         Color::CYAN,
-                        trajectory
+                        main_trajectory
                             .as_polyline()
                             .make_polygons(Distance::meters(5.0)),
                     );
+
+                    // Show where the vehicle is in the other trajectory right now
+                    if let Some((pos2, _)) = alt_trajectory.and_then(|t| t.interpolate(app.time)) {
+                        let (pos1, _) = main_trajectory.interpolate(app.time).unwrap();
+                        if let Ok(line) = geom::Line::new(pos1, pos2) {
+                            batch.push(Color::PINK, line.make_polygons(Distance::meters(5.0)));
+                        }
+                    }
+
                     ctx.upload(batch)
                 }
                 Obj::Stop(_) | Obj::Event(_) => Drawable::empty(ctx),
