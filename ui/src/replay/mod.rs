@@ -3,7 +3,7 @@ mod events;
 use abstutil::prettyprint_usize;
 use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, UnitFmt};
-use widgetry::mapspace::{ObjectID, World};
+use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State, Text,
     TextExt, Toggle, UpdateType, Widget,
@@ -20,9 +20,12 @@ pub struct Replay {
     panel: Panel,
     time_controls: TimeControls,
     world: World<Obj>,
-    hover_path: Cached<Obj, Drawable>,
     events: Events,
     prev_events: usize,
+
+    selected_vehicle: Option<VehicleID>,
+    show_path: Cached<VehicleID, Drawable>,
+    show_alt_position: Cached<VehicleID, Drawable>,
 }
 
 impl Replay {
@@ -31,9 +34,12 @@ impl Replay {
             panel: crate::components::MainMenu::panel(ctx, crate::components::Mode::Replay),
             time_controls: TimeControls::new(ctx, app),
             world: make_static_world(ctx, app),
-            hover_path: Cached::new(),
             events: Events::ticketing(&app.model),
             prev_events: 0,
+
+            selected_vehicle: None,
+            show_path: Cached::new(),
+            show_alt_position: Cached::new(),
         };
         let controls = Widget::col(vec![
             format!(
@@ -44,6 +50,9 @@ impl Replay {
             .text_widget(ctx),
             // TODO The order of these always feels so backwards...
             Toggle::choice(ctx, "trajectory source", "BIL", "AVL", Key::T, false),
+            format!("No vehicle selected")
+                .text_widget(ctx)
+                .named("current vehicle"),
         ]);
         state.panel.replace(ctx, "contents", controls);
 
@@ -59,8 +68,10 @@ impl Replay {
             &self.events,
             &mut self.prev_events,
             self.panel.is_checked("trajectory source"),
+            self.selected_vehicle,
         );
         self.time_controls.panel.replace(ctx, "stats", stats);
+        self.show_alt_position.clear();
     }
 }
 
@@ -74,7 +85,21 @@ impl State<App> for Replay {
             self.on_time_change(ctx, app);
         }
 
-        self.world.event(ctx);
+        match self.world.event(ctx) {
+            WorldOutcome::ClickedFreeSpace(_) => {
+                self.selected_vehicle = None;
+                let label = format!("No vehicle selected").text_widget(ctx);
+                self.panel.replace(ctx, "current vehicle", label);
+                self.on_time_change(ctx, app);
+            }
+            WorldOutcome::ClickedObject(Obj::Bus(id)) => {
+                self.selected_vehicle = Some(id);
+                let label = format!("Selected {:?}", id).text_widget(ctx);
+                self.panel.replace(ctx, "current vehicle", label);
+                self.on_time_change(ctx, app);
+            }
+            _ => {}
+        }
 
         if !self.time_controls.is_paused() {
             ctx.request_update(UpdateType::Game);
@@ -91,45 +116,56 @@ impl State<App> for Replay {
             Outcome::Changed(_) => {
                 // Trajectory source
                 self.on_time_change(ctx, app);
-                self.hover_path.clear();
+                self.show_path.clear();
+                self.show_alt_position.clear();
             }
             _ => {}
         }
 
-        self.hover_path
-            .update(self.world.get_hovering(), |obj| match obj {
-                Obj::Bus(id) => {
-                    let vehicle = &app.model.vehicles[id.0];
-                    let (main_trajectory, alt_trajectory) =
-                        if self.panel.is_checked("trajectory source") {
-                            (
-                                vehicle.alt_trajectory.as_ref().unwrap(),
-                                Some(&vehicle.trajectory),
-                            )
-                        } else {
-                            (&vehicle.trajectory, vehicle.alt_trajectory.as_ref())
-                        };
-
-                    let mut batch = GeomBatch::new();
-                    batch.push(
-                        Color::CYAN,
-                        main_trajectory
-                            .as_polyline()
-                            .make_polygons(Distance::meters(5.0)),
-                    );
-
-                    // Show where the vehicle is in the other trajectory right now
-                    if let Some((pos2, _)) = alt_trajectory.and_then(|t| t.interpolate(app.time)) {
-                        let (pos1, _) = main_trajectory.interpolate(app.time).unwrap();
-                        if let Ok(line) = geom::Line::new(pos1, pos2) {
-                            batch.push(Color::PINK, line.make_polygons(Distance::meters(5.0)));
-                        }
-                    }
-
-                    ctx.upload(batch)
-                }
-                Obj::Stop(_) | Obj::Event(_) => Drawable::empty(ctx),
+        let focus = self
+            .selected_vehicle
+            .or_else(|| match self.world.get_hovering() {
+                Some(Obj::Bus(id)) => Some(id),
+                _ => None,
             });
+        // Note either trajectory may be unavailable at this time
+        self.show_path.update(focus, |id| {
+            let vehicle = &app.model.vehicles[id.0];
+            let mut batch = GeomBatch::new();
+            if let Some(trajectory) = if self.panel.is_checked("trajectory source") {
+                vehicle.alt_trajectory.as_ref()
+            } else {
+                Some(&vehicle.trajectory)
+            } {
+                batch.push(
+                    Color::CYAN,
+                    trajectory
+                        .as_polyline()
+                        .make_polygons(Distance::meters(5.0)),
+                );
+            }
+
+            ctx.upload(batch)
+        });
+        self.show_alt_position.update(focus, |id| {
+            let vehicle = &app.model.vehicles[id.0];
+            let (main_trajectory, alt_trajectory) = if self.panel.is_checked("trajectory source") {
+                (vehicle.alt_trajectory.as_ref(), Some(&vehicle.trajectory))
+            } else {
+                (Some(&vehicle.trajectory), vehicle.alt_trajectory.as_ref())
+            };
+
+            let mut batch = GeomBatch::new();
+            if let Some((pos2, _)) = alt_trajectory.and_then(|t| t.interpolate(app.time)) {
+                if let Some((pos1, _)) = main_trajectory.and_then(|t| t.interpolate(app.time)) {
+                    if let Ok(line) = geom::Line::new(pos1, pos2) {
+                        batch.push(Color::PINK, line.make_polygons(Distance::meters(5.0)));
+                    }
+                }
+            }
+
+            ctx.upload(batch)
+        });
 
         Transition::Keep
     }
@@ -137,8 +173,11 @@ impl State<App> for Replay {
     fn draw(&self, g: &mut GfxCtx, _: &App) {
         self.panel.draw(g);
         self.time_controls.draw(g);
+        if let Some(draw) = self.show_path.value() {
+            g.redraw(draw);
+        }
         self.world.draw(g);
-        if let Some(draw) = self.hover_path.value() {
+        if let Some(draw) = self.show_alt_position.value() {
             g.redraw(draw);
         }
     }
@@ -189,6 +228,7 @@ fn update_world(
     events: &Events,
     prev_events: &mut usize,
     use_alt_trajectory_source: bool,
+    selected_vehicle: Option<VehicleID>,
 ) -> Widget {
     // Delete all existing vehicles
     for vehicle in &app.model.vehicles {
@@ -233,16 +273,23 @@ fn update_world(
                 moving += 1;
             }
 
+            let color = if Some(vehicle.id) == selected_vehicle {
+                Color::YELLOW
+            } else {
+                Color::RED
+            };
+
             world
                 .add(Obj::Bus(vehicle.id))
                 .hitbox(Circle::new(pos, radius).to_polygon())
-                .draw_color(Color::RED)
+                .draw_color(color)
                 .hover_alpha(0.5)
                 .tooltip(Text::from(format!(
                     "{:?} currently has speed {}",
                     vehicle.original_id,
                     speed.to_string(&metric)
                 )))
+                .clickable()
                 .build(ctx);
         } else {
             away += 1;
