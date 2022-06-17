@@ -2,7 +2,7 @@ mod events;
 
 use abstutil::prettyprint_usize;
 use chrono::Datelike;
-use geom::{Circle, Distance, Duration, Pt2D, Speed, UnitFmt};
+use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State, Text,
@@ -26,7 +26,7 @@ pub struct Replay {
     selected_vehicle: Option<VehicleID>,
     show_path: Cached<VehicleID, Drawable>,
     show_alt_position: Cached<VehicleID, Drawable>,
-    snap_to_trajectory: Cached<Pt2D, (Text, Drawable)>,
+    snap_to_trajectory: Cached<Pt2D, (Text, Drawable, Option<Time>)>,
 }
 
 impl Replay {
@@ -174,34 +174,50 @@ impl State<App> for Replay {
             .update(ctx.canvas.get_cursor_in_map_space(), |pt| {
                 let mut txt = Text::new();
                 let mut batch = GeomBatch::new();
+                let mut time_warp = None;
 
                 if let Some(id) = self.selected_vehicle {
-                    let vehicle = &app.model.vehicles[id.0];
-                    if let Some(trajectory) = if self.panel.is_checked("trajectory source") {
-                        vehicle.alt_trajectory.as_ref()
-                    } else {
-                        Some(&vehicle.trajectory)
-                    } {
-                        let hits = trajectory.times_near_pos(pt, Distance::meters(30.0));
-                        if !hits.is_empty() {
-                            batch.push(
-                                Color::CYAN,
-                                Circle::new(hits[0].1, Distance::meters(30.0)).to_polygon(),
-                            );
-                            let n = hits.len();
-                            for (idx, (time, _)) in hits.into_iter().enumerate() {
-                                txt.add_line(Line(format!("Here at {time}")));
-                                if idx == 4 {
-                                    txt.append(Line(format!(" (and {} more times)", n - 5)));
-                                    break;
+                    if self.world.get_hovering().is_none() {
+                        let vehicle = &app.model.vehicles[id.0];
+                        if let Some(trajectory) = if self.panel.is_checked("trajectory source") {
+                            vehicle.alt_trajectory.as_ref()
+                        } else {
+                            Some(&vehicle.trajectory)
+                        } {
+                            let hits = trajectory.times_near_pos(pt, Distance::meters(30.0));
+                            if !hits.is_empty() {
+                                batch.push(
+                                    Color::CYAN,
+                                    Circle::new(hits[0].1, Distance::meters(30.0)).to_polygon(),
+                                );
+                                let n = hits.len();
+                                for (idx, (time, _)) in hits.into_iter().enumerate() {
+                                    txt.add_line(Line(format!("Here at {time}")));
+                                    if idx == 0 {
+                                        time_warp = Some(time);
+                                    }
+                                    txt.append(Line("  (press W to time-warp)"));
+                                    if idx == 4 {
+                                        txt.append(Line(format!(" (and {} more times)", n - 5)));
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                (txt, ctx.upload(batch))
+                (txt, ctx.upload(batch), time_warp)
             });
+
+        if let Some((_, _, Some(time))) = self.snap_to_trajectory.value() {
+            if ctx.input.pressed(Key::W) {
+                app.time = *time;
+                self.on_time_change(ctx, app);
+                // Immediately update this
+                self.time_controls.event(ctx, app);
+            }
+        }
 
         Transition::Keep
     }
@@ -216,7 +232,7 @@ impl State<App> for Replay {
         if let Some(draw) = self.show_alt_position.value() {
             g.redraw(draw);
         }
-        if let Some((txt, draw)) = self.snap_to_trajectory.value() {
+        if let Some((txt, draw, _)) = self.snap_to_trajectory.value() {
             g.redraw(draw);
             g.draw_mouse_tooltip(txt.clone());
         }

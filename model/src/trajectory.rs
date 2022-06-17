@@ -77,6 +77,7 @@ impl Trajectory {
 
     // Returns all the (times, snapped points) when the trajectory passes within some threshold of
     // the point.
+    // TODO Should dedupe by time
     pub fn times_near_pos(&self, pos: Pt2D, threshold: Distance) -> Vec<(Time, Pt2D)> {
         // TODO Maybe FindClosest
         let mut hits = Vec::new();
