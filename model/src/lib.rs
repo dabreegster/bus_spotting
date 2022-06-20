@@ -3,10 +3,9 @@ extern crate anyhow;
 #[macro_use]
 extern crate log;
 
+mod assemble;
 mod avl;
-mod boarding;
 pub mod gtfs;
-mod segment;
 mod ticketing;
 mod trajectory;
 
@@ -16,7 +15,7 @@ use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
-pub use self::boarding::BoardingEvent;
+pub use self::assemble::BoardingEvent;
 use self::gtfs::{IDMapping, GTFS};
 pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::trajectory::Trajectory;
@@ -119,7 +118,7 @@ impl Model {
             boardings: Vec::new(),
             main_date,
         };
-        boarding::populate(&mut model, timer)?;
+        assemble::populate_boarding(&mut model, timer)?;
 
         Ok(model)
     }

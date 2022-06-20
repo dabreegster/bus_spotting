@@ -35,12 +35,10 @@ pub struct BoardingEvent {
 //     - one line for each vehicle. dot per stop, with color/size/tooltip showing boardings
 
 // This is a placeholder for much more correct matching
-pub fn populate(model: &mut Model, timer: &mut Timer) -> Result<()> {
-    let vehicle_and_variant = model.segment(timer)?;
-
+pub fn populate_boarding(model: &mut Model, _timer: &mut Timer) -> Result<()> {
     // TODO Just make up some data for the moment, to start the UIs
-    for (vehicle_id, variant_id) in vehicle_and_variant {
-        let variant = model.gtfs.variant(variant_id);
+    for (vehicle_id, mut variants) in model.vehicle_to_possible_routes()? {
+        let variant = model.gtfs.variant(variants.pop().unwrap());
         println!(
             "We've decided {:?} serves {}",
             vehicle_id,
@@ -50,7 +48,7 @@ pub fn populate(model: &mut Model, timer: &mut Timer) -> Result<()> {
             for stop_time in &trip.stop_times {
                 model.boardings.push(BoardingEvent {
                     vehicle: vehicle_id,
-                    variant: variant_id,
+                    variant: variant.variant_id,
                     trip: trip.id,
                     stop: stop_time.stop_id,
                     arrival_time: stop_time.arrival_time + Duration::seconds(15.0),
