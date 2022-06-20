@@ -18,7 +18,8 @@ pub struct BoardingEvent {
     pub stop: StopID,
     pub arrival_time: Time,
     pub departure_time: Time,
-    pub journeys: Vec<JourneyID>,
+    pub new_riders: Vec<JourneyID>,
+    pub transfers: Vec<JourneyID>,
 }
 
 // Assuming we can produce this, start some UIs:
@@ -54,7 +55,8 @@ pub fn populate(model: &mut Model, timer: &mut Timer) -> Result<()> {
                     stop: stop_time.stop_id,
                     arrival_time: stop_time.arrival_time + Duration::seconds(15.0),
                     departure_time: stop_time.departure_time + Duration::seconds(25.0),
-                    journeys: vec![JourneyID(0), JourneyID(1)],
+                    new_riders: vec![JourneyID(0), JourneyID(1)],
+                    transfers: vec![JourneyID(2)],
                 });
             }
         }

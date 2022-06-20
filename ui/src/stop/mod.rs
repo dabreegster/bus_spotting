@@ -96,12 +96,13 @@ fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) 
     for trip in &variant.trips {
         let scheduled = trip.arrival_at(stop.id);
         if let Some(actual) = app.model.find_event(trip.id, stop.id) {
-            let actual = actual.arrival_time;
             txt.add_line(Line(format!(
-                "{} (actually {} -- {})",
+                "{} (actually {} -- {}) -- {} new riders, {} transfers",
                 scheduled,
-                actual,
-                compare_time(scheduled, actual)
+                actual.arrival_time,
+                compare_time(scheduled, actual.arrival_time),
+                actual.new_riders.len(),
+                actual.transfers.len(),
             )));
         } else {
             txt.add_line(Line(format!("{} (no real data)", scheduled)));
