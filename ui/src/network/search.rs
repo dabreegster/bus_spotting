@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use widgetry::{Autocomplete, EventCtx, GfxCtx, Line, Outcome, Panel, State, Widget};
 
-use model::gtfs::{DateFilter, RouteVariantID};
+use model::gtfs::{DateFilter, RouteVariantID, VariantFilter};
 
 use super::filters::Filters;
 use super::Viewer;
@@ -59,7 +59,10 @@ impl State<App> for SearchForRouteVariant {
                 Transition::Pop,
                 Transition::ModifyState(Box::new(move |state, ctx, app| {
                     app.filters = Filters {
-                        date_filter: DateFilter::None,
+                        filter: VariantFilter {
+                            date_filter: DateFilter::None,
+                            minimum_trips_per_day: 0,
+                        },
                         variant: Some(variant),
                     };
 

@@ -28,22 +28,11 @@ impl Viewer {
         Box::new(state)
     }
 
-    // TODO Could move to App
-    fn selected_variants(&self, app: &App) -> BTreeSet<RouteVariantID> {
-        if let Some(v) = app.filters.variant {
-            vec![v].into_iter().collect()
-        } else {
-            app.model
-                .gtfs
-                .variants_matching_dates(&app.filters.date_filter)
-        }
-    }
-
     fn on_filter_change(&mut self, ctx: &mut EventCtx, app: &App) {
         let controls = app.filters.to_controls(ctx, app);
         self.panel.replace(ctx, "contents", controls);
 
-        let world = make_world(ctx, app, self.selected_variants(app));
+        let world = make_world(ctx, app);
         self.world = world;
     }
 
@@ -52,7 +41,7 @@ impl Viewer {
 
         let variants = stop
             .route_variants
-            .intersection(&self.selected_variants(app))
+            .intersection(&app.filters.selected_variants(app))
             .cloned()
             .collect::<Vec<RouteVariantID>>();
 
@@ -82,9 +71,7 @@ impl State<App> for Viewer {
                             return Transition::Push(search::SearchForRouteVariant::new_state(
                                 ctx,
                                 app,
-                                app.model
-                                    .gtfs
-                                    .variants_matching_dates(&app.filters.date_filter),
+                                app.model.gtfs.variants_matching_filter(&app.filters.filter),
                             ));
                         }
                         _ => unreachable!(),
@@ -122,11 +109,8 @@ enum Obj {
 }
 impl ObjectID for Obj {}
 
-fn make_world(
-    ctx: &mut EventCtx,
-    app: &App,
-    selected_variants: BTreeSet<RouteVariantID>,
-) -> World<Obj> {
+fn make_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
+    let selected_variants = app.filters.selected_variants(app);
     let mut world = World::bounded(&app.model.bounds);
 
     // Draw every route variant. Track what stops we visit

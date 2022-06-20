@@ -105,12 +105,15 @@ impl GTFS {
         }
     }
 
-    pub fn variants_matching_dates(&self, filter: &DateFilter) -> BTreeSet<RouteVariantID> {
-        let services = self.calendar.services_matching_dates(filter);
+    pub fn variants_matching_filter(&self, filter: &VariantFilter) -> BTreeSet<RouteVariantID> {
+        let services = self.calendar.services_matching_dates(&filter.date_filter);
         let mut variants = BTreeSet::new();
         for route in self.routes.values() {
             for variant in &route.variants {
-                if services.contains(&variant.service_id) {
+                // TODO I think this is correct, but make sure trips per variant is daily
+                if services.contains(&variant.service_id)
+                    && variant.trips.len() >= filter.minimum_trips_per_day
+                {
                     variants.insert(variant.variant_id);
                 }
             }
@@ -167,4 +170,10 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
         });
         *id_counter += 1;
     }
+}
+
+/// Filter for route variants
+pub struct VariantFilter {
+    pub date_filter: DateFilter,
+    pub minimum_trips_per_day: usize,
 }
