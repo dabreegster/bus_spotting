@@ -58,6 +58,7 @@ impl State<App> for Viewer {
         app.sync_mapbox(ctx);
 
         if let WorldOutcome::ClickedObject(Obj::Stop(id)) = self.world.event(ctx) {
+            self.world.hack_unset_hovering();
             return self.on_click_stop(ctx, app, id);
         }
 

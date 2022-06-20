@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#34487a3322b2b0e961ffb2352622b852b5278f54"
+source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -38,7 +38,7 @@ dependencies = [
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#34487a3322b2b0e961ffb2352622b852b5278f54"
+source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
 dependencies = [
  "anyhow",
  "bincode",
@@ -970,7 +970,7 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#34487a3322b2b0e961ffb2352622b852b5278f54"
+source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
 dependencies = [
  "aabb-quadtree",
  "abstutil",
@@ -3212,7 +3212,7 @@ checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#34487a3322b2b0e961ffb2352622b852b5278f54"
+source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
 dependencies = [
  "aabb-quadtree",
  "abstio",

@@ -84,7 +84,6 @@ impl State<App> for StopInfo {
     }
 
     fn draw_baselayer(&self) -> DrawBaselayer {
-        // TODO The tooltip sticks around, and also, this isn't what we want to show
         // Probably show all routes connected to this stop?
         DrawBaselayer::PreviousState
     }
