@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
 pub use calendar::{Calendar, DateFilter, DaysOfWeek, Service, ServiceID};
-pub use ids::{orig, IDMapping, StopID};
+pub use ids::{orig, CheapID, IDMapping, StopID};
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;

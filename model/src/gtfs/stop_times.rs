@@ -15,7 +15,7 @@ pub struct StopTime {
 
 pub fn load<R: std::io::Read>(
     reader: R,
-    stop_ids: &IDMapping,
+    stop_ids: &IDMapping<orig::StopID, StopID>,
 ) -> Result<BTreeMap<TripID, Vec<StopTime>>> {
     let mut stop_times = BTreeMap::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {

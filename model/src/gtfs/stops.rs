@@ -20,7 +20,13 @@ pub struct Stop {
     pub route_variants: BTreeSet<RouteVariantID>,
 }
 
-pub fn load<R: std::io::Read>(reader: R) -> Result<(BTreeMap<StopID, Stop>, IDMapping, GPSBounds)> {
+pub fn load<R: std::io::Read>(
+    reader: R,
+) -> Result<(
+    BTreeMap<StopID, Stop>,
+    IDMapping<orig::StopID, StopID>,
+    GPSBounds,
+)> {
     let mut gps_bounds = GPSBounds::new();
     let mut records = Vec::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {

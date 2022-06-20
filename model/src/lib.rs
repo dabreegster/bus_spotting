@@ -17,15 +17,9 @@ use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
 pub use self::boarding::BoardingEvent;
-use self::gtfs::GTFS;
+use self::gtfs::{IDMapping, GTFS};
 pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::trajectory::Trajectory;
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct VehicleName(String);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct VehicleID(pub usize);
 
 #[derive(Serialize, Deserialize)]
 pub struct Model {
@@ -33,6 +27,7 @@ pub struct Model {
     pub gps_bounds: GPSBounds,
     // TODO TiVec
     pub vehicles: Vec<Vehicle>,
+    pub vehicle_ids: IDMapping<VehicleName, VehicleID>,
     pub gtfs: GTFS,
     pub journeys: Vec<Journey>,
 
@@ -53,6 +48,18 @@ pub struct Vehicle {
     pub alt_trajectory: Option<Trajectory>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct VehicleName(String);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct VehicleID(pub usize);
+
+impl gtfs::CheapID for VehicleID {
+    fn new(x: usize) -> Self {
+        Self(x)
+    }
+}
+
 impl Model {
     pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Self> {
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
@@ -65,6 +72,7 @@ impl Model {
 
         // TODO Handle many AVL files. Use an arbitrary one for now.
         let mut vehicles = Vec::new();
+        let mut vehicle_ids = IDMapping::new();
         timer.start("loading AVL");
         // Indirection for the borrow checker
         let maybe_avl_path = archive
@@ -75,8 +83,9 @@ impl Model {
             let (trajectories, avl_date) = avl::load(archive.by_name(&avl_path)?, &gps_bounds)?;
             main_date = avl_date;
             for (original_id, trajectory) in trajectories {
+                let id = vehicle_ids.insert_new(original_id.clone())?;
                 vehicles.push(Vehicle {
-                    id: VehicleID(vehicles.len()),
+                    id,
                     original_id,
                     trajectory,
                     alt_trajectory: None,
@@ -104,6 +113,7 @@ impl Model {
             bounds: gps_bounds.to_bounds(),
             gps_bounds,
             vehicles,
+            vehicle_ids,
             gtfs,
             journeys,
             boardings: Vec::new(),
@@ -120,6 +130,7 @@ impl Model {
             bounds: Bounds::from(&[Pt2D::zero(), Pt2D::new(1.0, 1.0)]),
             gps_bounds: GPSBounds::new(),
             vehicles: Vec::new(),
+            vehicle_ids: IDMapping::new(),
             gtfs: GTFS::empty(),
             journeys: Vec::new(),
             boardings: Vec::new(),
@@ -128,6 +139,7 @@ impl Model {
     }
 
     pub fn lookup_vehicle(&self, name: &VehicleName) -> Option<&Vehicle> {
-        self.vehicles.iter().find(|v| &v.original_id == name)
+        let id = self.vehicle_ids.lookup(name).ok()?;
+        Some(&self.vehicles[id.0])
     }
 }
