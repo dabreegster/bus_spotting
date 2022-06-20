@@ -8,11 +8,23 @@ pub mod orig {
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
     pub struct StopID(String);
+
+    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+    pub struct TripID(String);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct StopID(usize);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct TripID(usize);
+
 impl CheapID for StopID {
+    fn new(x: usize) -> Self {
+        Self(x)
+    }
+}
+impl CheapID for TripID {
     fn new(x: usize) -> Self {
         Self(x)
     }

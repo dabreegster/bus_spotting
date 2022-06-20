@@ -50,7 +50,7 @@ pub fn populate(model: &mut Model, timer: &mut Timer) -> Result<()> {
                 model.boardings.push(BoardingEvent {
                     vehicle: vehicle_id,
                     variant: variant_id,
-                    trip: trip.trip_id.clone(),
+                    trip: trip.id,
                     stop: stop_time.stop_id,
                     arrival_time: stop_time.arrival_time + Duration::seconds(15.0),
                     departure_time: stop_time.departure_time + Duration::seconds(25.0),
@@ -64,9 +64,9 @@ pub fn populate(model: &mut Model, timer: &mut Timer) -> Result<()> {
 }
 
 impl Model {
-    pub fn find_event(&self, trip: &TripID, stop: StopID) -> Option<&BoardingEvent> {
+    pub fn find_event(&self, trip: TripID, stop: StopID) -> Option<&BoardingEvent> {
         self.boardings
             .iter()
-            .find(|ev| &ev.trip == trip && ev.stop == stop)
+            .find(|ev| ev.trip == trip && ev.stop == stop)
     }
 }

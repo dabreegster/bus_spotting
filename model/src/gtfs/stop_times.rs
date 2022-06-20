@@ -16,6 +16,7 @@ pub struct StopTime {
 pub fn load<R: std::io::Read>(
     reader: R,
     stop_ids: &IDMapping<orig::StopID, StopID>,
+    trip_ids: &IDMapping<orig::TripID, TripID>,
 ) -> Result<BTreeMap<TripID, Vec<StopTime>>> {
     let mut stop_times = BTreeMap::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {
@@ -26,7 +27,7 @@ pub fn load<R: std::io::Read>(
             bail!("Arrival time {arrival_time} is > departure time {departure_time}");
         }
         stop_times
-            .entry(rec.trip_id)
+            .entry(trip_ids.lookup(&rec.trip_id)?)
             .or_insert_with(Vec::new)
             .push((
                 rec.stop_sequence,
@@ -52,7 +53,7 @@ pub fn load<R: std::io::Read>(
 
 #[derive(Deserialize)]
 struct Record {
-    trip_id: TripID,
+    trip_id: orig::TripID,
     arrival_time: String,
     departure_time: String,
     stop_id: orig::StopID,

@@ -14,12 +14,12 @@ use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
 pub use calendar::{Calendar, DateFilter, DaysOfWeek, Service, ServiceID};
-pub use ids::{orig, CheapID, IDMapping, StopID};
+pub use ids::{orig, CheapID, IDMapping, StopID, TripID};
 pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
 pub use stops::Stop;
-pub use trips::{Trip, TripID};
+pub use trips::Trip;
 
 #[derive(Serialize, Deserialize)]
 pub struct GTFS {
@@ -41,14 +41,18 @@ impl GTFS {
             gtfs.shapes = shapes::load(file, &gps_bounds)?;
         }
 
-        let trips = trips::load(archive.by_name("gtfs/trips.txt")?)?;
-        let mut stop_times = stop_times::load(archive.by_name("gtfs/stop_times.txt")?, &stop_ids)?;
+        let (trips, trip_ids) = trips::load(archive.by_name("gtfs/trips.txt")?)?;
+        let mut stop_times = stop_times::load(
+            archive.by_name("gtfs/stop_times.txt")?,
+            &stop_ids,
+            &trip_ids,
+        )?;
 
         let mut trips_per_route: BTreeMap<RouteID, Vec<Trip>> = BTreeMap::new();
-        for (trip_id, mut trip) in trips {
-            trip.stop_times = match stop_times.remove(&trip_id) {
+        for mut trip in trips {
+            trip.stop_times = match stop_times.remove(&trip.id) {
                 Some(list) => list,
-                None => bail!("Trip {trip_id:?} has no stop times"),
+                None => bail!("Trip {:?} has no stop times", trip.orig_id),
             };
             trips_per_route
                 .entry(trip.route_id.clone())

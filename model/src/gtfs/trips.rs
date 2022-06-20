@@ -1,17 +1,13 @@
-use std::collections::BTreeMap;
-
 use anyhow::Result;
 use geom::Time;
 use serde::{Deserialize, Serialize};
 
-use super::{RouteID, ServiceID, ShapeID, StopID, StopTime};
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct TripID(String);
+use super::{orig, IDMapping, RouteID, ServiceID, ShapeID, StopID, StopTime, TripID};
 
 #[derive(Serialize, Deserialize)]
 pub struct Trip {
-    pub trip_id: TripID,
+    pub id: TripID,
+    pub orig_id: orig::TripID,
     pub route_id: RouteID,
     pub shape_id: ShapeID,
     pub service_id: ServiceID,
@@ -31,41 +27,38 @@ impl Trip {
                 return st.arrival_time;
             }
         }
-        panic!("{:?} doesn't visit {:?}", self.trip_id, stop_id);
+        panic!("{:?} doesn't visit {:?}", self.orig_id, stop_id);
     }
 }
 
-pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<TripID, Trip>> {
-    let mut trips = BTreeMap::new();
+pub fn load<R: std::io::Read>(reader: R) -> Result<(Vec<Trip>, IDMapping<orig::TripID, TripID>)> {
+    let mut trips = Vec::new();
+    let mut ids = IDMapping::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
-        if trips.contains_key(&rec.trip_id) {
-            bail!("Duplicate {:?}", rec.trip_id);
-        }
-        trips.insert(
-            rec.trip_id.clone(),
-            Trip {
-                trip_id: rec.trip_id,
-                route_id: rec.route_id,
-                shape_id: rec.shape_id,
-                service_id: rec.service_id,
-                headsign: rec.trip_headsign,
-                outbound_direction: match rec.direction_id {
-                    0 => true,
-                    1 => false,
-                    x => bail!("Unknown direction_id {x}"),
-                },
-
-                stop_times: Vec::new(),
+        let id = ids.insert_new(rec.trip_id.clone())?;
+        trips.push(Trip {
+            id,
+            orig_id: rec.trip_id,
+            route_id: rec.route_id,
+            shape_id: rec.shape_id,
+            service_id: rec.service_id,
+            headsign: rec.trip_headsign,
+            outbound_direction: match rec.direction_id {
+                0 => true,
+                1 => false,
+                x => bail!("Unknown direction_id {x}"),
             },
-        );
+
+            stop_times: Vec::new(),
+        });
     }
-    Ok(trips)
+    Ok((trips, ids))
 }
 
 #[derive(Deserialize)]
 struct Record {
-    trip_id: TripID,
+    trip_id: orig::TripID,
     route_id: RouteID,
     trip_headsign: Option<String>,
     direction_id: usize,
