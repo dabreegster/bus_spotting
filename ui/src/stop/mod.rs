@@ -1,3 +1,4 @@
+use geom::Time;
 use widgetry::{
     Choice, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
@@ -45,7 +46,7 @@ impl StopInfo {
                             .collect(),
                     ),
                 ]),
-                schedule(ctx, stop, app.model.gtfs.variant(variant)),
+                schedule(ctx, app, stop, app.model.gtfs.variant(variant)),
             ]))
             .build(ctx),
             variants,
@@ -89,12 +90,33 @@ impl State<App> for StopInfo {
     }
 }
 
-fn schedule(ctx: &mut EventCtx, stop: &Stop, variant: &RouteVariant) -> Widget {
+fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) -> Widget {
     let mut txt = Text::new();
     txt.add_line(Line("Schedule").small_heading());
     txt.add_line(Line(""));
     for trip in &variant.trips {
-        txt.add_line(Line(trip.arrival_at(stop.id).to_string()));
+        let scheduled = trip.arrival_at(stop.id);
+        if let Some(actual) = app.model.find_event(&trip.trip_id, stop.id) {
+            let actual = actual.arrival_time;
+            txt.add_line(Line(format!(
+                "{} (actually {} -- {})",
+                scheduled,
+                actual,
+                compare_time(scheduled, actual)
+            )));
+        } else {
+            txt.add_line(Line(format!("{} (no real data)", scheduled)));
+        }
     }
     txt.into_widget(ctx)
+}
+
+fn compare_time(scheduled: Time, actual: Time) -> String {
+    if scheduled == actual {
+        return "on time".to_string();
+    }
+    if scheduled < actual {
+        return format!("{} late", actual - scheduled);
+    }
+    format!("{} early", scheduled - actual)
 }

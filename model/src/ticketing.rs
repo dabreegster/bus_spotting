@@ -10,6 +10,10 @@ use crate::VehicleName;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CardID(String);
 
+// Just an index into journeys for now
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct JourneyID(pub(crate) usize);
+
 #[derive(Serialize, Deserialize)]
 pub struct Journey {
     pub card_id: CardID,

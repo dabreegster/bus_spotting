@@ -4,6 +4,7 @@ extern crate anyhow;
 extern crate log;
 
 mod avl;
+mod boarding;
 pub mod gtfs;
 mod segment;
 mod ticketing;
@@ -15,8 +16,9 @@ use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
+pub use self::boarding::BoardingEvent;
 use self::gtfs::GTFS;
-pub use self::ticketing::{CardID, Journey, JourneyLeg};
+pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::trajectory::Trajectory;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -33,6 +35,9 @@ pub struct Model {
     pub vehicles: Vec<Vehicle>,
     pub gtfs: GTFS,
     pub journeys: Vec<Journey>,
+
+    // TODO This is derived from other things, and may outright replace it at some point
+    pub boardings: Vec<BoardingEvent>,
 
     // If we've loaded journey and vehicle data, this is the one day covered. If not, it's an
     // arbitrary date covered by some GTFS service.
@@ -95,14 +100,18 @@ impl Model {
         }
         timer.stop("loading BIL");
 
-        Ok(Self {
+        let mut model = Self {
             bounds: gps_bounds.to_bounds(),
             gps_bounds,
             vehicles,
             gtfs,
             journeys,
+            boardings: Vec::new(),
             main_date,
-        })
+        };
+        boarding::populate(&mut model, timer)?;
+
+        Ok(model)
     }
 
     pub fn empty() -> Self {
@@ -113,6 +122,7 @@ impl Model {
             vehicles: Vec::new(),
             gtfs: GTFS::empty(),
             journeys: Vec::new(),
+            boardings: Vec::new(),
             main_date: NaiveDate::from_ymd(2020, 1, 1),
         }
     }

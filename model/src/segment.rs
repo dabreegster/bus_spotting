@@ -5,11 +5,11 @@ use anyhow::Result;
 use geom::{Distance, Pt2D, Time};
 
 use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID};
-use crate::{Model, Trajectory, VehicleName};
+use crate::{Model, Trajectory, VehicleID, VehicleName};
 
 impl Model {
-    // TODO Not sure what this should fill out yet.
-    pub fn segment(&self, timer: &mut Timer) -> Result<()> {
+    // This just assigns vehicles to a single variant for the entire day, for now
+    pub fn segment(&self, timer: &mut Timer) -> Result<Vec<(VehicleID, RouteVariantID)>> {
         // We're assuming the model only represents one day right now
 
         timer.start("match vehicles to route_short_name");
@@ -79,6 +79,8 @@ impl Model {
 
         timer.stop("match vehicles to route_short_name");
 
+        let mut final_assignments = Vec::new();
+
         timer.start_iter("match vehicles to route variants", vehicles.len());
         let services = self
             .gtfs
@@ -86,11 +88,6 @@ impl Model {
             .services_matching_dates(&DateFilter::SingleDay(self.main_date));
         for (vehicle, assignment) in &vehicles {
             timer.next();
-
-            // TODO Disable this analysis, it's slow and wrong
-            if true {
-                continue;
-            }
 
             // Start simple
             if assignment.segments.len() != 1 {
@@ -107,6 +104,17 @@ impl Model {
                         variants.push(variant);
                     }
                 }
+            }
+
+            if let Some(x) = variants.pop() {
+                if let Some(vehicle) = self.lookup_vehicle(&vehicle) {
+                    final_assignments.push((vehicle.id, x.variant_id));
+                }
+            }
+
+            // TODO Disable the rest of this analysis, it's slow and wrong
+            if true {
+                continue;
             }
 
             println!("{:?} has {} possible variants", vehicle, variants.len());
@@ -133,7 +141,7 @@ impl Model {
             }
         }
 
-        Ok(())
+        Ok(final_assignments)
     }
 
     pub fn set_alt_trajectories_from_ticketing(&mut self) {

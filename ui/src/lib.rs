@@ -60,7 +60,7 @@ fn run(settings: Settings) {
         let model = ctx.loading_screen("initialize model", |_, timer| {
             let mut model = args.load(timer).unwrap();
             // TODO tmp
-            model.segment(timer).unwrap();
+            //model.segment(timer).unwrap();
             model.set_alt_trajectories_from_ticketing();
             model
         });
