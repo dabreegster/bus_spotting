@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use geom::Time;
+use geom::{Distance, Pt2D, Time};
 
-use crate::gtfs::{DateFilter, RouteVariantID};
+use crate::gtfs::{DateFilter, RouteVariantID, TripID};
 use crate::{Model, Trajectory, VehicleID, VehicleName};
 
 impl Model {
@@ -64,33 +64,35 @@ impl Model {
         }
 
         // Just print some stats
-        let mut one_route = 0;
-        let mut multiple_routes_normal = 0;
-        let mut multiple_routes_overlapping = 0;
-        for (vehicle, assignment) in &vehicles {
-            // Most serve 1 route; that's the simple case for matching
-            if assignment.segments.len() == 1 {
-                one_route += 1;
-                continue;
+        if false {
+            let mut one_route = 0;
+            let mut multiple_routes_normal = 0;
+            let mut multiple_routes_overlapping = 0;
+            for (vehicle, assignment) in &vehicles {
+                // Most serve 1 route; that's the simple case for matching
+                if assignment.segments.len() == 1 {
+                    one_route += 1;
+                    continue;
+                }
+
+                if !assignment.has_overlaps() {
+                    multiple_routes_normal += 1;
+                    continue;
+                }
+
+                multiple_routes_overlapping += 1;
+                println!(
+                    "{:?} serves {} routes, partly overlapping",
+                    vehicle,
+                    assignment.segments.len()
+                );
+                for (t1, t2, route) in &assignment.segments {
+                    println!("  - from {t1} to {t2}: {route}");
+                }
             }
 
-            if !assignment.has_overlaps() {
-                multiple_routes_normal += 1;
-                continue;
-            }
-
-            multiple_routes_overlapping += 1;
-            println!(
-                "{:?} serves {} routes, partly overlapping",
-                vehicle,
-                assignment.segments.len()
-            );
-            for (t1, t2, route) in &assignment.segments {
-                println!("  - from {t1} to {t2}: {route}");
-            }
+            println!("{one_route} vehicles serve 1 route, {multiple_routes_normal} serve multiple normally, {multiple_routes_overlapping} have weird overlaps");
         }
-
-        println!("{one_route} vehicles serve 1 route, {multiple_routes_normal} serve multiple normally, {multiple_routes_overlapping} have weird overlaps");
 
         // Manually debug vehicles assigned to multiple routes with apparent overlap
         // To understand best, then do `sort -n vehicle_assignment.csv`
@@ -180,4 +182,65 @@ impl Model {
         }
         Ok(result)
     }
+
+    pub fn look_for_explainable_vehicle(&self) {
+        let mut best = Vec::new();
+        for vehicle in &self.vehicles {
+            let mut scores = self.score_vehicle_similarity_to_trips(vehicle.id);
+            if !scores.is_empty() {
+                let (trip, score) = scores.remove(0);
+                best.push((vehicle.id, trip, score));
+            }
+        }
+        best.sort_by_key(|pair| pair.2);
+        println!("Any good matches?");
+        for (vehicle, trip, score) in best {
+            println!("- {:?} matches to {:?} with score {}", vehicle, trip, score);
+        }
+    }
+
+    pub fn score_vehicle_similarity_to_trips(&self, id: VehicleID) -> Vec<(TripID, Distance)> {
+        let vehicle_trajectory = &self.vehicles[id.0].trajectory;
+        let mut scores = Vec::new();
+        if let Some(variants) = self
+            .vehicle_to_possible_routes()
+            .ok()
+            .and_then(|mut mapping| mapping.remove(&id))
+        {
+            for variant in variants {
+                for trip in &self.gtfs.variant(variant).trips {
+                    // Just see how closely the AVL matches stop position according to the
+                    // timetable. This'll not be a good match when there are delays.
+                    let mut expected = Vec::new();
+                    for stop_time in &trip.stop_times {
+                        expected.push((
+                            stop_time.arrival_time,
+                            self.gtfs.stops[&stop_time.stop_id].pos,
+                        ));
+                    }
+                    if let Some(score) = score_trajectory_at_points(vehicle_trajectory, expected) {
+                        scores.push((trip.id, score));
+                    }
+                }
+            }
+        }
+        scores.sort_by_key(|pair| pair.1);
+        scores
+    }
+}
+
+fn score_trajectory_at_points(
+    trajectory: &Trajectory,
+    expected: Vec<(Time, Pt2D)>,
+) -> Option<Distance> {
+    let mut sum = Distance::ZERO;
+    for (t, pt1) in expected {
+        if let Some((pt2, _)) = trajectory.interpolate(t) {
+            sum += pt1.dist_to(pt2);
+        } else {
+            // If the vehicle wasn't even around at this time, probably not a match
+            return None;
+        }
+    }
+    Some(sum)
 }

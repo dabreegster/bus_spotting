@@ -112,6 +112,17 @@ impl State<App> for Replay {
                 }
                 return Transition::Push(crate::trajectories::Compare::new_state(ctx, list));
             }
+            WorldOutcome::Keypress("score against trips", Obj::Bus(id)) => {
+                println!("Matching {:?} to possible trips", id);
+                for (trip, score) in app
+                    .model
+                    .score_vehicle_similarity_to_trips(id)
+                    .into_iter()
+                    .take(5)
+                {
+                    println!("- {:?} has score of {}", trip, score);
+                }
+            }
             _ => {}
         }
 
@@ -356,6 +367,7 @@ fn update_world(
                     speed.to_string(&metric)
                 )))
                 .hotkey(Key::C, "compare trajectories")
+                .hotkey(Key::S, "score against trips")
                 .clickable()
                 .build(ctx);
         } else {

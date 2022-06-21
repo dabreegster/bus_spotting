@@ -62,6 +62,7 @@ fn run(settings: Settings) {
             let mut model = args.load(timer).unwrap();
             // TODO tmp
             //model.segment(timer).unwrap();
+            //model.look_for_explainable_vehicle();
             model.set_alt_trajectories_from_ticketing();
             model
         });
