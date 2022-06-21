@@ -5,6 +5,9 @@ use geom::{Distance, Time};
 use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID};
 use crate::{Model, VehicleID};
 
+// TODO This approach seems too brittle. Snapping to the trajectory is messy, so trying to do it
+// for boarding events is unnecessary trouble.
+
 impl Model {
     pub fn segment(&self, timer: &mut Timer) -> Result<()> {
         // We're assuming the model only represents one day right now

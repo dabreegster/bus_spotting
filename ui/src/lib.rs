@@ -7,6 +7,7 @@ mod components;
 mod network;
 mod replay;
 mod stop;
+mod trajectories;
 
 use abstutil::Timer;
 use anyhow::Result;

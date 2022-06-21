@@ -2,7 +2,7 @@ use anyhow::Result;
 use geom::{Distance, Line, PolyLine, Pt2D, Speed, Time};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Trajectory {
     // TODO Figure out how to represent/compress staying in the same position for a long time
     inner: Vec<(Pt2D, Time)>,

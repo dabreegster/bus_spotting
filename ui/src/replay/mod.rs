@@ -101,6 +101,14 @@ impl State<App> for Replay {
                 self.panel.replace(ctx, "current vehicle", label);
                 self.on_time_change(ctx, app);
             }
+            WorldOutcome::Keypress("compare trajectories", Obj::Bus(id)) => {
+                let vehicle = &app.model.vehicles[id.0];
+                let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
+                if let Some(ref t) = vehicle.alt_trajectory {
+                    list.push(("BIL".to_string(), t.clone()));
+                }
+                return Transition::Push(crate::trajectories::Compare::new_state(ctx, list));
+            }
             _ => {}
         }
 
@@ -344,6 +352,7 @@ fn update_world(
                     vehicle.original_id,
                     speed.to_string(&metric)
                 )))
+                .hotkey(Key::C, "compare trajectories")
                 .clickable()
                 .build(ctx);
         } else {
