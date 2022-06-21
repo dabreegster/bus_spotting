@@ -1,5 +1,5 @@
 use anyhow::Result;
-use geom::{Distance, Line, PolyLine, Pt2D, Speed, Time};
+use geom::{Distance, Duration, Line, PolyLine, Pt2D, Speed, Time};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -95,5 +95,16 @@ impl Trajectory {
             }
         }
         hits
+    }
+
+    /// Makes up nonsense times per point
+    pub fn from_polyline(pl: &PolyLine) -> Self {
+        let mut time = Time::START_OF_DAY;
+        let mut inner = Vec::new();
+        for pt in pl.points() {
+            inner.push((*pt, time));
+            time += Duration::minutes(1);
+        }
+        Self { inner }
     }
 }

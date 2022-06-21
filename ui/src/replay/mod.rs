@@ -107,6 +107,9 @@ impl State<App> for Replay {
                 if let Some(ref t) = vehicle.alt_trajectory {
                     list.push(("BIL".to_string(), t.clone()));
                 }
+                if let Ok(more) = app.model.possible_trajectories_for_vehicle(id) {
+                    list.extend(more);
+                }
                 return Transition::Push(crate::trajectories::Compare::new_state(ctx, list));
             }
             _ => {}

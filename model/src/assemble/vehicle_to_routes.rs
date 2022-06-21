@@ -4,7 +4,7 @@ use anyhow::Result;
 use geom::Time;
 
 use crate::gtfs::{DateFilter, RouteVariantID};
-use crate::{Model, VehicleID, VehicleName};
+use crate::{Model, Trajectory, VehicleID, VehicleName};
 
 impl Model {
     pub(crate) fn vehicle_to_possible_routes(
@@ -158,5 +158,26 @@ impl Assignment {
             }
         }
         false
+    }
+}
+
+impl Model {
+    pub fn possible_trajectories_for_vehicle(
+        &self,
+        id: VehicleID,
+    ) -> Result<Vec<(String, Trajectory)>> {
+        let mut variants = Vec::new();
+        if let Some(list) = self.vehicle_to_possible_routes()?.remove(&id) {
+            variants.extend(list);
+        }
+
+        // We could group by shape, but the UI actually cares about disambiguating, so don't bother
+        let mut result = Vec::new();
+        for variant in variants {
+            let variant = self.gtfs.variant(variant);
+            let pl = &self.gtfs.shapes[&variant.shape_id];
+            result.push((variant.describe(&self.gtfs), Trajectory::from_polyline(pl)));
+        }
+        Ok(result)
     }
 }
