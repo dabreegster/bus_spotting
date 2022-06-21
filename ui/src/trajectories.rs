@@ -81,6 +81,10 @@ impl Compare {
                 ])
                 .evenly_spaced(),
                 Widget::placeholder(ctx, "info"),
+                ctx.style()
+                    .btn_plain
+                    .text("Chop AVL into non-overlapping pieces")
+                    .build_def(ctx),
             ]))
             .aligned(HorizontalAlignment::Left, VerticalAlignment::Top)
             .build(ctx),
@@ -128,6 +132,18 @@ impl State<App> for Compare {
                         self.idx += 1;
                     }
                     self.update(ctx);
+                }
+                "Chop AVL into non-overlapping pieces" => {
+                    return Transition::Push(Self::new_state(
+                        ctx,
+                        self.items[0]
+                            .trajectory
+                            .split_non_overlapping()
+                            .into_iter()
+                            .enumerate()
+                            .map(|(idx, t)| (format!("AVL piece {}", idx + 1), t))
+                            .collect(),
+                    ));
                 }
                 _ => unreachable!(),
             }

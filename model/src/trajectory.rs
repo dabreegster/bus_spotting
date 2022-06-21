@@ -107,4 +107,43 @@ impl Trajectory {
         }
         Self { inner }
     }
+
+    pub fn split_non_overlapping(&self) -> Vec<Trajectory> {
+        let mut results = Vec::new();
+
+        let mut current_trajectory = Trajectory { inner: Vec::new() };
+        let mut current_pl: Option<PolyLine> = None;
+
+        for (pt, t) in &self.inner {
+            let pt = *pt;
+            let t = *t;
+
+            match current_pl {
+                Some(ref current) => {
+                    // We might be looking at two equal adjacent points. That's not a split.
+                    if let Ok(pl) = PolyLine::new(vec![current.last_pt(), pt]) {
+                        // If adding this point causes the polyline to intersect itself, we've found a split
+                        if current.intersection(&pl).is_some() {
+                            results.push(current_trajectory.clone());
+                            let last = current_trajectory.inner.last().unwrap().clone();
+                            current_trajectory.inner = vec![last, (pt, t)];
+                            current_pl = Some(pl);
+                            continue;
+                        }
+                    }
+                    current_trajectory.inner.push((pt, t));
+                    current_pl = Some(current_pl.take().unwrap().optionally_push(pt));
+                }
+                None => {
+                    // Still at the beginning
+                    if let Some(last) = current_trajectory.inner.last() {
+                        current_pl = PolyLine::new(vec![last.0, pt]).ok();
+                    }
+                    current_trajectory.inner.push((pt, t));
+                }
+            }
+        }
+        results.push(current_trajectory);
+        results
+    }
 }
