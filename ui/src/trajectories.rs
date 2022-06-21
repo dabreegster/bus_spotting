@@ -25,36 +25,41 @@ impl Compare {
         ctx: &mut EventCtx,
         trajectories: Vec<(String, Trajectory)>,
     ) -> Box<dyn State<App>> {
-        let items = trajectories
-            .into_iter()
-            .map(|(name, trajectory)| {
-                let pl = trajectory.as_polyline();
-                let draw = ctx.upload(GeomBatch::from(vec![(
-                    Color::CYAN,
-                    pl.make_polygons(Distance::meters(5.0)),
-                )]));
-                let info = Text::from_multiline(vec![
-                    Line(name),
-                    Line(format!(
-                        "Time range: {} to {}",
-                        trajectory.start_time(),
-                        trajectory.end_time()
-                    )),
-                    Line(format!(
-                        "Length: {}",
-                        pl.length().to_string(&UnitFmt {
-                            round_durations: false,
-                            metric: true,
-                        })
-                    )),
-                ]);
-                Item {
-                    trajectory,
-                    draw,
-                    info,
-                }
-            })
-            .collect();
+        let unit_fmt = UnitFmt {
+            round_durations: false,
+            metric: true,
+        };
+
+        let mut items: Vec<Item> = Vec::new();
+        for (name, trajectory) in trajectories {
+            let pl = trajectory.as_polyline();
+            let draw = ctx.upload(GeomBatch::from(vec![(
+                Color::CYAN,
+                pl.make_polygons(Distance::meters(5.0)),
+            )]));
+            let mut info = Text::from_multiline(vec![
+                Line(name),
+                Line(format!(
+                    "Time range: {} to {}",
+                    trajectory.start_time(),
+                    trajectory.end_time()
+                )),
+                Line(format!("Length: {}", pl.length().to_string(&unit_fmt))),
+            ]);
+            // Compare everything against the 1st trajectory
+            if !items.is_empty() {
+                info.add_line(Line(format!(
+                    "Diff from 1st: {}",
+                    score_diff(&items[0].trajectory, &trajectory).to_string(&unit_fmt)
+                )));
+            }
+
+            items.push(Item {
+                trajectory,
+                draw,
+                info,
+            });
+        }
 
         let mut state = Self {
             panel: Panel::new_builder(Widget::col(vec![
@@ -164,4 +169,22 @@ impl State<App> for Compare {
             g.draw_mouse_tooltip(txt.clone());
         }
     }
+}
+
+// Lower is more similar. Ignore time for now. Take the shorter polyline, and walk along it every
+// few meters. Compare to the equivalent position along the other.
+fn score_diff(t1: &Trajectory, t2: &Trajectory) -> Distance {
+    let step_size = Distance::meters(100.0);
+    let buffer_ends = Distance::ZERO;
+
+    let mut sum = Distance::ZERO;
+    for ((pt1, _), (pt2, _)) in t1
+        .as_polyline()
+        .step_along(step_size, buffer_ends)
+        .into_iter()
+        .zip(t2.as_polyline().step_along(step_size, buffer_ends))
+    {
+        sum += pt1.dist_to(pt2);
+    }
+    sum
 }
