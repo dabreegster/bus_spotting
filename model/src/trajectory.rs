@@ -98,12 +98,42 @@ impl Trajectory {
     }
 
     /// Makes up nonsense times per point
+    // TODO Remove this
     pub fn from_polyline(pl: &PolyLine) -> Self {
         let mut time = Time::START_OF_DAY;
         let mut inner = Vec::new();
         for pt in pl.points() {
             inner.push((*pt, time));
             time += Duration::minutes(1);
+        }
+        Self { inner }
+    }
+
+    pub fn from_pieces_with_times(pieces: &Vec<PolyLine>, times: Vec<Time>) -> Result<Self> {
+        if pieces.len() != times.len() - 1 {
+            bail!("{} PolyLines, but {} times", pieces.len(), times.len());
+        }
+
+        let mut inner = Vec::new();
+        for (pair, pl) in times.windows(2).zip(pieces) {
+            let trajectory = Self::lerp_along_pl(pl, pair[0], pair[1]);
+            inner.extend(trajectory.inner);
+        }
+        Self::new(inner)
+    }
+
+    fn lerp_along_pl(pl: &PolyLine, t1: Time, t2: Time) -> Self {
+        let mut inner = Vec::new();
+        let total_dist = pl.length();
+        let mut dist_so_far = Distance::ZERO;
+        let mut last_pt = pl.first_pt();
+        for pt in pl.points() {
+            let pt = *pt;
+            dist_so_far += last_pt.dist_to(pt);
+            last_pt = pt;
+            let pct = dist_so_far / total_dist;
+            let time = t1 + pct * (t2 - t1);
+            inner.push((pt, time));
         }
         Self { inner }
     }

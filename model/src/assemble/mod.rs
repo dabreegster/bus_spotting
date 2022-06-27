@@ -1,4 +1,5 @@
 mod boarding;
+mod gtfs_trajectories;
 mod segment;
 mod vehicle_to_routes;
 

@@ -30,6 +30,11 @@ impl Compare {
             metric: true,
         };
 
+        info!(
+            "Setting up trajectory comparison for {} things",
+            trajectories.len()
+        );
+
         let mut items: Vec<Item> = Vec::new();
         for (name, trajectory) in trajectories {
             let pl = trajectory.as_polyline();
@@ -200,6 +205,11 @@ impl State<App> for Compare {
 // Lower is more similar. Ignore time for now. Take the shorter polyline, and walk along it every
 // few meters. Compare to the equivalent position along the other.
 fn score_diff(t1: &Trajectory, t2: &Trajectory) -> Distance {
+    // TODO Disable because slow
+    if true {
+        return Distance::ZERO;
+    }
+
     let step_size = Distance::meters(100.0);
     let buffer_ends = Distance::ZERO;
 

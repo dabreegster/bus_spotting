@@ -176,9 +176,15 @@ impl Model {
         // We could group by shape, but the UI actually cares about disambiguating, so don't bother
         let mut result = Vec::new();
         for variant in variants {
-            let variant = self.gtfs.variant(variant);
+            // This doesn't take time into account at all
+            /*let variant = self.gtfs.variant(variant);
             let pl = &self.gtfs.shapes[&variant.shape_id];
-            result.push((variant.describe(&self.gtfs), Trajectory::from_polyline(pl)));
+            result.push((variant.describe(&self.gtfs), Trajectory::from_polyline(pl)));*/
+
+            let variant_description = self.gtfs.variant(variant).describe(&self.gtfs);
+            for (trip, trajectory) in self.trajectories_for_variant(variant)? {
+                result.push((format!("{:?} of {}", trip, variant_description), trajectory));
+            }
         }
         Ok(result)
     }

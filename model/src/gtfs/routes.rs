@@ -76,8 +76,8 @@ impl RouteVariant {
         }
 
         let mut pts = Vec::new();
-        for stop_time in &self.trips[0].stop_times {
-            pts.push(gtfs.stops[&stop_time.stop_id].pos);
+        for stop_id in self.stops() {
+            pts.push(gtfs.stops[&stop_id].pos);
         }
         PolyLine::new(pts)
     }
