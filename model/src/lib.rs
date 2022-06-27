@@ -48,7 +48,7 @@ pub struct Vehicle {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct VehicleName(String);
+pub struct VehicleName(pub(crate) String);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VehicleID(pub usize);

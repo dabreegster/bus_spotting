@@ -1,8 +1,8 @@
 use anyhow::Result;
 use geom::{Distance, PolyLine, Time};
 
-use crate::gtfs::{RouteVariant, RouteVariantID, TripID};
-use crate::{Model, Trajectory};
+use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID, TripID, VariantFilter};
+use crate::{IDMapping, Model, Trajectory, Vehicle, VehicleName};
 
 impl Model {
     pub fn trajectories_for_variant(
@@ -11,12 +11,6 @@ impl Model {
     ) -> Result<Vec<(TripID, Trajectory)>> {
         let variant = self.gtfs.variant(variant);
         let shape_pl = &self.gtfs.shapes[&variant.shape_id];
-
-        info!(
-            "trajectories_for_variant {:?}, there are {} trips",
-            variant.variant_id,
-            variant.trips.len()
-        );
 
         let split_shape = split_shape_by_stops(self, shape_pl, variant)?;
 
@@ -30,6 +24,43 @@ impl Model {
             ));
         }
         Ok(trajectories)
+    }
+
+    pub fn replace_vehicles_with_gtfs(&mut self) {
+        self.vehicles.clear();
+        self.vehicle_ids = IDMapping::new();
+        self.journeys.clear();
+        self.boardings.clear();
+
+        // Only for the main_date
+        let filter = VariantFilter {
+            date_filter: DateFilter::SingleDay(self.main_date),
+            minimum_trips_per_day: 0,
+        };
+
+        let mut all_trajectories = Vec::new();
+        for id in &self.gtfs.variants_matching_filter(&filter) {
+            match self.trajectories_for_variant(*id) {
+                Ok(list) => {
+                    all_trajectories.extend(list);
+                }
+                Err(err) => {
+                    error!("{:?} didn't work: {}", id, err);
+                }
+            }
+        }
+
+        // One vehicle per trip
+        for (trip, trajectory) in all_trajectories {
+            let original_id = VehicleName(format!("{:?}", trip));
+            let id = self.vehicle_ids.insert_new(original_id.clone()).unwrap();
+            self.vehicles.push(Vehicle {
+                id,
+                original_id,
+                trajectory,
+                alt_trajectory: None,
+            });
+        }
     }
 }
 

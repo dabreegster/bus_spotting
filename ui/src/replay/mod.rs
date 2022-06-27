@@ -55,6 +55,10 @@ impl Replay {
             format!("No vehicle selected")
                 .text_widget(ctx)
                 .named("current vehicle"),
+            ctx.style()
+                .btn_plain
+                .text("Replace vehicles with GTFS")
+                .build_def(ctx),
         ]);
         state.panel.replace(ctx, "contents", controls);
 
@@ -132,6 +136,11 @@ impl State<App> for Replay {
 
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => {
+                if x == "Replace vehicles with GTFS" {
+                    app.model.replace_vehicles_with_gtfs();
+                    return Transition::Replace(Self::new_state(ctx, app));
+                }
+
                 if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
                     return t;
                 } else {
