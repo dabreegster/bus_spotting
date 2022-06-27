@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use geom::{Distance, Pt2D, Time};
+use geom::{Distance, Time};
 
 use crate::gtfs::{DateFilter, RouteVariantID, TripID};
 use crate::{Model, Trajectory, VehicleID, VehicleName};
@@ -224,7 +224,7 @@ impl Model {
                             self.gtfs.stops[&stop_time.stop_id].pos,
                         ));
                     }
-                    if let Some(score) = score_trajectory_at_points(vehicle_trajectory, expected) {
+                    if let Some(score) = vehicle_trajectory.score_at_points(expected) {
                         scores.push((trip.id, score));
                     }
                 }
@@ -233,20 +233,4 @@ impl Model {
         scores.sort_by_key(|pair| pair.1);
         scores
     }
-}
-
-fn score_trajectory_at_points(
-    trajectory: &Trajectory,
-    expected: Vec<(Time, Pt2D)>,
-) -> Option<Distance> {
-    let mut sum = Distance::ZERO;
-    for (t, pt1) in expected {
-        if let Some((pt2, _)) = trajectory.interpolate(t) {
-            sum += pt1.dist_to(pt2);
-        } else {
-            // If the vehicle wasn't even around at this time, probably not a match
-            return None;
-        }
-    }
-    Some(sum)
 }

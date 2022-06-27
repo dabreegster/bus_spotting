@@ -53,9 +53,12 @@ impl Compare {
             ]);
             // Compare everything against the 1st trajectory
             if !items.is_empty() {
+                // TODO Slow and poor quality, so disabled
+                //let score = items[0].trajectory.score_by_position(&trajectory);
+                let score = Distance::ZERO;
                 info.add_line(Line(format!(
                     "Diff from 1st: {}",
-                    score_diff(&items[0].trajectory, &trajectory).to_string(&unit_fmt)
+                    score.to_string(&unit_fmt)
                 )));
             }
 
@@ -200,27 +203,4 @@ impl State<App> for Compare {
             g.draw_mouse_tooltip(txt.clone());
         }
     }
-}
-
-// Lower is more similar. Ignore time for now. Take the shorter polyline, and walk along it every
-// few meters. Compare to the equivalent position along the other.
-fn score_diff(t1: &Trajectory, t2: &Trajectory) -> Distance {
-    // TODO Disable because slow
-    if true {
-        return Distance::ZERO;
-    }
-
-    let step_size = Distance::meters(100.0);
-    let buffer_ends = Distance::ZERO;
-
-    let mut sum = Distance::ZERO;
-    for ((pt1, _), (pt2, _)) in t1
-        .as_polyline()
-        .step_along(step_size, buffer_ends)
-        .into_iter()
-        .zip(t2.as_polyline().step_along(step_size, buffer_ends))
-    {
-        sum += pt1.dist_to(pt2);
-    }
-    sum
 }
