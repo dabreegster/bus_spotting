@@ -163,11 +163,21 @@ impl State<App> for Compare {
                         Circle::new(hits[0].1, Distance::meters(30.0)).to_polygon(),
                     );
                     let n = hits.len();
+                    let first_time = hits[0].0;
                     for (idx, (time, _)) in hits.into_iter().enumerate() {
                         txt.add_line(Line(format!("Here at {time}")));
                         if idx == 4 {
                             txt.append(Line(format!(" (and {} more times)", n - 5)));
                             break;
+                        }
+                    }
+
+                    // Compare to the AVL
+                    if self.idx != 0 {
+                        if let Some((pos, _)) = self.items[0].trajectory.interpolate(first_time) {
+                            if let Ok(line) = geom::Line::new(pt, pos) {
+                                batch.push(Color::PINK, line.make_polygons(Distance::meters(5.0)));
+                            }
                         }
                     }
                 }
