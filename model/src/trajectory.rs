@@ -69,6 +69,8 @@ impl Trajectory {
         Self { inner }
     }
 
+    /// Split a trajectory into pieces every time it crosses itself. This will split when a vehicle
+    /// drives on a bridge over a previous part of its path.
     pub fn split_non_overlapping(&self) -> Vec<Trajectory> {
         let mut results = Vec::new();
 
@@ -83,8 +85,19 @@ impl Trajectory {
                 Some(ref current) => {
                     // We might be looking at two equal adjacent points. That's not a split.
                     if let Ok(pl) = PolyLine::new(vec![current.last_pt(), pt]) {
+                        let has_intersection = if current.points().len() == 2 {
+                            false
+                        } else {
+                            // Either there's noise in the trajectory data or the intersection
+                            // check is too sensitive. Ignore the last point.
+                            let mut pts = current.clone().into_points();
+                            pts.pop().unwrap();
+                            let compare = PolyLine::must_new(pts);
+                            compare.intersection(&pl).is_some()
+                        };
+
                         // If adding this point causes the polyline to intersect itself, we've found a split
-                        if current.intersection(&pl).is_some() {
+                        if has_intersection {
                             results.push(current_trajectory.clone());
                             let last = current_trajectory.inner.last().unwrap().clone();
                             current_trajectory.inner = vec![last, (pt, t)];
