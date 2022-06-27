@@ -25,11 +25,6 @@ impl Compare {
         ctx: &mut EventCtx,
         trajectories: Vec<(String, Trajectory)>,
     ) -> Box<dyn State<App>> {
-        let unit_fmt = UnitFmt {
-            round_durations: false,
-            metric: true,
-        };
-
         info!(
             "Setting up trajectory comparison for {} things",
             trajectories.len()
@@ -49,7 +44,10 @@ impl Compare {
                     trajectory.start_time(),
                     trajectory.end_time()
                 )),
-                Line(format!("Length: {}", pl.length().to_string(&unit_fmt))),
+                Line(format!(
+                    "Length: {}",
+                    pl.length().to_string(&UnitFmt::metric())
+                )),
             ]);
             // Compare everything against the 1st trajectory
             if !items.is_empty() {
@@ -58,7 +56,7 @@ impl Compare {
                 let score = Distance::ZERO;
                 info.add_line(Line(format!(
                     "Diff from 1st: {}",
-                    score.to_string(&unit_fmt)
+                    score.to_string(&UnitFmt::metric())
                 )));
             }
 

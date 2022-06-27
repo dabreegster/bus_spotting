@@ -328,11 +328,6 @@ fn update_world(
     }
     *prev_events = 0;
 
-    // TODO UnitFmt::metric()?
-    let metric = UnitFmt {
-        round_durations: false,
-        metric: true,
-    };
     let radius = Distance::meters(50.0);
 
     let mut away = 0;
@@ -373,7 +368,7 @@ fn update_world(
                 .tooltip(Text::from(format!(
                     "{:?} currently has speed {}",
                     vehicle.original_id,
-                    speed.to_string(&metric)
+                    speed.to_string(&UnitFmt::metric())
                 )))
                 .hotkey(Key::C, "compare trajectories")
                 .hotkey(Key::S, "score against trips")

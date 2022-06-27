@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
+source = "git+https://github.com/dabreegster/abstreet#48398612de71c9dc102cefb3387bdcc12ae4c7c3"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -38,7 +38,7 @@ dependencies = [
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
+source = "git+https://github.com/dabreegster/abstreet#48398612de71c9dc102cefb3387bdcc12ae4c7c3"
 dependencies = [
  "anyhow",
  "bincode",
@@ -920,9 +920,9 @@ dependencies = [
 
 [[package]]
 name = "geo"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20f1cd8cc66ae5c52a2b9328e3562adde921b203a10d6ea0ac24c349de4c42c4"
+checksum = "6f9a9248b7d4f0168bbf24d66d1cf6f11f49949abe44f8b8c15657dafd067cd0"
 dependencies = [
  "float_next_after",
  "geo-types",
@@ -935,9 +935,9 @@ dependencies = [
 
 [[package]]
 name = "geo-types"
-version = "0.7.5"
+version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5696e8138fbc44f64edc88b423afbe5a8f635df003376b3a57087e61a8ae7b66"
+checksum = "d9805fbfcea97de816e6408e938603241879cc41eea3fba3f84f122f4f6f9c54"
 dependencies = [
  "approx",
  "num-traits",
@@ -970,14 +970,14 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
+source = "git+https://github.com/dabreegster/abstreet#48398612de71c9dc102cefb3387bdcc12ae4c7c3"
 dependencies = [
  "aabb-quadtree",
  "abstutil",
  "anyhow",
  "earcutr",
  "fs-err",
- "geo 0.21.0",
+ "geo 0.22.0",
  "geojson",
  "histogram",
  "instant",
@@ -1185,6 +1185,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0c35f58762feb77d74ebe43bdbc3210f09be9fe6742234d573bacc26ed92b67"
 dependencies = [
  "byteorder",
+]
+
+[[package]]
+name = "hash32-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59d2aba832b60be25c1b169146b27c64115470981b128ed84c8db18c1b03c6ff"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1488,12 +1499,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "winapi",
 ]
-
-[[package]]
-name = "libm"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
 
 [[package]]
 name = "libm"
@@ -1805,7 +1810,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
- "libm 0.2.2",
+ "libm",
 ]
 
 [[package]]
@@ -2537,16 +2542,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "stretch"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b0dc6d20ce137f302edf90f9cd3d278866fd7fb139efca6f246161222ad6d87"
-dependencies = [
- "lazy_static",
- "libm 0.1.4",
-]
-
-[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2613,6 +2608,19 @@ dependencies = [
  "pkg-config",
  "toml",
  "version-compare",
+]
+
+[[package]]
+name = "taffy"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec27dea659b100d489dffa57cf0efc6d7bfefb119af817b92cc14006c0b214e3"
+dependencies = [
+ "arrayvec 0.7.2",
+ "hash32 0.2.1",
+ "hash32-derive",
+ "num-traits",
+ "typenum",
 ]
 
 [[package]]
@@ -3212,7 +3220,7 @@ checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#6e5b8746372e595afd670edd7dd3e4dcf33cccec"
+source = "git+https://github.com/dabreegster/abstreet#48398612de71c9dc102cefb3387bdcc12ae4c7c3"
 dependencies = [
  "aabb-quadtree",
  "abstio",
@@ -3236,7 +3244,7 @@ dependencies = [
  "lyon",
  "serde",
  "serde_json",
- "stretch",
+ "taffy",
  "tokio",
  "ttf-parser",
  "usvg",
