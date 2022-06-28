@@ -29,6 +29,13 @@ impl Trip {
         }
         panic!("{:?} doesn't visit {:?}", self.orig_id, stop_id);
     }
+
+    pub fn time_range(&self) -> (Time, Time) {
+        (
+            self.stop_times[0].arrival_time,
+            self.stop_times.last().unwrap().departure_time,
+        )
+    }
 }
 
 pub fn load<R: std::io::Read>(reader: R) -> Result<(Vec<Trip>, IDMapping<orig::TripID, TripID>)> {

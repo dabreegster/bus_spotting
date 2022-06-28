@@ -63,6 +63,7 @@ fn run(settings: Settings) {
             // TODO tmp
             //model.segment(timer).unwrap();
             //model.look_for_explainable_vehicle();
+            model.supply_demand_matching().unwrap();
             model.set_alt_trajectories_from_ticketing();
             model
         });
