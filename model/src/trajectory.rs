@@ -120,6 +120,31 @@ impl Trajectory {
         results.push(current_trajectory);
         results
     }
+
+    pub fn clip_to_time(&self, t1: Time, t2: Time) -> Result<Self> {
+        let mut inner = Vec::new();
+        for (pt, t) in &self.inner {
+            let pt = *pt;
+            let t = *t;
+            if t < t1 {
+                continue;
+            }
+            if t > t2 {
+                break;
+            }
+            if inner.is_empty() {
+                if let Some((pt, _)) = self.interpolate(t1) {
+                    inner.push((pt, t1));
+                }
+            }
+            inner.push((pt, t));
+        }
+        if let Some((pt, _)) = self.interpolate(t2) {
+            inner.push((pt, t2));
+        }
+
+        Self::new(inner)
+    }
 }
 
 // Queries

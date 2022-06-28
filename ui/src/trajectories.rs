@@ -33,10 +33,6 @@ impl Compare {
         let mut items: Vec<Item> = Vec::new();
         for (name, trajectory) in trajectories {
             let pl = trajectory.as_polyline();
-            let draw = ctx.upload(GeomBatch::from(vec![(
-                Color::CYAN,
-                pl.make_polygons(Distance::meters(5.0)),
-            )]));
             let mut info = Text::from_multiline(vec![
                 Line(name),
                 Line(format!(
@@ -49,6 +45,9 @@ impl Compare {
                     pl.length().to_string(&UnitFmt::metric())
                 )),
             ]);
+
+            let mut draw = GeomBatch::new();
+
             // Compare everything against the 1st trajectory
             if !items.is_empty() {
                 // TODO Slow and poor quality, so disabled
@@ -58,11 +57,24 @@ impl Compare {
                     "Diff from 1st: {}",
                     score.to_string(&UnitFmt::metric())
                 )));
+
+                // TODO Also showing the full AVL is useful
+                if let Ok(t) = items[0]
+                    .trajectory
+                    .clip_to_time(trajectory.start_time(), trajectory.end_time())
+                {
+                    draw.push(
+                        Color::RED,
+                        t.as_polyline().make_polygons(Distance::meters(5.0)),
+                    );
+                }
             }
+
+            draw.push(Color::CYAN, pl.make_polygons(Distance::meters(10.0)));
 
             items.push(Item {
                 trajectory,
-                draw,
+                draw: draw.upload(ctx),
                 info,
             });
         }
