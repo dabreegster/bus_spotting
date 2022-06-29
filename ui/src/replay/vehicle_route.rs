@@ -1,5 +1,5 @@
-use geom::{Circle, Distance, Pt2D};
-use model::gtfs::RouteVariantID;
+use geom::{Circle, Distance, Pt2D, Time};
+use model::gtfs::{RouteVariant, RouteVariantID};
 use model::Trajectory;
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome,
@@ -24,6 +24,8 @@ impl Viewer {
     ) -> Box<dyn State<App>> {
         let mut draw = GeomBatch::new();
 
+        print_timetable(app, &trajectory, app.model.gtfs.variant(variant));
+
         // AVL
         draw.push(
             Color::CYAN,
@@ -35,7 +37,10 @@ impl Viewer {
         // The route
         let variant = app.model.gtfs.variant(variant);
         if let Ok(pl) = variant.polyline(&app.model.gtfs) {
-            draw.push(Color::RED, pl.make_polygons(Distance::meters(3.0)));
+            draw.push(
+                Color::RED.alpha(0.8),
+                pl.make_polygons(Distance::meters(3.0)),
+            );
         }
 
         // Labeled stops
@@ -112,5 +117,48 @@ impl State<App> for Viewer {
             g.redraw(draw);
             g.draw_mouse_tooltip(txt.clone());
         }
+    }
+}
+
+fn print_timetable(app: &App, trajectory: &Trajectory, variant: &RouteVariant) {
+    let mut times_near_stops: Vec<Vec<Time>> = Vec::new();
+    let mut min_times = usize::MAX;
+    for stop in variant.stops() {
+        let threshold = Distance::meters(10.0);
+        let stop_pos = app.model.gtfs.stops[&stop].pos;
+        let times: Vec<Time> = trajectory
+            .times_near_pos(stop_pos, threshold)
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
+        min_times = min_times.min(times.len());
+        times_near_stops.push(times);
+    }
+
+    // Assemble into trips
+    // TODO This is the naive approach. What if we used the next possible valid time?
+    let mut trips: Vec<Vec<Time>> = Vec::new();
+    for trip_idx in 0..min_times {
+        let times: Vec<Time> = times_near_stops
+            .iter()
+            .map(|times| times[trip_idx])
+            .collect();
+        trips.push(times);
+    }
+
+    println!(
+        "{} trips along {} stops",
+        trips.len(),
+        variant.stops().len()
+    );
+    for times in trips {
+        println!(
+            "- Trip: {}",
+            times
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     }
 }
