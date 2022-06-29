@@ -5,10 +5,10 @@ use abstutil::prettyprint_usize;
 use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::tools::ChooseSomething;
+use widgetry::tools::{ChooseSomething, PromptInput};
 use widgetry::{
-    Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State,
-    Text, TextExt, Toggle, UpdateType, Widget,
+    lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel,
+    State, Text, TextExt, Toggle, UpdateType, Widget,
 };
 
 use model::gtfs::{DateFilter, RouteVariantID, StopID};
@@ -61,6 +61,11 @@ impl Replay {
                 .btn_outline
                 .text("Replace vehicles with GTFS")
                 .build_def(ctx),
+            ctx.style()
+                .btn_outline
+                .text("Warp to vehicle")
+                .hotkey(lctrl(Key::J))
+                .build_def(ctx),
         ]);
         state.panel.replace(ctx, "contents", controls);
 
@@ -80,6 +85,17 @@ impl Replay {
         );
         self.time_controls.panel.replace(ctx, "stats", stats);
         self.show_alt_position.clear();
+    }
+
+    fn on_select_vehicle(&mut self, ctx: &mut EventCtx, id: VehicleID) {
+        self.selected_vehicle = Some(id);
+        let btn = ctx
+            .style()
+            .btn_outline
+            .text(format!("Selected {:?}", id))
+            .hotkey(Key::D)
+            .build_widget(ctx, "debug vehicle");
+        self.panel.replace(ctx, "debug vehicle", btn);
     }
 }
 
@@ -102,14 +118,7 @@ impl State<App> for Replay {
                 self.on_time_change(ctx, app);
             }
             WorldOutcome::ClickedObject(Obj::Bus(id)) => {
-                self.selected_vehicle = Some(id);
-                let btn = ctx
-                    .style()
-                    .btn_outline
-                    .text(format!("Selected {:?}", id))
-                    .hotkey(Key::D)
-                    .build_widget(ctx, "debug vehicle");
-                self.panel.replace(ctx, "debug vehicle", btn);
+                self.on_select_vehicle(ctx, id);
                 self.on_time_change(ctx, app);
             }
             _ => {}
@@ -128,6 +137,9 @@ impl State<App> for Replay {
                     }
                     "debug vehicle" => {
                         return open_vehicle_menu(ctx, app, self.selected_vehicle.unwrap());
+                    }
+                    "Warp to vehicle" => {
+                        return warp_to_vehicle(ctx);
                     }
                     _ => {}
                 }
@@ -511,6 +523,39 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
                 }
                 unreachable!();
             }
+        }),
+    ))
+}
+
+fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
+    Transition::Push(PromptInput::new_state(
+        ctx,
+        "Waarp to what vehicle ID?",
+        String::new(),
+        Box::new(move |response, _, _| {
+            Transition::Multi(vec![
+                Transition::Pop,
+                Transition::ModifyState(Box::new(move |state, ctx, app| {
+                    let state = state.downcast_mut::<Replay>().unwrap();
+
+                    if let Ok(x) = response.parse::<usize>() {
+                        if let Some(vehicle) = app.model.vehicles.get(x) {
+                            state.on_select_vehicle(ctx, vehicle.id);
+                            ctx.canvas.cam_zoom = 1.0;
+                            if let Some((pt, _)) = vehicle.trajectory.interpolate(app.time) {
+                                ctx.canvas.center_on_map_pt(pt);
+                            } else {
+                                ctx.canvas
+                                    .center_on_map_pt(vehicle.trajectory.as_polyline().first_pt());
+                                app.time = vehicle.trajectory.start_time();
+                                state.on_time_change(ctx, app);
+                                // Immediately update this
+                                state.time_controls.event(ctx, app);
+                            }
+                        }
+                    }
+                })),
+            ])
         }),
     ))
 }
