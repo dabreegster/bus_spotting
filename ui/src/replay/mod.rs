@@ -127,6 +127,9 @@ impl State<App> for Replay {
                     println!("- {:?} has score of {}", trip, score);
                 }
             }
+            WorldOutcome::Keypress("match to route shape", Obj::Bus(id)) => {
+                app.model.match_to_route_shapes(id).unwrap();
+            }
             _ => {}
         }
 
@@ -372,6 +375,7 @@ fn update_world(
                 )))
                 .hotkey(Key::C, "compare trajectories")
                 .hotkey(Key::S, "score against trips")
+                .hotkey(Key::R, "match to route shape")
                 .clickable()
                 .build(ctx);
         } else {
