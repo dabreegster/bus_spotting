@@ -7,7 +7,14 @@ use crate::gtfs::{DateFilter, RouteVariantID, TripID};
 use crate::{Model, Trajectory, VehicleID, VehicleName};
 
 impl Model {
-    pub(crate) fn vehicle_to_possible_routes(
+    pub fn vehicle_to_possible_routes(&self, id: VehicleID) -> Vec<RouteVariantID> {
+        match self.vehicles_to_possible_routes().unwrap().remove(&id) {
+            Some(list) => list,
+            None => Vec::new(),
+        }
+    }
+
+    pub(crate) fn vehicles_to_possible_routes(
         &self,
     ) -> Result<BTreeMap<VehicleID, Vec<RouteVariantID>>> {
         let services = self
@@ -164,27 +171,35 @@ impl Assignment {
 }
 
 impl Model {
-    pub fn possible_trajectories_for_vehicle(
+    pub fn possible_trip_trajectories_for_vehicle(
         &self,
         id: VehicleID,
     ) -> Result<Vec<(String, Trajectory)>> {
-        let mut variants = Vec::new();
-        if let Some(list) = self.vehicle_to_possible_routes()?.remove(&id) {
-            variants.extend(list);
+        let variants = self.vehicle_to_possible_routes(id);
+
+        let mut result = Vec::new();
+        for variant in variants {
+            let variant_description = self.gtfs.variant(variant).describe(&self.gtfs);
+            for (trip, trajectory) in self.trajectories_for_variant(variant)? {
+                result.push((format!("{:?} of {}", trip, variant_description), trajectory));
+            }
         }
+        Ok(result)
+    }
+
+    pub fn possible_route_trajectories_for_vehicle(
+        &self,
+        id: VehicleID,
+    ) -> Result<Vec<(String, Trajectory)>> {
+        let variants = self.vehicle_to_possible_routes(id);
 
         // We could group by shape, but the UI actually cares about disambiguating, so don't bother
         let mut result = Vec::new();
         for variant in variants {
             // This doesn't take time into account at all
-            /*let variant = self.gtfs.variant(variant);
+            let variant = self.gtfs.variant(variant);
             let pl = &self.gtfs.shapes[&variant.shape_id];
-            result.push((variant.describe(&self.gtfs), Trajectory::from_polyline(pl)));*/
-
-            let variant_description = self.gtfs.variant(variant).describe(&self.gtfs);
-            for (trip, trajectory) in self.trajectories_for_variant(variant)? {
-                result.push((format!("{:?} of {}", trip, variant_description), trajectory));
-            }
+            result.push((variant.describe(&self.gtfs), Trajectory::from_polyline(pl)));
         }
         Ok(result)
     }
@@ -208,25 +223,19 @@ impl Model {
     pub fn score_vehicle_similarity_to_trips(&self, id: VehicleID) -> Vec<(TripID, Distance)> {
         let vehicle_trajectory = &self.vehicles[id.0].trajectory;
         let mut scores = Vec::new();
-        if let Some(variants) = self
-            .vehicle_to_possible_routes()
-            .ok()
-            .and_then(|mut mapping| mapping.remove(&id))
-        {
-            for variant in variants {
-                for trip in &self.gtfs.variant(variant).trips {
-                    // Just see how closely the AVL matches stop position according to the
-                    // timetable. This'll not be a good match when there are delays.
-                    let mut expected = Vec::new();
-                    for stop_time in &trip.stop_times {
-                        expected.push((
-                            stop_time.arrival_time,
-                            self.gtfs.stops[&stop_time.stop_id].pos,
-                        ));
-                    }
-                    if let Some(score) = vehicle_trajectory.score_at_points(expected) {
-                        scores.push((trip.id, score));
-                    }
+        for variant in self.vehicle_to_possible_routes(id) {
+            for trip in &self.gtfs.variant(variant).trips {
+                // Just see how closely the AVL matches stop position according to the timetable.
+                // This'll not be a good match when there are delays.
+                let mut expected = Vec::new();
+                for stop_time in &trip.stop_times {
+                    expected.push((
+                        stop_time.arrival_time,
+                        self.gtfs.stops[&stop_time.stop_id].pos,
+                    ));
+                }
+                if let Some(score) = vehicle_trajectory.score_at_points(expected) {
+                    scores.push((trip.id, score));
                 }
             }
         }
@@ -235,7 +244,8 @@ impl Model {
     }
 
     pub fn match_to_route_shapes(&self, vehicle: VehicleID) -> Result<()> {
-        if let Some(list) = self.vehicle_to_possible_routes()?.remove(&vehicle) {
+        let list = self.vehicle_to_possible_routes(vehicle);
+        if !list.is_empty() {
             // TODO Just do the first one
             self.segment_avl_by_endpoints(vehicle, list[0]);
         }

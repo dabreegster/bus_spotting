@@ -37,7 +37,7 @@ pub struct BoardingEvent {
 // This is a placeholder for much more correct matching
 pub fn populate_boarding(model: &mut Model, _timer: &mut Timer) -> Result<()> {
     // TODO Just make up some data for the moment, to start the UIs
-    for (vehicle_id, mut variants) in model.vehicle_to_possible_routes()? {
+    for (vehicle_id, mut variants) in model.vehicles_to_possible_routes()? {
         let variant = model.gtfs.variant(variants.pop().unwrap());
         println!(
             "We've decided {:?} serves {}",

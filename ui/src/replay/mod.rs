@@ -10,7 +10,7 @@ use widgetry::{
     Text, TextExt, Toggle, UpdateType, Widget,
 };
 
-use model::gtfs::{DateFilter, StopID};
+use model::gtfs::{DateFilter, RouteVariantID, StopID};
 use model::{Vehicle, VehicleID};
 
 use self::events::Events;
@@ -106,6 +106,7 @@ impl State<App> for Replay {
                     .style()
                     .btn_outline
                     .text(format!("Selected {:?}", id))
+                    .hotkey(Key::D)
                     .build_widget(ctx, "debug vehicle");
                 self.panel.replace(ctx, "debug vehicle", btn);
                 self.on_time_change(ctx, app);
@@ -436,26 +437,49 @@ fn update_world(
 
 fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition {
     let mut choices = vec![
-        Choice::string("compare trajectories"),
+        Choice::string("compare trajectories (by variants)"),
+        Choice::string("compare trajectories (by trips)"),
         Choice::string("score against trips"),
         Choice::string("match to route shape"),
     ];
+
+    for v in app.model.vehicle_to_possible_routes(id) {
+        choices.push(Choice::string(&format!("match to variant {}", v.0)));
+    }
 
     Transition::Push(ChooseSomething::new_state(
         ctx,
         "Debug this vehicle",
         choices,
         Box::new(move |choice, ctx, app| match choice.as_ref() {
-            "compare trajectories" => {
+            "compare trajectories (by variants)" => {
                 let vehicle = &app.model.vehicles[id.0];
                 let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
                 if let Some(ref t) = vehicle.alt_trajectory {
                     list.push(("BIL".to_string(), t.clone()));
                 }
-                if let Ok(more) = app.model.possible_trajectories_for_vehicle(id) {
+                if let Ok(more) = app.model.possible_route_trajectories_for_vehicle(id) {
                     list.extend(more);
                 }
-                Transition::Replace(crate::trajectories::Compare::new_state(ctx, list))
+                let clip_avl_time = false;
+                Transition::Replace(crate::trajectories::Compare::new_state(
+                    ctx,
+                    list,
+                    clip_avl_time,
+                ))
+            }
+            "compare trajectories (by trips)" => {
+                let vehicle = &app.model.vehicles[id.0];
+                let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
+                if let Ok(more) = app.model.possible_trip_trajectories_for_vehicle(id) {
+                    list.extend(more);
+                }
+                let clip_avl_time = true;
+                Transition::Replace(crate::trajectories::Compare::new_state(
+                    ctx,
+                    list,
+                    clip_avl_time,
+                ))
             }
             "score against trips" => {
                 println!("Matching {:?} to possible trips", id);
@@ -473,7 +497,13 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
                 app.model.match_to_route_shapes(id).unwrap();
                 Transition::Pop
             }
-            _ => unreachable!(),
+            x => {
+                if let Some(x) = x.strip_prefix("match to variant ") {
+                    let variant = RouteVariantID(x.parse::<usize>().unwrap());
+                    return Transition::Pop;
+                }
+                unreachable!();
+            }
         }),
     ))
 }

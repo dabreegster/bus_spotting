@@ -24,6 +24,7 @@ impl Compare {
     pub fn new_state(
         ctx: &mut EventCtx,
         trajectories: Vec<(String, Trajectory)>,
+        clip_avl_time: bool,
     ) -> Box<dyn State<App>> {
         info!(
             "Setting up trajectory comparison for {} things",
@@ -58,14 +59,23 @@ impl Compare {
                     score.to_string(&UnitFmt::metric())
                 )));
 
-                // TODO Also showing the full AVL is useful
-                if let Ok(t) = items[0]
-                    .trajectory
-                    .clip_to_time(trajectory.start_time(), trajectory.end_time())
-                {
+                if clip_avl_time {
+                    if let Ok(t) = items[0]
+                        .trajectory
+                        .clip_to_time(trajectory.start_time(), trajectory.end_time())
+                    {
+                        draw.push(
+                            Color::RED,
+                            t.as_polyline().make_polygons(Distance::meters(5.0)),
+                        );
+                    }
+                } else {
                     draw.push(
                         Color::RED,
-                        t.as_polyline().make_polygons(Distance::meters(5.0)),
+                        items[0]
+                            .trajectory
+                            .as_polyline()
+                            .make_polygons(Distance::meters(5.0)),
                     );
                 }
             }
@@ -152,6 +162,7 @@ impl State<App> for Compare {
                     self.update(ctx);
                 }
                 "Chop AVL into non-overlapping pieces" => {
+                    let clip_avl_time = false;
                     return Transition::Push(Self::new_state(
                         ctx,
                         self.items[0]
@@ -161,6 +172,7 @@ impl State<App> for Compare {
                             .enumerate()
                             .map(|(idx, t)| (format!("AVL piece {}", idx + 1), t))
                             .collect(),
+                        clip_avl_time,
                     ));
                 }
                 _ => unreachable!(),

@@ -6,7 +6,7 @@ use crate::Model;
 
 impl Model {
     pub fn assemble_using_stops(&self, timer: &mut Timer) -> Result<()> {
-        for (vehicle_id, variants) in model.vehicle_to_possible_routes()? {
+        for (vehicle_id, variants) in model.vehicles_to_possible_routes()? {
             // Based on all possible variants that might be served, let's union all of the stops
 
 
