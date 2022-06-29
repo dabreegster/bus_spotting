@@ -32,14 +32,14 @@ impl MainMenu {
                     ctx.style()
                         .btn_solid
                         .text("Network")
-                        .hotkey(Key::Tab)
+                        .hotkey(Key::N)
                         .build_def(ctx),
                 ]),
                 Mode::Network => Widget::row(vec![
                     ctx.style()
                         .btn_solid
                         .text("Replay")
-                        .hotkey(Key::Tab)
+                        .hotkey(Key::R)
                         .build_def(ctx),
                     ctx.style()
                         .btn_solid

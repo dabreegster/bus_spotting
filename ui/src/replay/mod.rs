@@ -4,9 +4,10 @@ use abstutil::prettyprint_usize;
 use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
+use widgetry::tools::ChooseSomething;
 use widgetry::{
-    Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State, Text,
-    TextExt, Toggle, UpdateType, Widget,
+    Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State,
+    Text, TextExt, Toggle, UpdateType, Widget,
 };
 
 use model::gtfs::{DateFilter, StopID};
@@ -54,9 +55,9 @@ impl Replay {
             Toggle::choice(ctx, "trajectory source", "BIL", "AVL", Key::T, false),
             format!("No vehicle selected")
                 .text_widget(ctx)
-                .named("current vehicle"),
+                .named("debug vehicle"),
             ctx.style()
-                .btn_plain
+                .btn_outline
                 .text("Replace vehicles with GTFS")
                 .build_def(ctx),
         ]);
@@ -96,39 +97,18 @@ impl State<App> for Replay {
             WorldOutcome::ClickedFreeSpace(_) => {
                 self.selected_vehicle = None;
                 let label = format!("No vehicle selected").text_widget(ctx);
-                self.panel.replace(ctx, "current vehicle", label);
+                self.panel.replace(ctx, "debug vehicle", label);
                 self.on_time_change(ctx, app);
             }
             WorldOutcome::ClickedObject(Obj::Bus(id)) => {
                 self.selected_vehicle = Some(id);
-                let label = format!("Selected {:?}", id).text_widget(ctx);
-                self.panel.replace(ctx, "current vehicle", label);
+                let btn = ctx
+                    .style()
+                    .btn_outline
+                    .text(format!("Selected {:?}", id))
+                    .build_widget(ctx, "debug vehicle");
+                self.panel.replace(ctx, "debug vehicle", btn);
                 self.on_time_change(ctx, app);
-            }
-            WorldOutcome::Keypress("compare trajectories", Obj::Bus(id)) => {
-                let vehicle = &app.model.vehicles[id.0];
-                let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
-                if let Some(ref t) = vehicle.alt_trajectory {
-                    list.push(("BIL".to_string(), t.clone()));
-                }
-                if let Ok(more) = app.model.possible_trajectories_for_vehicle(id) {
-                    list.extend(more);
-                }
-                return Transition::Push(crate::trajectories::Compare::new_state(ctx, list));
-            }
-            WorldOutcome::Keypress("score against trips", Obj::Bus(id)) => {
-                println!("Matching {:?} to possible trips", id);
-                for (trip, score) in app
-                    .model
-                    .score_vehicle_similarity_to_trips(id)
-                    .into_iter()
-                    .take(5)
-                {
-                    println!("- {:?} has score of {}", trip, score);
-                }
-            }
-            WorldOutcome::Keypress("match to route shape", Obj::Bus(id)) => {
-                app.model.match_to_route_shapes(id).unwrap();
             }
             _ => {}
         }
@@ -139,9 +119,15 @@ impl State<App> for Replay {
 
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => {
-                if x == "Replace vehicles with GTFS" {
-                    app.model.replace_vehicles_with_gtfs();
-                    return Transition::Replace(Self::new_state(ctx, app));
+                match x.as_ref() {
+                    "Replace vehicles with GTFS" => {
+                        app.model.replace_vehicles_with_gtfs();
+                        return Transition::Replace(Self::new_state(ctx, app));
+                    }
+                    "debug vehicle" => {
+                        return open_vehicle_menu(ctx, app, self.selected_vehicle.unwrap());
+                    }
+                    _ => {}
                 }
 
                 if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
@@ -373,9 +359,6 @@ fn update_world(
                     vehicle.original_id,
                     speed.to_string(&UnitFmt::metric())
                 )))
-                .hotkey(Key::C, "compare trajectories")
-                .hotkey(Key::S, "score against trips")
-                .hotkey(Key::R, "match to route shape")
                 .clickable()
                 .build(ctx);
         } else {
@@ -449,4 +432,48 @@ fn update_world(
         )),
     ])
     .into_widget(ctx)
+}
+
+fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition {
+    let mut choices = vec![
+        Choice::string("compare trajectories"),
+        Choice::string("score against trips"),
+        Choice::string("match to route shape"),
+    ];
+
+    Transition::Push(ChooseSomething::new_state(
+        ctx,
+        "Debug this vehicle",
+        choices,
+        Box::new(move |choice, ctx, app| match choice.as_ref() {
+            "compare trajectories" => {
+                let vehicle = &app.model.vehicles[id.0];
+                let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
+                if let Some(ref t) = vehicle.alt_trajectory {
+                    list.push(("BIL".to_string(), t.clone()));
+                }
+                if let Ok(more) = app.model.possible_trajectories_for_vehicle(id) {
+                    list.extend(more);
+                }
+                Transition::Replace(crate::trajectories::Compare::new_state(ctx, list))
+            }
+            "score against trips" => {
+                println!("Matching {:?} to possible trips", id);
+                for (trip, score) in app
+                    .model
+                    .score_vehicle_similarity_to_trips(id)
+                    .into_iter()
+                    .take(5)
+                {
+                    println!("- {:?} has score of {}", trip, score);
+                }
+                Transition::Pop
+            }
+            "match to route shape" => {
+                app.model.match_to_route_shapes(id).unwrap();
+                Transition::Pop
+            }
+            _ => unreachable!(),
+        }),
+    ))
 }

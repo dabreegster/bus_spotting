@@ -100,7 +100,7 @@ impl Compare {
                 .evenly_spaced(),
                 Widget::placeholder(ctx, "info"),
                 ctx.style()
-                    .btn_plain
+                    .btn_outline
                     .text("Chop AVL into non-overlapping pieces")
                     .build_def(ctx),
             ]))
