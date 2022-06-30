@@ -7,8 +7,8 @@ use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{ChooseSomething, PromptInput};
 use widgetry::{
-    lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel,
-    State, Text, TextExt, Toggle, UpdateType, Widget,
+    include_labeled_bytes, lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx,
+    Key, Line, Outcome, Panel, State, Text, TextExt, Toggle, UpdateType, Widget,
 };
 
 use model::gtfs::{DateFilter, RouteVariantID, StopID};
@@ -56,9 +56,15 @@ impl Replay {
             .text_widget(ctx),
             // TODO The order of these always feels so backwards...
             Toggle::choice(ctx, "trajectory source", "BIL", "AVL", Key::T, false),
-            format!("No vehicle selected")
-                .text_widget(ctx)
-                .named("debug vehicle"),
+            Widget::row(vec![
+                format!("No vehicle selected")
+                    .text_widget(ctx)
+                    .named("debug vehicle"),
+                ctx.style()
+                    .btn_plain
+                    .icon_bytes(include_labeled_bytes!("../../assets/location.svg"))
+                    .build_widget(ctx, "goto this vehicle"),
+            ]),
             Widget::row(vec![
                 "Show stops for variant: ".text_widget(ctx),
                 Widget::dropdown(
@@ -167,6 +173,17 @@ impl State<App> for Replay {
                     }
                     "Warp to vehicle" => {
                         return warp_to_vehicle(ctx);
+                    }
+                    "goto this vehicle" => {
+                        if let Some(id) = self.selected_vehicle {
+                            if let Some((pt, _)) =
+                                app.model.vehicles[id.0].trajectory.interpolate(app.time)
+                            {
+                                ctx.canvas.cam_zoom = 1.0;
+                                ctx.canvas.center_on_map_pt(pt);
+                            }
+                        }
+                        return Transition::Keep;
                     }
                     _ => {}
                 }
