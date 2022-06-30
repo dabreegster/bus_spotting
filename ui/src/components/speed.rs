@@ -215,7 +215,7 @@ impl TimeControls {
                         ctx,
                         "Jump to what time?",
                         String::new(),
-                        Box::new(|response, ctx, app| {
+                        Box::new(|response, _, app| {
                             if let Ok(t) = Time::parse(&response) {
                                 app.time = t;
                             }

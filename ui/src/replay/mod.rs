@@ -5,7 +5,7 @@ use abstutil::prettyprint_usize;
 use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::tools::{ChooseSomething, PromptInput};
+use widgetry::tools::{ChooseSomething, PopupMsg, PromptInput};
 use widgetry::{
     include_labeled_bytes, lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx,
     Key, Line, Outcome, Panel, State, Text, TextExt, Toggle, UpdateType, Widget,
@@ -156,6 +156,22 @@ impl State<App> for Replay {
                 self.on_select_vehicle(ctx, app, id);
                 self.on_time_change(ctx, app);
             }
+            WorldOutcome::ClickedObject(Obj::Stop(stop)) => {
+                if let Some(vehicle) = self.selected_vehicle {
+                    let stop_pos = app.model.gtfs.stops[&stop].pos;
+                    let threshold = Distance::meters(10.0);
+                    return Transition::Push(PopupMsg::new_state(
+                        ctx,
+                        "Vehicle near this stop at...",
+                        app.model.vehicles[vehicle.0]
+                            .trajectory
+                            .times_near_pos(stop_pos, threshold)
+                            .into_iter()
+                            .map(|(t, _)| t.to_string())
+                            .collect(),
+                    ));
+                }
+            }
             _ => {}
         }
 
@@ -197,7 +213,7 @@ impl State<App> for Replay {
                 }
             }
             Outcome::Changed(x) => match x.as_ref() {
-                "trajectory source" => {
+                "AVL" | "BIL" => {
                     self.on_time_change(ctx, app);
                     self.show_path.clear();
                     self.show_alt_position.clear();
@@ -212,6 +228,11 @@ impl State<App> for Replay {
                                     .render(ctx)
                                     .centered_on(pt),
                             );
+                            if let Ok(p) = Circle::new(pt, Distance::meters(50.0))
+                                .to_outline(Distance::meters(3.0))
+                            {
+                                batch.push(Color::WHITE, p);
+                            }
                         }
                     }
                     self.draw_stop_order = batch.upload(ctx);
@@ -364,6 +385,7 @@ fn make_static_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
             .draw_color(Color::BLUE)
             .hover_alpha(0.5)
             .tooltip(describe::stop(stop))
+            .clickable()
             .build(ctx);
     }
 
