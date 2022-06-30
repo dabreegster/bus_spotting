@@ -136,14 +136,43 @@ fn print_timetable(app: &App, trajectory: &Trajectory, variant: &RouteVariant) {
     }
 
     // Assemble into trips
-    // TODO This is the naive approach. What if we used the next possible valid time?
     let mut trips: Vec<Vec<Time>> = Vec::new();
-    for trip_idx in 0..min_times {
-        let times: Vec<Time> = times_near_stops
-            .iter()
-            .map(|times| times[trip_idx])
-            .collect();
-        trips.push(times);
+
+    if false {
+        // The naive approach
+        for trip_idx in 0..min_times {
+            let times: Vec<Time> = times_near_stops
+                .iter()
+                .map(|times| times[trip_idx])
+                .collect();
+            trips.push(times);
+        }
+    } else {
+        // Assume the first time at the first stop is correct, then build up from there and always
+        // require the time to increase. Skip some times if needed
+        let mut skipped = 0;
+        let mut last_time = Time::START_OF_DAY;
+        'OUTER: loop {
+            let mut trip_times = Vec::new();
+            for times in &mut times_near_stops {
+                // Shift while the first time is too early
+                while !times.is_empty() && times[0] < last_time {
+                    times.remove(0);
+                    skipped += 1;
+                }
+                if times.is_empty() {
+                    break 'OUTER;
+                }
+                last_time = times.remove(0);
+                trip_times.push(last_time);
+            }
+            trips.push(trip_times);
+        }
+
+        println!(
+            "For below, skipped {} times at different stops because they're out-of-order",
+            skipped
+        );
     }
 
     println!(
@@ -178,7 +207,12 @@ fn print_timetable(app: &App, trajectory: &Trajectory, variant: &RouteVariant) {
             }
         }
 
-        println!("--- Trip");
+        println!(
+            "--- Trip from {} to {} ({} total)",
+            times[0],
+            times.last().unwrap(),
+            *times.last().unwrap() - times[0]
+        );
         let mut last_time = times[0];
         for (idx, time) in times.into_iter().enumerate() {
             println!("  Stop {}: {} ({})", idx + 1, time, time - last_time);
