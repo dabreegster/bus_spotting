@@ -130,7 +130,9 @@ impl State<App> for Replay {
         app.sync_mapbox(ctx);
 
         let prev_time = app.time;
-        self.time_controls.event(ctx, app);
+        if let Some(t) = self.time_controls.event(ctx, app) {
+            return t;
+        }
         if app.time != prev_time {
             self.on_time_change(ctx, app);
         }
@@ -591,7 +593,7 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
 fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
     Transition::Push(PromptInput::new_state(
         ctx,
-        "Waarp to what vehicle ID?",
+        "Warp to what vehicle ID?",
         String::new(),
         Box::new(move |response, _, _| {
             Transition::Multi(vec![

@@ -1,11 +1,12 @@
 use geom::{Duration, Time};
+use widgetry::tools::PromptInput;
 use widgetry::{
     include_labeled_bytes, Choice, ControlState, EdgeInsets, EventCtx, GfxCtx, HorizontalAlignment,
     Key, Line, Outcome, Panel, PersistentSplit, ScreenDims, Slider, Text, VerticalAlignment,
     Widget,
 };
 
-use crate::App;
+use crate::{App, Transition};
 
 // TODO Maybe the component pattern is to
 //
@@ -154,6 +155,13 @@ impl TimeControls {
                 .hotkey(Key::X)
                 .build_widget(ctx, "reset to midnight"),
         );
+        row.push(
+            ctx.style()
+                .btn_plain
+                .icon_bytes(include_labeled_bytes!("../../assets/jump_to_time.svg"))
+                .hotkey(Key::B)
+                .build_widget(ctx, "jump to specific time"),
+        );
 
         self.panel.replace(ctx, "controls", Widget::custom_row(row));
     }
@@ -168,7 +176,7 @@ impl TimeControls {
     }
 
     // May update app.time
-    pub fn event(&mut self, ctx: &mut EventCtx, app: &mut App) {
+    pub fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Option<Transition> {
         if self.time != app.time {
             self.time = app.time;
             self.on_time_change(ctx);
@@ -201,6 +209,19 @@ impl TimeControls {
                 }
                 "reset to midnight" => {
                     app.time = Time::START_OF_DAY;
+                }
+                "jump to specific time" => {
+                    return Some(Transition::Push(PromptInput::new_state(
+                        ctx,
+                        "Jump to what time?",
+                        String::new(),
+                        Box::new(|response, ctx, app| {
+                            if let Ok(t) = Time::parse(&response) {
+                                app.time = t;
+                            }
+                            Transition::Pop
+                        }),
+                    )));
                 }
                 "step forwards" => {
                     app.time += app.time_increment;
@@ -272,6 +293,8 @@ impl TimeControls {
                 app.time += dt;
             }
         }
+
+        None
     }
 
     pub fn draw(&self, g: &mut GfxCtx) {
