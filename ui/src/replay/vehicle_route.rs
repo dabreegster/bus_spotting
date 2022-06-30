@@ -152,13 +152,37 @@ fn print_timetable(app: &App, trajectory: &Trajectory, variant: &RouteVariant) {
         variant.stops().len()
     );
     for times in trips {
-        println!(
-            "- Trip: {}",
-            times
-                .into_iter()
-                .map(|t| t.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
+        // More compressed, but harder to read
+        if false {
+            println!(
+                "- Trip: {}",
+                times
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, t)| format!("{} @ {}", idx + 1, t))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+
+            // Look for impossible bits, show the stops
+            for (idx, pair) in times.windows(2).enumerate() {
+                if pair[1] < pair[0] {
+                    println!(
+                        "  - Something funny near stop {} ({}) -> {} ({})",
+                        idx + 1,
+                        pair[0],
+                        idx + 2,
+                        pair[1]
+                    );
+                }
+            }
+        }
+
+        println!("--- Trip");
+        let mut last_time = times[0];
+        for (idx, time) in times.into_iter().enumerate() {
+            println!("  Stop {}: {} ({})", idx + 1, time, time - last_time);
+            last_time = time;
+        }
     }
 }
