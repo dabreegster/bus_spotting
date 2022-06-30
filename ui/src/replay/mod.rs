@@ -29,6 +29,7 @@ pub struct Replay {
     show_path: Cached<VehicleID, Drawable>,
     show_alt_position: Cached<VehicleID, Drawable>,
     snap_to_trajectory: Cached<Pt2D, (Text, Drawable, Option<Time>)>,
+    draw_stop_order: Drawable,
 }
 
 impl Replay {
@@ -44,6 +45,7 @@ impl Replay {
             show_path: Cached::new(),
             show_alt_position: Cached::new(),
             snap_to_trajectory: Cached::new(),
+            draw_stop_order: Drawable::empty(ctx),
         };
         let controls = Widget::col(vec![
             format!(
@@ -57,6 +59,15 @@ impl Replay {
             format!("No vehicle selected")
                 .text_widget(ctx)
                 .named("debug vehicle"),
+            Widget::row(vec![
+                "Show stops for variant: ".text_widget(ctx),
+                Widget::dropdown(
+                    ctx,
+                    "variant stops",
+                    None,
+                    vec![Choice::<Option<RouteVariantID>>::new("---", None)],
+                ),
+            ]),
             ctx.style()
                 .btn_outline
                 .text("Replace vehicles with GTFS")
@@ -87,7 +98,7 @@ impl Replay {
         self.show_alt_position.clear();
     }
 
-    fn on_select_vehicle(&mut self, ctx: &mut EventCtx, id: VehicleID) {
+    fn on_select_vehicle(&mut self, ctx: &mut EventCtx, app: &App, id: VehicleID) {
         self.selected_vehicle = Some(id);
         let btn = ctx
             .style()
@@ -96,6 +107,14 @@ impl Replay {
             .hotkey(Key::D)
             .build_widget(ctx, "debug vehicle");
         self.panel.replace(ctx, "debug vehicle", btn);
+
+        let mut choices = vec![Choice::<Option<RouteVariantID>>::new("---", None)];
+        for v in app.model.vehicle_to_possible_routes(id) {
+            choices.push(Choice::new(format!("{:?}", v), Some(v)));
+        }
+        let dropdown = Widget::dropdown(ctx, "variant stops", None, choices);
+        self.panel.replace(ctx, "variant stops", dropdown);
+        self.draw_stop_order = Drawable::empty(ctx);
     }
 }
 
@@ -115,10 +134,18 @@ impl State<App> for Replay {
                 self.selected_vehicle = None;
                 let label = format!("No vehicle selected").text_widget(ctx);
                 self.panel.replace(ctx, "debug vehicle", label);
+                let dropdown = Widget::dropdown(
+                    ctx,
+                    "variant stops",
+                    None,
+                    vec![Choice::<Option<RouteVariantID>>::new("---", None)],
+                );
+                self.panel.replace(ctx, "variant stops", dropdown);
+                self.draw_stop_order = Drawable::empty(ctx);
                 self.on_time_change(ctx, app);
             }
             WorldOutcome::ClickedObject(Obj::Bus(id)) => {
-                self.on_select_vehicle(ctx, id);
+                self.on_select_vehicle(ctx, app, id);
                 self.on_time_change(ctx, app);
             }
             _ => {}
@@ -150,12 +177,28 @@ impl State<App> for Replay {
                     unreachable!()
                 }
             }
-            Outcome::Changed(_) => {
-                // Trajectory source
-                self.on_time_change(ctx, app);
-                self.show_path.clear();
-                self.show_alt_position.clear();
-            }
+            Outcome::Changed(x) => match x.as_ref() {
+                "trajectory source" => {
+                    self.on_time_change(ctx, app);
+                    self.show_path.clear();
+                    self.show_alt_position.clear();
+                }
+                "variant stops" => {
+                    let mut batch = GeomBatch::new();
+                    if let Some(v) = self.panel.dropdown_value("variant stops") {
+                        for (idx, id) in app.model.gtfs.variant(v).stops().into_iter().enumerate() {
+                            let pt = app.model.gtfs.stops[&id].pos;
+                            batch.append(
+                                Text::from(Line(format!("{}", idx + 1)).fg(Color::WHITE))
+                                    .render(ctx)
+                                    .centered_on(pt),
+                            );
+                        }
+                    }
+                    self.draw_stop_order = batch.upload(ctx);
+                }
+                _ => unreachable!(),
+            },
             _ => {}
         }
 
@@ -270,6 +313,7 @@ impl State<App> for Replay {
             g.redraw(draw);
             g.draw_mouse_tooltip(txt.clone());
         }
+        g.redraw(&self.draw_stop_order);
     }
 
     fn recreate(&mut self, ctx: &mut EventCtx, app: &mut App) -> Box<dyn State<App>> {
@@ -540,7 +584,7 @@ fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
 
                     if let Ok(x) = response.parse::<usize>() {
                         if let Some(vehicle) = app.model.vehicles.get(x) {
-                            state.on_select_vehicle(ctx, vehicle.id);
+                            state.on_select_vehicle(ctx, app, vehicle.id);
                             ctx.canvas.cam_zoom = 1.0;
                             if let Some((pt, _)) = vehicle.trajectory.interpolate(app.time) {
                                 ctx.canvas.center_on_map_pt(pt);
