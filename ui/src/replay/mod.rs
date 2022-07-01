@@ -592,13 +592,9 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
             }
             x => {
                 if let Some(x) = x.strip_prefix("match to variant ") {
-                    let vehicle = &app.model.vehicles[id.0];
                     let variant = RouteVariantID(x.parse::<usize>().unwrap());
                     return Transition::Replace(vehicle_route::Viewer::new_state(
-                        ctx,
-                        app,
-                        vehicle.trajectory.clone(),
-                        variant,
+                        ctx, app, id, variant,
                     ));
                 }
                 unreachable!();

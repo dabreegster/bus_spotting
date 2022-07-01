@@ -1,6 +1,6 @@
-use geom::{Circle, Distance, Pt2D, Time};
-use model::gtfs::{RouteVariant, RouteVariantID};
-use model::Trajectory;
+use geom::{Circle, Distance, Pt2D};
+use model::gtfs::RouteVariantID;
+use model::{Trajectory, VehicleID};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome,
     Panel, State, Text, VerticalAlignment, Widget,
@@ -19,12 +19,15 @@ impl Viewer {
     pub fn new_state(
         ctx: &mut EventCtx,
         app: &App,
-        trajectory: Trajectory,
+        vehicle: VehicleID,
         variant: RouteVariantID,
     ) -> Box<dyn State<App>> {
-        let mut draw = GeomBatch::new();
+        let trajectory = app.model.vehicles[vehicle.0].trajectory.clone();
 
-        print_timetable(app, &trajectory, app.model.gtfs.variant(variant));
+        app.model
+            .get_trips_for_vehicle_and_variant(vehicle, variant);
+
+        let mut draw = GeomBatch::new();
 
         // AVL
         draw.push(
@@ -116,107 +119,6 @@ impl State<App> for Viewer {
         if let Some((txt, draw)) = self.snap_to_trajectory.value() {
             g.redraw(draw);
             g.draw_mouse_tooltip(txt.clone());
-        }
-    }
-}
-
-fn print_timetable(app: &App, trajectory: &Trajectory, variant: &RouteVariant) {
-    let mut times_near_stops: Vec<Vec<Time>> = Vec::new();
-    let mut min_times = usize::MAX;
-    for stop in variant.stops() {
-        let threshold = Distance::meters(10.0);
-        let stop_pos = app.model.gtfs.stops[&stop].pos;
-        let times: Vec<Time> = trajectory
-            .times_near_pos(stop_pos, threshold)
-            .into_iter()
-            .map(|(t, _)| t)
-            .collect();
-        min_times = min_times.min(times.len());
-        times_near_stops.push(times);
-    }
-
-    // Assemble into trips
-    let mut trips: Vec<Vec<Time>> = Vec::new();
-
-    if false {
-        // The naive approach
-        for trip_idx in 0..min_times {
-            let times: Vec<Time> = times_near_stops
-                .iter()
-                .map(|times| times[trip_idx])
-                .collect();
-            trips.push(times);
-        }
-    } else {
-        // Assume the first time at the first stop is correct, then build up from there and always
-        // require the time to increase. Skip some times if needed
-        let mut skipped = 0;
-        let mut last_time = Time::START_OF_DAY;
-        'OUTER: loop {
-            let mut trip_times = Vec::new();
-            for times in &mut times_near_stops {
-                // Shift while the first time is too early
-                while !times.is_empty() && times[0] < last_time {
-                    times.remove(0);
-                    skipped += 1;
-                }
-                if times.is_empty() {
-                    break 'OUTER;
-                }
-                last_time = times.remove(0);
-                trip_times.push(last_time);
-            }
-            trips.push(trip_times);
-        }
-
-        println!(
-            "For below, skipped {} times at different stops because they're out-of-order",
-            skipped
-        );
-    }
-
-    println!(
-        "{} trips along {} stops",
-        trips.len(),
-        variant.stops().len()
-    );
-    for times in trips {
-        // More compressed, but harder to read
-        if false {
-            println!(
-                "- Trip: {}",
-                times
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, t)| format!("{} @ {}", idx + 1, t))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-
-            // Look for impossible bits, show the stops
-            for (idx, pair) in times.windows(2).enumerate() {
-                if pair[1] < pair[0] {
-                    println!(
-                        "  - Something funny near stop {} ({}) -> {} ({})",
-                        idx + 1,
-                        pair[0],
-                        idx + 2,
-                        pair[1]
-                    );
-                }
-            }
-        }
-
-        println!(
-            "--- Trip from {} to {} ({} total)",
-            times[0],
-            times.last().unwrap(),
-            *times.last().unwrap() - times[0]
-        );
-        let mut last_time = times[0];
-        for (idx, time) in times.into_iter().enumerate() {
-            println!("  Stop {}: {} ({})", idx + 1, time, time - last_time);
-            last_time = time;
         }
     }
 }
