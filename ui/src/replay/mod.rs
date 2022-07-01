@@ -538,7 +538,6 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
         Choice::string("compare trajectories (by variants)"),
         Choice::string("compare trajectories (by trips)"),
         Choice::string("score against trips"),
-        Choice::string("match to route shape"),
     ];
 
     for v in app.model.vehicle_to_possible_routes(id) {
@@ -589,10 +588,6 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
                 {
                     println!("- {:?} has score of {}", trip, score);
                 }
-                Transition::Pop
-            }
-            "match to route shape" => {
-                app.model.match_to_route_shapes(id).unwrap();
                 Transition::Pop
             }
             x => {

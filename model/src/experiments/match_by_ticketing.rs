@@ -5,11 +5,12 @@ use geom::{Distance, Time};
 use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID};
 use crate::{Model, VehicleID};
 
-// TODO This approach seems too brittle. Snapping to the trajectory is messy, so trying to do it
-// for boarding events is unnecessary trouble.
-
 impl Model {
-    pub fn segment(&self, timer: &mut Timer) -> Result<()> {
+    // For each possible variant shape, snap ticketing events to a distance along that shape. For a
+    // good match, you'd expect the distances to increase over time as the vehicle proceeds.
+    //
+    // But there's loads of noise! So the distances jump back and forth a bunch
+    pub fn match_by_ticketing(&self, timer: &mut Timer) -> Result<()> {
         // We're assuming the model only represents one day right now
 
         timer.start("match vehicles to route_short_name");

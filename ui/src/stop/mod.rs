@@ -95,7 +95,7 @@ fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) 
     txt.add_line(Line(""));
     for trip in &variant.trips {
         let scheduled = trip.arrival_at(stop.id);
-        if let Some(actual) = app.model.find_event(trip.id, stop.id) {
+        if let Some(actual) = app.model.find_boarding_event(trip.id, stop.id) {
             txt.add_line(Line(format!(
                 "{} (actually {} -- {}) -- {} new riders, {} transfers",
                 scheduled,

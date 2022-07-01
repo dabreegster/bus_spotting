@@ -7,6 +7,11 @@ use crate::gtfs::{DateFilter, TripID, VariantFilter};
 use crate::{Model, VehicleID};
 
 impl Model {
+    // Per route short name, we can find all vehicles serving it at least part of the day (supply)
+    // and all the GTFS trips supposed to happen (demand). We can then try to match things up,
+    // assuming a vehicle can only serve one trip at a time.
+    //
+    // This could still possibly work, but in many cases, there's nowhere near enough supply.
     pub fn supply_demand_matching(&self) -> Result<()> {
         // The supply: per route short name, find all vehicles that served it at least part of the day
         let mut vehicles_per_route: BTreeMap<String, BTreeSet<VehicleID>> = BTreeMap::new();

@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use geom::{Distance, Time, UnitFmt};
+use geom::Time;
 
-use crate::gtfs::{DateFilter, RouteVariantID, TripID};
-use crate::{Model, Trajectory, VehicleID, VehicleName};
+use crate::gtfs::{DateFilter, RouteVariantID};
+use crate::{Model, VehicleID, VehicleName};
+
+// BIL data says somebody boarded a vehicle and rode route_short_name. Use that, along with the
+// variants actually served that day, to figure out possible route variants per vehicle.
 
 impl Model {
     pub fn vehicle_to_possible_routes(&self, id: VehicleID) -> Vec<RouteVariantID> {
@@ -124,10 +127,14 @@ impl Model {
     }
 }
 
-pub struct Assignment {
+// If a vehicle serves multiple routes over the day, try to figure out when they switch.
+//
+// Current implementation doesn't handle a sequence like (route1, route2, route1). Could improve it
+// by first sorting by time all ticketing events per vehicle, then processing those in order.
+pub(crate) struct Assignment {
     // (time1, time2, route short name)
     // Ordered by time1
-    pub segments: Vec<(Time, Time, String)>,
+    pub(crate) segments: Vec<(Time, Time, String)>,
 }
 
 impl Assignment {
@@ -167,160 +174,5 @@ impl Assignment {
             }
         }
         false
-    }
-}
-
-impl Model {
-    pub fn possible_trip_trajectories_for_vehicle(
-        &self,
-        id: VehicleID,
-    ) -> Result<Vec<(String, Trajectory)>> {
-        let variants = self.vehicle_to_possible_routes(id);
-
-        let mut result = Vec::new();
-        for variant in variants {
-            let variant_description = self.gtfs.variant(variant).describe(&self.gtfs);
-            for (trip, trajectory) in self.trajectories_for_variant(variant)? {
-                result.push((format!("{:?} of {}", trip, variant_description), trajectory));
-            }
-        }
-        Ok(result)
-    }
-
-    pub fn possible_route_trajectories_for_vehicle(
-        &self,
-        id: VehicleID,
-    ) -> Result<Vec<(String, Trajectory)>> {
-        let variants = self.vehicle_to_possible_routes(id);
-
-        // We could group by shape, but the UI actually cares about disambiguating, so don't bother
-        let mut result = Vec::new();
-        for variant in variants {
-            // This doesn't take time into account at all
-            let variant = self.gtfs.variant(variant);
-            let pl = &self.gtfs.shapes[&variant.shape_id];
-            result.push((variant.describe(&self.gtfs), Trajectory::from_polyline(pl)));
-        }
-        Ok(result)
-    }
-
-    pub fn look_for_explainable_vehicle(&self) {
-        let mut best = Vec::new();
-        for vehicle in &self.vehicles {
-            let mut scores = self.score_vehicle_similarity_to_trips(vehicle.id);
-            if !scores.is_empty() {
-                let (trip, score) = scores.remove(0);
-                best.push((vehicle.id, trip, score));
-            }
-        }
-        best.sort_by_key(|pair| pair.2);
-        println!("Any good matches?");
-        for (vehicle, trip, score) in best {
-            println!("- {:?} matches to {:?} with score {}", vehicle, trip, score);
-        }
-    }
-
-    pub fn score_vehicle_similarity_to_trips(&self, id: VehicleID) -> Vec<(TripID, Distance)> {
-        let vehicle_trajectory = &self.vehicles[id.0].trajectory;
-        let mut scores = Vec::new();
-        for variant in self.vehicle_to_possible_routes(id) {
-            for trip in &self.gtfs.variant(variant).trips {
-                // Just see how closely the AVL matches stop position according to the timetable.
-                // This'll not be a good match when there are delays.
-                let mut expected = Vec::new();
-                for stop_time in &trip.stop_times {
-                    expected.push((
-                        stop_time.arrival_time,
-                        self.gtfs.stops[&stop_time.stop_id].pos,
-                    ));
-                }
-                if let Some(score) = vehicle_trajectory.score_at_points(expected) {
-                    scores.push((trip.id, score));
-                }
-            }
-        }
-        scores.sort_by_key(|pair| pair.1);
-        scores
-    }
-
-    pub fn match_to_route_shapes(&self, vehicle: VehicleID) -> Result<()> {
-        let list = self.vehicle_to_possible_routes(vehicle);
-        if !list.is_empty() {
-            // TODO Just do the first one
-            self.segment_avl_by_endpoints(vehicle, list[0]);
-        }
-        Ok(())
-    }
-
-    pub fn segment_avl_by_endpoints(
-        &self,
-        vehicle: VehicleID,
-        variant: RouteVariantID,
-    ) -> Vec<Trajectory> {
-        let variant = self.gtfs.variant(variant);
-        let shape_pl = &self.gtfs.shapes[&variant.shape_id];
-
-        let vehicle_trajectory = &self.vehicles[vehicle.0].trajectory;
-
-        // Idea 1: find all times the AVL is close to endpoints of the shape. Use those to clip
-        // into multiple pieces, just view it
-        let threshold = Distance::meters(10.0);
-        let times_near_start = vehicle_trajectory.times_near_pos(shape_pl.first_pt(), threshold);
-        let times_near_end = vehicle_trajectory.times_near_pos(shape_pl.last_pt(), threshold);
-
-        if true {
-            println!("does {:?} match {:?}?", vehicle, variant.variant_id);
-            println!("near start at:");
-            for (t, _) in &times_near_start {
-                println!("- {t}");
-            }
-            println!("near end at:");
-            for (t, _) in &times_near_end {
-                println!("- {t}");
-            }
-        }
-
-        // Attempt to match up the times
-        let mut intervals = Vec::new();
-        for ((t1, _), (t2, _)) in times_near_start.into_iter().zip(times_near_end.into_iter()) {
-            if t1 < t2 {
-                if intervals
-                    .last()
-                    .map(|(_, prev_t2)| t1 > *prev_t2)
-                    .unwrap_or(true)
-                {
-                    intervals.push((t1, t2));
-                    println!("... so interval from {t1} to {t2}");
-                    continue;
-                }
-            }
-            println!("??? what happened from {t1} to {t2}");
-        }
-
-        // TODO Now clip_to_time for the good matches? Or if there's unexplainable bits, don't
-        // consider this a good match?
-
-        // Idea 2: find all times the AVL is close to each of the stops. just see what those look
-        // like
-
-        Vec::new()
-    }
-
-    pub fn vehicles_with_few_stops(&self) -> Result<()> {
-        for (vehicle, variants) in self.vehicles_to_possible_routes()? {
-            for v in variants {
-                let variant = self.gtfs.variant(v);
-                if variant.stops().len() < 15 {
-                    let shape = &self.gtfs.shapes[&variant.shape_id];
-                    println!(
-                        "{:?} possibly serves a simple route {:?} with length {}",
-                        vehicle,
-                        v,
-                        shape.length().to_string(&UnitFmt::metric())
-                    );
-                }
-            }
-        }
-        Ok(())
     }
 }

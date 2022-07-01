@@ -6,7 +6,11 @@ use serde::{Deserialize, Serialize};
 use crate::gtfs::{RouteVariantID, StopID, TripID};
 use crate::{JourneyID, Model, VehicleID};
 
-// This effectively joins AVL, BIL, and GTFS.
+// Represents a vehicle arriving at a stop, and maybe people boarding (either as new riders or
+// transfers). This effectively joins AVL, BIL, and GTFS.
+//
+// Most of the high-level UI could be built on top of this, and the data model could omit all the
+// raw AVL and BIL data.
 //
 // Uniquely keyed by (TripID, StopID)
 #[derive(Serialize, Deserialize)]
@@ -33,6 +37,14 @@ pub struct BoardingEvent {
 //   - how many diff vehicles serve it?
 //   - make a graph. X axis time, Y axis stops (spaced by distance along shape?)
 //     - one line for each vehicle. dot per stop, with color/size/tooltip showing boardings
+
+impl Model {
+    pub fn find_boarding_event(&self, trip: TripID, stop: StopID) -> Option<&BoardingEvent> {
+        self.boardings
+            .iter()
+            .find(|ev| ev.trip == trip && ev.stop == stop)
+    }
+}
 
 // This is a placeholder for much more correct matching
 pub fn populate_boarding(model: &mut Model, _timer: &mut Timer) -> Result<()> {
@@ -61,12 +73,4 @@ pub fn populate_boarding(model: &mut Model, _timer: &mut Timer) -> Result<()> {
     }
 
     Ok(())
-}
-
-impl Model {
-    pub fn find_event(&self, trip: TripID, stop: StopID) -> Option<&BoardingEvent> {
-        self.boardings
-            .iter()
-            .find(|ev| ev.trip == trip && ev.stop == stop)
-    }
 }

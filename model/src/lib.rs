@@ -5,6 +5,7 @@ extern crate log;
 
 mod assemble;
 mod avl;
+mod experiments;
 pub mod gtfs;
 mod ticketing;
 mod trajectory;

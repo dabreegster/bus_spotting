@@ -5,6 +5,11 @@ use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID, TripID, VariantFilte
 use crate::{IDMapping, Model, Trajectory, Vehicle, VehicleName};
 
 impl Model {
+    // Turn each trip of a variant into a trajectory, using the stop times.
+    //
+    // Interesting to replay the "expected state", but hard to compare to real data. As delays
+    // increase or the number of trips for a variant differ, figuring out what a bus was supposed
+    // to be doing...
     pub fn trajectories_for_variant(
         &self,
         variant: RouteVariantID,

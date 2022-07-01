@@ -60,11 +60,10 @@ fn run(settings: Settings) {
     widgetry::run(settings, move |ctx| {
         let model = ctx.loading_screen("initialize model", |_, timer| {
             let mut model = args.load(timer).unwrap();
-            // TODO tmp
-            //model.segment(timer).unwrap();
-            //model.look_for_explainable_vehicle();
+            // TODO Experiments turned on
+            //model.look_for_best_matches_by_pos_and_time();
             //model.supply_demand_matching().unwrap();
-            model.vehicles_with_few_stops().unwrap();
+            //model.vehicles_with_few_stops().unwrap();
             model.set_alt_trajectories_from_ticketing();
             model
         });
