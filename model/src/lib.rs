@@ -16,7 +16,7 @@ use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
-pub use self::assemble::BoardingEvent;
+pub use self::assemble::*;
 use self::gtfs::{IDMapping, GTFS};
 pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::trajectory::Trajectory;

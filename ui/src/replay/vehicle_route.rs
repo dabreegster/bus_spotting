@@ -1,9 +1,10 @@
 use geom::{Circle, Distance, Pt2D};
 use model::gtfs::RouteVariantID;
-use model::{Trajectory, VehicleID};
+use model::{ActualTrip, Trajectory, VehicleID};
+use widgetry::tools::PopupMsg;
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome,
-    Panel, State, Text, VerticalAlignment, Widget,
+    Panel, State, Text, TextExt, VerticalAlignment, Widget,
 };
 
 use crate::{App, Transition};
@@ -13,6 +14,8 @@ pub struct Viewer {
     trajectory: Trajectory,
     draw: Drawable,
     snap_to_trajectory: Cached<Pt2D, (Text, Drawable)>,
+
+    trips: Vec<ActualTrip>,
 }
 
 impl Viewer {
@@ -24,7 +27,8 @@ impl Viewer {
     ) -> Box<dyn State<App>> {
         let trajectory = app.model.vehicles[vehicle.0].trajectory.clone();
 
-        app.model
+        let trips = app
+            .model
             .get_trips_for_vehicle_and_variant(vehicle, variant);
 
         let mut draw = GeomBatch::new();
@@ -60,16 +64,28 @@ impl Viewer {
             );
         }
 
+        let mut col = vec![Widget::row(vec![
+            Line("Vehicle + route").small_heading().into_widget(ctx),
+            ctx.style().btn_close_widget(ctx),
+        ])];
+        for (idx, trip) in trips.iter().enumerate() {
+            col.push(Widget::row(vec![
+                ctx.style()
+                    .btn_outline
+                    .text(format!("trip {}", idx))
+                    .build_def(ctx),
+                trip.summary().text_widget(ctx),
+            ]));
+        }
+
         Box::new(Self {
-            panel: Panel::new_builder(Widget::col(vec![Widget::row(vec![
-                Line("Vehicle + route").small_heading().into_widget(ctx),
-                ctx.style().btn_close_widget(ctx),
-            ])]))
-            .aligned(HorizontalAlignment::Left, VerticalAlignment::Top)
-            .build(ctx),
+            panel: Panel::new_builder(Widget::col(col))
+                .aligned(HorizontalAlignment::Left, VerticalAlignment::Top)
+                .build(ctx),
             trajectory,
             draw: ctx.upload(draw),
             snap_to_trajectory: Cached::new(),
+            trips,
         })
     }
 }
@@ -79,11 +95,16 @@ impl State<App> for Viewer {
         ctx.canvas_movement();
 
         if let Outcome::Clicked(x) = self.panel.event(ctx) {
-            match x.as_ref() {
-                "close" => {
-                    return Transition::Pop;
-                }
-                _ => unreachable!(),
+            if x == "close" {
+                return Transition::Pop;
+            } else if let Some(x) = x.strip_prefix("trip ") {
+                return Transition::Push(PopupMsg::new_state(
+                    ctx,
+                    "Schedule",
+                    self.trips[x.parse::<usize>().unwrap()].show_schedule(),
+                ));
+            } else {
+                unreachable!();
             }
         }
 

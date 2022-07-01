@@ -5,3 +5,4 @@ mod to_trips;
 mod vehicle_to_routes;
 
 pub use boarding::{populate_boarding, BoardingEvent};
+pub use to_trips::ActualTrip;

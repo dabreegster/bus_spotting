@@ -12,7 +12,6 @@ impl Model {
         variant: RouteVariantID,
     ) -> Vec<ActualTrip> {
         let trips = self.get_trip_times(vehicle, variant);
-        print_timetable(trips.clone());
 
         // Match to actual trip IDs in order. Don't attempt to match up times at all yet.
         let gtfs_trips = &self.gtfs.variant(variant).trips;
@@ -115,45 +114,57 @@ pub struct ActualTrip {
     pub stop_times: Vec<Time>,
 }
 
-fn print_timetable(trips: Vec<Vec<Time>>) {
-    println!("{} trips", trips.len());
-    for times in trips {
+impl ActualTrip {
+    pub fn summary(&self) -> String {
+        format!(
+            "{:?} from {} to {} ({} total)",
+            self.trip,
+            self.stop_times[0],
+            self.stop_times.last().unwrap(),
+            *self.stop_times.last().unwrap() - self.stop_times[0]
+        )
+    }
+
+    pub fn show_schedule(&self) -> Vec<String> {
+        let mut out = Vec::new();
+
         // More compressed, but harder to read
         if false {
-            println!(
+            out.push(format!(
                 "- Trip: {}",
-                times
+                self.stop_times
                     .iter()
                     .enumerate()
                     .map(|(idx, t)| format!("{} @ {}", idx + 1, t))
                     .collect::<Vec<_>>()
                     .join(", ")
-            );
+            ));
 
             // Look for impossible bits, show the stops
-            for (idx, pair) in times.windows(2).enumerate() {
+            for (idx, pair) in self.stop_times.windows(2).enumerate() {
                 if pair[1] < pair[0] {
-                    println!(
+                    out.push(format!(
                         "  - Something funny near stop {} ({}) -> {} ({})",
                         idx + 1,
                         pair[0],
                         idx + 2,
                         pair[1]
-                    );
+                    ));
                 }
             }
         }
 
-        println!(
-            "--- Trip from {} to {} ({} total)",
-            times[0],
-            times.last().unwrap(),
-            *times.last().unwrap() - times[0]
-        );
-        let mut last_time = times[0];
-        for (idx, time) in times.into_iter().enumerate() {
-            println!("  Stop {}: {} ({})", idx + 1, time, time - last_time);
+        let mut last_time = self.stop_times[0];
+        for (idx, time) in self.stop_times.iter().enumerate() {
+            let time = *time;
+            out.push(format!(
+                "  Stop {}: {} ({})",
+                idx + 1,
+                time,
+                time - last_time
+            ));
             last_time = time;
         }
+        out
     }
 }
