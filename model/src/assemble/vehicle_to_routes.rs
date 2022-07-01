@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use geom::{Distance, Time};
+use geom::{Distance, Time, UnitFmt};
 
 use crate::gtfs::{DateFilter, RouteVariantID, TripID};
 use crate::{Model, Trajectory, VehicleID, VehicleName};
@@ -304,5 +304,23 @@ impl Model {
         // like
 
         Vec::new()
+    }
+
+    pub fn vehicles_with_few_stops(&self) -> Result<()> {
+        for (vehicle, variants) in self.vehicles_to_possible_routes()? {
+            for v in variants {
+                let variant = self.gtfs.variant(v);
+                if variant.stops().len() < 15 {
+                    let shape = &self.gtfs.shapes[&variant.shape_id];
+                    println!(
+                        "{:?} possibly serves a simple route {:?} with length {}",
+                        vehicle,
+                        v,
+                        shape.length().to_string(&UnitFmt::metric())
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 }
