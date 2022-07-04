@@ -1,6 +1,8 @@
-use abstutil::Timer;
+use std::collections::BTreeMap;
+
+use abstutil::{prettyprint_usize, Timer};
 use anyhow::Result;
-use geom::{Duration, Time};
+use geom::Time;
 use serde::{Deserialize, Serialize};
 
 use crate::gtfs::{RouteVariantID, StopID, TripID};
@@ -46,31 +48,91 @@ impl Model {
     }
 }
 
-// This is a placeholder for much more correct matching
-pub fn populate_boarding(model: &mut Model, _timer: &mut Timer) -> Result<()> {
-    // TODO Just make up some data for the moment, to start the UIs
-    for (vehicle_id, mut variants) in model.vehicles_to_possible_routes()? {
-        let variant = model.gtfs.variant(variants.pop().unwrap());
-        println!(
-            "We've decided {:?} serves {}",
-            vehicle_id,
-            variant.describe(&model.gtfs)
-        );
-        for trip in &variant.trips {
-            for stop_time in &trip.stop_times {
-                model.boardings.push(BoardingEvent {
-                    vehicle: vehicle_id,
-                    variant: variant.variant_id,
-                    trip: trip.id,
-                    stop: stop_time.stop_id,
-                    arrival_time: stop_time.arrival_time + Duration::seconds(15.0),
-                    departure_time: stop_time.departure_time + Duration::seconds(25.0),
-                    new_riders: vec![JourneyID(0), JourneyID(1)],
-                    transfers: vec![JourneyID(2)],
-                });
+pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
+    timer.start("populate_boarding");
+
+    // Every stop a vehicle visits through the day, in order
+    let mut events_per_vehicle: BTreeMap<VehicleID, Vec<BoardingEvent>> = BTreeMap::new();
+
+    // Fill out empty BoardingEvents for each stop along each trip
+    for (vehicle, events) in timer.parallelize(
+        "calculate schedule for vehicles",
+        model.vehicles.iter().map(|v| v.id).collect(),
+        |vehicle| {
+            let mut events = Vec::new();
+            for trip in model.infer_vehicle_schedule(vehicle) {
+                let variant = model.gtfs.variant(trip.variant);
+                assert_eq!(trip.stop_times.len(), variant.stops().len());
+                for (time, stop) in trip.stop_times.into_iter().zip(variant.stops().into_iter()) {
+                    events.push(BoardingEvent {
+                        vehicle: trip.vehicle,
+                        variant: trip.variant,
+                        trip: trip.trip,
+                        stop,
+                        arrival_time: time,
+                        departure_time: time,
+                        new_riders: Vec::new(),
+                        transfers: Vec::new(),
+                    });
+                }
+            }
+            (vehicle, events)
+        },
+    ) {
+        events_per_vehicle.insert(vehicle, events);
+    }
+
+    // Match each ticketing event to the appropriate vehicle. Assume people tap on AFTER boarding
+    // the bus and match to the most recent stop time.
+    let mut matched_events = 0;
+    let mut unmatched_events = 0;
+    for (journey_idx, journey) in model.journeys.iter().enumerate() {
+        for (leg_idx, leg) in journey.legs.iter().enumerate() {
+            let mut ok = false;
+
+            if let Ok(vehicle) = model.vehicle_ids.lookup(&leg.vehicle_name) {
+                // Check stops in reverse, so we can find the first stop occurring before this
+                // ticketing event
+                for event in events_per_vehicle
+                    .get_mut(&vehicle)
+                    .unwrap()
+                    .iter_mut()
+                    .rev()
+                {
+                    if leg.time >= event.arrival_time {
+                        // TODO This time should occur shortly after the stop
+                        // TODO Make sure the route short name matches up!
+
+                        ok = true;
+                        if leg_idx == 0 {
+                            event.new_riders.push(JourneyID(journey_idx));
+                        } else {
+                            event.transfers.push(JourneyID(journey_idx));
+                        }
+                    }
+                }
+            }
+
+            if ok {
+                matched_events += 1;
+            } else {
+                unmatched_events += 1;
             }
         }
     }
 
+    info!(
+        "{} ticketing events matched to actual trips. {} unmatched",
+        prettyprint_usize(matched_events),
+        prettyprint_usize(unmatched_events)
+    );
+
+    // Flatten (not sure how boarding events will be used yet; this is obviously not the final
+    // structure)
+    for (_, events) in events_per_vehicle {
+        model.boardings.extend(events);
+    }
+
+    timer.stop("populate_boarding");
     Ok(())
 }

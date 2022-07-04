@@ -7,6 +7,9 @@ impl Model {
     /// Given one vehicle, use `get_trips_for_vehicle_and_variant` against all possible variants,
     /// then merge the results into one schedule through the day. Returns non-overlapping trips in
     /// order.
+    ///
+    /// Note we don't check that the same TripID isn't covered by two different vehicles. This
+    /// method looks at one vehicle only.
     pub fn infer_vehicle_schedule(&self, vehicle: VehicleID) -> Vec<ActualTrip> {
         let mut all_possible_trips = Vec::new();
         for variant in self.vehicle_to_possible_routes(vehicle) {
