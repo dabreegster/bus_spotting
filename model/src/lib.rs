@@ -8,6 +8,7 @@ mod avl;
 mod experiments;
 pub mod gtfs;
 mod ticketing;
+mod timetable;
 mod trajectory;
 
 use abstutil::Timer;
@@ -19,6 +20,7 @@ use serde::{Deserialize, Serialize};
 pub use self::assemble::*;
 use self::gtfs::{IDMapping, GTFS};
 pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
+pub use self::timetable::Timetable;
 pub use self::trajectory::Trajectory;
 
 #[derive(Serialize, Deserialize)]

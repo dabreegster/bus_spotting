@@ -552,7 +552,12 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
         Box::new(move |choice, ctx, app| match choice.as_ref() {
             "view schedule" => {
                 let mut lines = vec!["See STDOUT for skipped trips".to_string(), String::new()];
+                let mut last_time = None;
                 for trip in app.model.infer_vehicle_schedule(id) {
+                    if let Some(t) = last_time {
+                        lines.push(format!("{} gap", trip.start_time() - t));
+                    }
+                    last_time = Some(trip.end_time());
                     lines.push(trip.summary());
                 }
                 Transition::Replace(PopupMsg::new_state(ctx, "Vehicle schedule", lines))

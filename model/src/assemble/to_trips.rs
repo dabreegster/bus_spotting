@@ -1,7 +1,7 @@
 use geom::{Distance, Time};
 
 use crate::gtfs::{RouteVariantID, TripID};
-use crate::{Model, VehicleID};
+use crate::{Model, Timetable, VehicleID};
 
 impl Model {
     /// Given one vehicle, use `get_trips_for_vehicle_and_variant` against all possible variants,
@@ -13,29 +13,39 @@ impl Model {
             all_possible_trips.extend(self.get_trips_for_vehicle_and_variant(vehicle, variant));
         }
 
-        all_possible_trips.sort_by_key(|t| t.start_time());
-        let mut final_schedule: Vec<ActualTrip> = Vec::new();
-
         // Walk through in order of start time. Greedily add a trip if the time intervals don't
         // overlap.
         //
-        // TODO Probably better algorithm: Sort by trip duration, then insert those into a schedule
-        // as they fit. Long trips are usually wrong.
+        // Long trips (usually buggy) often win.
+        if false {
+            all_possible_trips.sort_by_key(|t| t.start_time());
+            let mut final_schedule: Vec<ActualTrip> = Vec::new();
+            for trip in all_possible_trips {
+                if final_schedule
+                    .last()
+                    .as_ref()
+                    .map(|last| last.end_time() < trip.start_time())
+                    .unwrap_or(true)
+                {
+                    final_schedule.push(trip);
+                } else {
+                    println!("Skipping {}", trip.summary());
+                }
+            }
+            return final_schedule;
+        }
 
+        // Sort by trip duration, then insert those into a schedule as they fit.
+        all_possible_trips.sort_by_key(|t| t.end_time() - t.start_time());
+        let mut timetable = Timetable::new();
         for trip in all_possible_trips {
-            if final_schedule
-                .last()
-                .as_ref()
-                .map(|last| last.end_time() < trip.start_time())
-                .unwrap_or(true)
-            {
-                final_schedule.push(trip);
+            if timetable.is_free((trip.start_time(), trip.end_time())) {
+                timetable.assign((trip.start_time(), trip.end_time()), trip);
             } else {
                 println!("Skipping {}", trip.summary());
             }
         }
-
-        final_schedule
+        timetable.0.into_iter().map(|(_, _, trip)| trip).collect()
     }
 
     /// Given a vehicle and one variant it possibly serves (according to ticketing), match its
@@ -207,11 +217,11 @@ impl ActualTrip {
         out
     }
 
-    fn start_time(&self) -> Time {
+    pub fn start_time(&self) -> Time {
         self.stop_times[0]
     }
 
-    fn end_time(&self) -> Time {
+    pub fn end_time(&self) -> Time {
         *self.stop_times.last().unwrap()
     }
 }
