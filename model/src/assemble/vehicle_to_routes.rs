@@ -127,6 +127,9 @@ impl Model {
     }
 }
 
+// TODO Move this to experiments, and simplify the above implementations, which just look for all
+// possible variants and ignore time / possible overlaps entirely.
+
 // If a vehicle serves multiple routes over the day, try to figure out when they switch.
 //
 // Current implementation doesn't handle a sequence like (route1, route2, route1). Could improve it

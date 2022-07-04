@@ -4,8 +4,46 @@ use crate::gtfs::{RouteVariantID, TripID};
 use crate::{Model, VehicleID};
 
 impl Model {
-    // TODO This assumes a single variant. Next step is to look at all possibilities and remove
-    // overlaps between them automatically
+    /// Given one vehicle, use `get_trips_for_vehicle_and_variant` against all possible variants,
+    /// then merge the results into one schedule through the day. Returns non-overlapping trips in
+    /// order.
+    pub fn infer_vehicle_schedule(&self, vehicle: VehicleID) -> Vec<ActualTrip> {
+        let mut all_possible_trips = Vec::new();
+        for variant in self.vehicle_to_possible_routes(vehicle) {
+            all_possible_trips.extend(self.get_trips_for_vehicle_and_variant(vehicle, variant));
+        }
+
+        all_possible_trips.sort_by_key(|t| t.start_time());
+        let mut final_schedule: Vec<ActualTrip> = Vec::new();
+
+        // Walk through in order of start time. Greedily add a trip if the time intervals don't
+        // overlap.
+        //
+        // TODO Probably better algorithm: Sort by trip duration, then insert those into a schedule
+        // as they fit. Long trips are usually wrong.
+
+        for trip in all_possible_trips {
+            if final_schedule
+                .last()
+                .as_ref()
+                .map(|last| last.end_time() < trip.start_time())
+                .unwrap_or(true)
+            {
+                final_schedule.push(trip);
+            } else {
+                println!("Skipping {}", trip.summary());
+            }
+        }
+
+        final_schedule
+    }
+
+    /// Given a vehicle and one variant it possibly serves (according to ticketing), match its
+    /// trajectory to all stops along that variant. Find all times it passes close to each stop,
+    /// then assemble those into a likely sequence of trips serving that variant.
+    ///
+    /// The result mostly looks good, but the distance threshold still needs tuning. Strange
+    /// results can generally be detected from very long trip times.
     pub fn get_trips_for_vehicle_and_variant(
         &self,
         vehicle: VehicleID,
@@ -117,8 +155,9 @@ pub struct ActualTrip {
 impl ActualTrip {
     pub fn summary(&self) -> String {
         format!(
-            "{:?} from {} to {} ({} total)",
+            "{:?} ({:?}) from {} to {} ({} total)",
             self.trip,
+            self.variant,
             self.stop_times[0],
             self.stop_times.last().unwrap(),
             *self.stop_times.last().unwrap() - self.stop_times[0]
@@ -166,5 +205,13 @@ impl ActualTrip {
             last_time = time;
         }
         out
+    }
+
+    fn start_time(&self) -> Time {
+        self.stop_times[0]
+    }
+
+    fn end_time(&self) -> Time {
+        *self.stop_times.last().unwrap()
     }
 }

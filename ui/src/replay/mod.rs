@@ -535,6 +535,7 @@ fn update_world(
 
 fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition {
     let mut choices = vec![
+        Choice::string("view schedule"),
         Choice::string("compare trajectories (by variants)"),
         Choice::string("compare trajectories (by trips)"),
         Choice::string("score against trips"),
@@ -549,6 +550,13 @@ fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition
         "Debug this vehicle",
         choices,
         Box::new(move |choice, ctx, app| match choice.as_ref() {
+            "view schedule" => {
+                let mut lines = vec!["See STDOUT for skipped trips".to_string(), String::new()];
+                for trip in app.model.infer_vehicle_schedule(id) {
+                    lines.push(trip.summary());
+                }
+                Transition::Replace(PopupMsg::new_state(ctx, "Vehicle schedule", lines))
+            }
             "compare trajectories (by variants)" => {
                 let vehicle = &app.model.vehicles[id.0];
                 let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
