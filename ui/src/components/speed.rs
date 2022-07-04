@@ -54,7 +54,7 @@ impl TimeControls {
                 Widget::placeholder(ctx, "controls"),
                 Widget::placeholder(ctx, "stats"),
             ]))
-            .aligned(HorizontalAlignment::Left, VerticalAlignment::Bottom)
+            .aligned(HorizontalAlignment::Right, VerticalAlignment::Top)
             .build(ctx),
             time: app.time,
             paused: true,

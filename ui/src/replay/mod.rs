@@ -5,7 +5,7 @@ use abstutil::prettyprint_usize;
 use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::tools::{ChooseSomething, PopupMsg, PromptInput};
+use widgetry::tools::{PopupMsg, PromptInput};
 use widgetry::{
     include_labeled_bytes, lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx,
     Key, Line, Outcome, Panel, State, Text, TextExt, Toggle, UpdateType, Widget,
@@ -56,24 +56,6 @@ impl Replay {
             .text_widget(ctx),
             // TODO The order of these always feels so backwards...
             Toggle::choice(ctx, "trajectory source", "BIL", "AVL", Key::T, false),
-            Widget::row(vec![
-                format!("No vehicle selected")
-                    .text_widget(ctx)
-                    .named("debug vehicle"),
-                ctx.style()
-                    .btn_plain
-                    .icon_bytes(include_labeled_bytes!("../../assets/location.svg"))
-                    .build_widget(ctx, "goto this vehicle"),
-            ]),
-            Widget::row(vec![
-                "Show stops for variant: ".text_widget(ctx),
-                Widget::dropdown(
-                    ctx,
-                    "variant stops",
-                    None,
-                    vec![Choice::<Option<RouteVariantID>>::new("---", None)],
-                ),
-            ]),
             ctx.style()
                 .btn_outline
                 .text("Replace vehicles with GTFS")
@@ -83,6 +65,9 @@ impl Replay {
                 .text("Warp to vehicle")
                 .hotkey(lctrl(Key::J))
                 .build_def(ctx),
+            format!("No vehicle selected")
+                .text_widget(ctx)
+                .named("vehicle controls"),
         ]);
         state.panel.replace(ctx, "contents", controls);
 
@@ -106,21 +91,50 @@ impl Replay {
 
     fn on_select_vehicle(&mut self, ctx: &mut EventCtx, app: &App, id: VehicleID) {
         self.selected_vehicle = Some(id);
-        let btn = ctx
-            .style()
-            .btn_outline
-            .text(format!("Selected {:?}", id))
-            .hotkey(Key::D)
-            .build_widget(ctx, "debug vehicle");
-        self.panel.replace(ctx, "debug vehicle", btn);
-
-        let mut choices = vec![Choice::<Option<RouteVariantID>>::new("---", None)];
-        for v in app.model.vehicle_to_possible_routes(id) {
-            choices.push(Choice::new(format!("{:?}", v), Some(v)));
-        }
-        let dropdown = Widget::dropdown(ctx, "variant stops", None, choices);
-        self.panel.replace(ctx, "variant stops", dropdown);
         self.draw_stop_order = Drawable::empty(ctx);
+
+        let mut stops_choices = vec![Choice::<Option<RouteVariantID>>::new("---", None)];
+        for v in app.model.vehicle_to_possible_routes(id) {
+            stops_choices.push(Choice::new(format!("{:?}", v), Some(v)));
+        }
+
+        let mut controls = vec![
+            Widget::row(vec![
+                format!("Selected {:?}", id).text_widget(ctx),
+                ctx.style()
+                    .btn_plain
+                    .icon_bytes(include_labeled_bytes!("../../assets/location.svg"))
+                    .build_widget(ctx, "goto this vehicle"),
+            ]),
+            Widget::row(vec![
+                "Show stops for variant: ".text_widget(ctx),
+                Widget::dropdown(ctx, "variant stops", None, stops_choices),
+            ]),
+            ctx.style().btn_plain.text("view schedule").build_def(ctx),
+            ctx.style()
+                .btn_plain
+                .text("compare trajectories (by variants)")
+                .build_def(ctx),
+            ctx.style()
+                .btn_plain
+                .text("compare trajectories (by trips)")
+                .build_def(ctx),
+            ctx.style()
+                .btn_plain
+                .text("score against trips")
+                .build_def(ctx),
+        ];
+        for v in app.model.vehicle_to_possible_routes(id) {
+            controls.push(
+                ctx.style()
+                    .btn_plain
+                    .text(format!("match to variant {}", v.0))
+                    .build_def(ctx),
+            );
+        }
+
+        self.panel
+            .replace(ctx, "vehicle controls", Widget::col(controls).section(ctx));
     }
 }
 
@@ -141,14 +155,7 @@ impl State<App> for Replay {
             WorldOutcome::ClickedFreeSpace(_) => {
                 self.selected_vehicle = None;
                 let label = format!("No vehicle selected").text_widget(ctx);
-                self.panel.replace(ctx, "debug vehicle", label);
-                let dropdown = Widget::dropdown(
-                    ctx,
-                    "variant stops",
-                    None,
-                    vec![Choice::<Option<RouteVariantID>>::new("---", None)],
-                );
-                self.panel.replace(ctx, "variant stops", dropdown);
+                self.panel.replace(ctx, "vehicle controls", label);
                 self.draw_stop_order = Drawable::empty(ctx);
                 self.on_time_change(ctx, app);
             }
@@ -186,24 +193,94 @@ impl State<App> for Replay {
                         app.model.replace_vehicles_with_gtfs();
                         return Transition::Replace(Self::new_state(ctx, app));
                     }
-                    "debug vehicle" => {
-                        return open_vehicle_menu(ctx, app, self.selected_vehicle.unwrap());
-                    }
                     "Warp to vehicle" => {
                         return warp_to_vehicle(ctx);
                     }
                     "goto this vehicle" => {
-                        if let Some(id) = self.selected_vehicle {
-                            if let Some((pt, _)) =
-                                app.model.vehicles[id.0].trajectory.interpolate(app.time)
-                            {
-                                ctx.canvas.cam_zoom = 1.0;
-                                ctx.canvas.center_on_map_pt(pt);
+                        if let Some((pt, _)) = app.model.vehicles[self.selected_vehicle.unwrap().0]
+                            .trajectory
+                            .interpolate(app.time)
+                        {
+                            ctx.canvas.cam_zoom = 1.0;
+                            ctx.canvas.center_on_map_pt(pt);
+                        }
+                        return Transition::Keep;
+                    }
+                    "view schedule" => {
+                        let mut lines =
+                            vec!["See STDOUT for skipped trips".to_string(), String::new()];
+                        let mut last_time = None;
+                        for trip in app
+                            .model
+                            .infer_vehicle_schedule(self.selected_vehicle.unwrap())
+                        {
+                            if let Some(t) = last_time {
+                                lines.push(format!("{} gap", trip.start_time() - t));
                             }
+                            last_time = Some(trip.end_time());
+                            lines.push(trip.summary());
+                        }
+                        return Transition::Push(PopupMsg::new_state(
+                            ctx,
+                            "Vehicle schedule",
+                            lines,
+                        ));
+                    }
+                    "compare trajectories (by variants)" => {
+                        let id = self.selected_vehicle.unwrap();
+                        let vehicle = &app.model.vehicles[id.0];
+                        let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
+                        if let Some(ref t) = vehicle.alt_trajectory {
+                            list.push(("BIL".to_string(), t.clone()));
+                        }
+                        if let Ok(more) = app.model.possible_route_trajectories_for_vehicle(id) {
+                            list.extend(more);
+                        }
+                        let clip_avl_time = false;
+                        return Transition::Push(crate::trajectories::Compare::new_state(
+                            ctx,
+                            list,
+                            clip_avl_time,
+                        ));
+                    }
+                    "compare trajectories (by trips)" => {
+                        let id = self.selected_vehicle.unwrap();
+                        let vehicle = &app.model.vehicles[id.0];
+                        let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
+                        if let Ok(more) = app.model.possible_trip_trajectories_for_vehicle(id) {
+                            list.extend(more);
+                        }
+                        let clip_avl_time = true;
+                        return Transition::Push(crate::trajectories::Compare::new_state(
+                            ctx,
+                            list,
+                            clip_avl_time,
+                        ));
+                    }
+                    "score against trips" => {
+                        let id = self.selected_vehicle.unwrap();
+                        println!("Matching {:?} to possible trips", id);
+                        for (trip, score) in app
+                            .model
+                            .score_vehicle_similarity_to_trips(id)
+                            .into_iter()
+                            .take(5)
+                        {
+                            println!("- {:?} has score of {}", trip, score);
                         }
                         return Transition::Keep;
                     }
                     _ => {}
+                }
+
+                if let Some(x) = x.strip_prefix("match to variant ") {
+                    let variant = RouteVariantID(x.parse::<usize>().unwrap());
+                    return Transition::Push(vehicle_route::Viewer::new_state(
+                        ctx,
+                        app,
+                        self.selected_vehicle.unwrap(),
+                        variant,
+                    ));
                 }
 
                 if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
@@ -533,89 +610,6 @@ fn update_world(
     .into_widget(ctx)
 }
 
-fn open_vehicle_menu(ctx: &mut EventCtx, app: &App, id: VehicleID) -> Transition {
-    let mut choices = vec![
-        Choice::string("view schedule"),
-        Choice::string("compare trajectories (by variants)"),
-        Choice::string("compare trajectories (by trips)"),
-        Choice::string("score against trips"),
-    ];
-
-    for v in app.model.vehicle_to_possible_routes(id) {
-        choices.push(Choice::string(&format!("match to variant {}", v.0)));
-    }
-
-    Transition::Push(ChooseSomething::new_state(
-        ctx,
-        "Debug this vehicle",
-        choices,
-        Box::new(move |choice, ctx, app| match choice.as_ref() {
-            "view schedule" => {
-                let mut lines = vec!["See STDOUT for skipped trips".to_string(), String::new()];
-                let mut last_time = None;
-                for trip in app.model.infer_vehicle_schedule(id) {
-                    if let Some(t) = last_time {
-                        lines.push(format!("{} gap", trip.start_time() - t));
-                    }
-                    last_time = Some(trip.end_time());
-                    lines.push(trip.summary());
-                }
-                Transition::Replace(PopupMsg::new_state(ctx, "Vehicle schedule", lines))
-            }
-            "compare trajectories (by variants)" => {
-                let vehicle = &app.model.vehicles[id.0];
-                let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
-                if let Some(ref t) = vehicle.alt_trajectory {
-                    list.push(("BIL".to_string(), t.clone()));
-                }
-                if let Ok(more) = app.model.possible_route_trajectories_for_vehicle(id) {
-                    list.extend(more);
-                }
-                let clip_avl_time = false;
-                Transition::Replace(crate::trajectories::Compare::new_state(
-                    ctx,
-                    list,
-                    clip_avl_time,
-                ))
-            }
-            "compare trajectories (by trips)" => {
-                let vehicle = &app.model.vehicles[id.0];
-                let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
-                if let Ok(more) = app.model.possible_trip_trajectories_for_vehicle(id) {
-                    list.extend(more);
-                }
-                let clip_avl_time = true;
-                Transition::Replace(crate::trajectories::Compare::new_state(
-                    ctx,
-                    list,
-                    clip_avl_time,
-                ))
-            }
-            "score against trips" => {
-                println!("Matching {:?} to possible trips", id);
-                for (trip, score) in app
-                    .model
-                    .score_vehicle_similarity_to_trips(id)
-                    .into_iter()
-                    .take(5)
-                {
-                    println!("- {:?} has score of {}", trip, score);
-                }
-                Transition::Pop
-            }
-            x => {
-                if let Some(x) = x.strip_prefix("match to variant ") {
-                    let variant = RouteVariantID(x.parse::<usize>().unwrap());
-                    return Transition::Replace(vehicle_route::Viewer::new_state(
-                        ctx, app, id, variant,
-                    ));
-                }
-                unreachable!();
-            }
-        }),
-    ))
-}
-
 fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
     Transition::Push(PromptInput::new_state(
         ctx,
@@ -630,6 +624,8 @@ fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
                     if let Ok(x) = response.parse::<usize>() {
                         if let Some(vehicle) = app.model.vehicles.get(x) {
                             state.on_select_vehicle(ctx, app, vehicle.id);
+                            // Redraw the selected vehicle
+                            state.on_time_change(ctx, app);
                             ctx.canvas.cam_zoom = 1.0;
                             if let Some((pt, _)) = vehicle.trajectory.interpolate(app.time) {
                                 ctx.canvas.center_on_map_pt(pt);
