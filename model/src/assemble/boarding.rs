@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use abstutil::{prettyprint_usize, Timer};
 use anyhow::Result;
@@ -7,6 +7,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::gtfs::{RouteVariantID, StopID, TripID};
 use crate::{JourneyID, Model, VehicleID};
+
+// TODO UIs
+// - for just a variant (click in the world)
+//   - how many diff vehicles serve it?
+//   - make a graph. X axis time, Y axis stops (spaced by distance along shape?)
+//     - one line for each vehicle. dot per stop, with color/size/tooltip showing boardings
 
 // Represents a vehicle arriving at a stop, and maybe people boarding (either as new riders or
 // transfers). This effectively joins AVL, BIL, and GTFS.
@@ -27,18 +33,6 @@ pub struct BoardingEvent {
     pub new_riders: Vec<JourneyID>,
     pub transfers: Vec<JourneyID>,
 }
-
-// Assuming we can produce this, start some UIs:
-//
-// - for a stop + variant...
-//   - on the schedule tab, show actual/expected time (with an 'early' / 'late' indicator)
-//   - make a new tab for ridership. list each of these events and count the boardings. breakdown
-//     by transfer or not.
-//
-// - for just a variant (click in the world)
-//   - how many diff vehicles serve it?
-//   - make a graph. X axis time, Y axis stops (spaced by distance along shape?)
-//     - one line for each vehicle. dot per stop, with color/size/tooltip showing boardings
 
 impl Model {
     pub fn find_boarding_event(&self, trip: TripID, stop: StopID) -> Option<&BoardingEvent> {
@@ -85,6 +79,28 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
     ) {
         events_per_vehicle.insert(vehicle, events);
     }
+
+    // Sanity check multiple vehicles aren't assigned to the same trip.
+    let mut trip_to_vehicles: BTreeMap<TripID, BTreeSet<VehicleID>> = BTreeMap::new();
+    for events in events_per_vehicle.values() {
+        for event in events {
+            trip_to_vehicles
+                .entry(event.trip)
+                .or_insert_with(BTreeSet::new)
+                .insert(event.vehicle);
+        }
+    }
+    let mut trip_problems = 0;
+    for (trip, vehicles) in trip_to_vehicles {
+        if vehicles.len() > 1 {
+            trip_problems += 1;
+            error!(
+                "{:?} is assigned to multiple vehicles: {:?}",
+                trip, vehicles
+            );
+        }
+    }
+    error!("{} trips with multiple vehicles", trip_problems);
 
     // Match each ticketing event to the appropriate vehicle. Assume people tap on AFTER boarding
     // the bus and match to the most recent stop time.

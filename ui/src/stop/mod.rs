@@ -112,12 +112,13 @@ fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) 
         let scheduled = trip.arrival_at(stop.id);
         if let Some(actual) = app.model.find_boarding_event(trip.id, stop.id) {
             txt.add_line(Line(format!(
-                "{} (actually {} -- {}) -- {} new riders, {} transfers",
+                "{} (actually {} -- {}) -- {} new riders, {} transfers by {:?}",
                 scheduled,
                 actual.arrival_time,
                 compare_time(scheduled, actual.arrival_time),
                 actual.new_riders.len(),
                 actual.transfers.len(),
+                actual.vehicle,
             )));
         } else {
             txt.add_line(Line(format!("{} (no real data)", scheduled)));
