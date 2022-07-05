@@ -110,7 +110,11 @@ impl Replay {
                 "Show stops for variant: ".text_widget(ctx),
                 Widget::dropdown(ctx, "variant stops", None, stops_choices),
             ]),
-            ctx.style().btn_plain.text("view schedule").build_def(ctx),
+            ctx.style()
+                .btn_plain
+                .text("view schedule")
+                .hotkey(Key::S)
+                .build_def(ctx),
             ctx.style()
                 .btn_plain
                 .text("compare trajectories (by variants)")

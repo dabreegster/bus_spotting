@@ -46,6 +46,10 @@ impl Model {
             .iter()
             .find(|ev| ev.trip == trip && ev.stop == stop)
     }
+
+    pub fn all_boarding_events_at_stop(&self, stop: StopID) -> Vec<&BoardingEvent> {
+        self.boardings.iter().filter(|ev| ev.stop == stop).collect()
+    }
 }
 
 pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {

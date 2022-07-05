@@ -1,3 +1,4 @@
+use abstutil::Counter;
 use geom::Time;
 use widgetry::{
     Choice, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
@@ -46,6 +47,7 @@ impl StopInfo {
                             .collect(),
                     ),
                 ]),
+                total_counts_per_variant(ctx, app, stop).section(ctx),
                 schedule(ctx, app, stop, app.model.gtfs.variant(variant)),
             ]))
             .build(ctx),
@@ -62,7 +64,20 @@ impl State<App> for StopInfo {
                 "close" => {
                     return Transition::Pop;
                 }
-                _ => unreachable!(),
+                x => {
+                    if let Some(x) = x.strip_prefix("Variant ") {
+                        let variant = RouteVariantID(x.parse::<usize>().unwrap());
+                        return Transition::Replace(Self::new_state(
+                            ctx,
+                            app,
+                            &app.model.gtfs.stops[&self.stop_id],
+                            std::mem::take(&mut self.variants),
+                            variant,
+                        ));
+                    } else {
+                        unreachable!()
+                    }
+                }
             },
             Outcome::Changed(_) => {
                 return Transition::Replace(Self::new_state(
@@ -119,4 +134,34 @@ fn compare_time(scheduled: Time, actual: Time) -> String {
         return format!("{} late", actual - scheduled);
     }
     format!("{} early", scheduled - actual)
+}
+
+// TODO Use the variants list to filter by day
+fn total_counts_per_variant(ctx: &mut EventCtx, app: &App, stop: &Stop) -> Widget {
+    let mut trips_per_variant = Counter::new();
+    let mut new_riders_per_variant = Counter::new();
+    let mut transfers_per_variant = Counter::new();
+
+    for event in app.model.all_boarding_events_at_stop(stop.id) {
+        trips_per_variant.inc(event.variant);
+        new_riders_per_variant.add(event.variant, event.new_riders.len());
+        transfers_per_variant.add(event.variant, event.transfers.len());
+    }
+
+    let mut col = vec![Line("Totals per variant").small_heading().into_widget(ctx)];
+    for (variant, num_trips) in trips_per_variant.consume() {
+        col.push(
+            ctx.style()
+                .btn_plain
+                .text(format!(
+                    "{:?}: {} trips, {} new riders, {} transfers",
+                    variant,
+                    num_trips,
+                    new_riders_per_variant.get(variant),
+                    transfers_per_variant.get(variant)
+                ))
+                .build_widget(ctx, format!("Variant {}", variant.0)),
+        );
+    }
+    Widget::col(col)
 }
