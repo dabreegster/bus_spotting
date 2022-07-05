@@ -46,8 +46,6 @@ pub struct Vehicle {
     pub id: VehicleID,
     pub original_id: VehicleName,
     pub trajectory: Trajectory,
-    /// A trajectory built from ticketing data
-    pub alt_trajectory: Option<Trajectory>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -90,7 +88,6 @@ impl Model {
                     id,
                     original_id,
                     trajectory,
-                    alt_trajectory: None,
                 });
             }
         }

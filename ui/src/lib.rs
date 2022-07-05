@@ -64,7 +64,6 @@ fn run(settings: Settings) {
             //model.look_for_best_matches_by_pos_and_time();
             //model.supply_demand_matching().unwrap();
             //model.vehicles_with_few_stops().unwrap();
-            model.set_alt_trajectories_from_ticketing();
             model
         });
 

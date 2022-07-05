@@ -63,7 +63,6 @@ impl Model {
                 id,
                 original_id,
                 trajectory,
-                alt_trajectory: None,
             });
         }
     }

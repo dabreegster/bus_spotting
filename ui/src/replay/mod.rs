@@ -8,11 +8,11 @@ use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{PopupMsg, PromptInput};
 use widgetry::{
     include_labeled_bytes, lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx,
-    Key, Line, Outcome, Panel, State, Text, TextExt, Toggle, UpdateType, Widget,
+    Key, Line, Outcome, Panel, State, Text, TextExt, UpdateType, Widget,
 };
 
 use model::gtfs::{DateFilter, RouteVariantID, StopID};
-use model::{Vehicle, VehicleID};
+use model::VehicleID;
 
 use self::events::Events;
 use crate::components::{describe, MainMenu, TimeControls};
@@ -27,7 +27,6 @@ pub struct Replay {
 
     selected_vehicle: Option<VehicleID>,
     show_path: Cached<VehicleID, Drawable>,
-    show_alt_position: Cached<VehicleID, Drawable>,
     snap_to_trajectory: Cached<Pt2D, (Text, Drawable, Option<Time>)>,
     draw_stop_order: Drawable,
 }
@@ -43,7 +42,6 @@ impl Replay {
 
             selected_vehicle: None,
             show_path: Cached::new(),
-            show_alt_position: Cached::new(),
             snap_to_trajectory: Cached::new(),
             draw_stop_order: Drawable::empty(ctx),
         };
@@ -54,8 +52,6 @@ impl Replay {
                 app.model.main_date.weekday()
             )
             .text_widget(ctx),
-            // TODO The order of these always feels so backwards...
-            Toggle::choice(ctx, "trajectory source", "BIL", "AVL", Key::T, false),
             ctx.style()
                 .btn_outline
                 .text("Replace vehicles with GTFS")
@@ -82,11 +78,9 @@ impl Replay {
             &mut self.world,
             &self.events,
             &mut self.prev_events,
-            self.panel.is_checked("trajectory source"),
             self.selected_vehicle,
         );
         self.time_controls.panel.replace(ctx, "stats", stats);
-        self.show_alt_position.clear();
     }
 
     fn on_select_vehicle(&mut self, ctx: &mut EventCtx, app: &App, id: VehicleID) {
@@ -234,9 +228,6 @@ impl State<App> for Replay {
                         let id = self.selected_vehicle.unwrap();
                         let vehicle = &app.model.vehicles[id.0];
                         let mut list = vec![("AVL".to_string(), vehicle.trajectory.clone())];
-                        if let Some(ref t) = vehicle.alt_trajectory {
-                            list.push(("BIL".to_string(), t.clone()));
-                        }
                         if let Ok(more) = app.model.possible_route_trajectories_for_vehicle(id) {
                             list.extend(more);
                         }
@@ -294,11 +285,6 @@ impl State<App> for Replay {
                 }
             }
             Outcome::Changed(x) => match x.as_ref() {
-                "AVL" | "BIL" => {
-                    self.on_time_change(ctx, app);
-                    self.show_path.clear();
-                    self.show_alt_position.clear();
-                }
                 "variant stops" => {
                     let mut batch = GeomBatch::new();
                     if let Some(v) = self.panel.dropdown_value("variant stops") {
@@ -329,42 +315,16 @@ impl State<App> for Replay {
                 Some(Obj::Bus(id)) => Some(id),
                 _ => None,
             });
-        // Note either trajectory may be unavailable at this time
         self.show_path.update(focus, |id| {
             let vehicle = &app.model.vehicles[id.0];
             let mut batch = GeomBatch::new();
-            if let Some(trajectory) = if self.panel.is_checked("trajectory source") {
-                vehicle.alt_trajectory.as_ref()
-            } else {
-                Some(&vehicle.trajectory)
-            } {
-                batch.push(
-                    Color::CYAN,
-                    trajectory
-                        .as_polyline()
-                        .make_polygons(Distance::meters(5.0)),
-                );
-            }
-
-            ctx.upload(batch)
-        });
-        self.show_alt_position.update(focus, |id| {
-            let vehicle = &app.model.vehicles[id.0];
-            let (main_trajectory, alt_trajectory) = if self.panel.is_checked("trajectory source") {
-                (vehicle.alt_trajectory.as_ref(), Some(&vehicle.trajectory))
-            } else {
-                (Some(&vehicle.trajectory), vehicle.alt_trajectory.as_ref())
-            };
-
-            let mut batch = GeomBatch::new();
-            if let Some((pos2, _)) = alt_trajectory.and_then(|t| t.interpolate(app.time)) {
-                if let Some((pos1, _)) = main_trajectory.and_then(|t| t.interpolate(app.time)) {
-                    if let Ok(line) = geom::Line::new(pos1, pos2) {
-                        batch.push(Color::PINK, line.make_polygons(Distance::meters(5.0)));
-                    }
-                }
-            }
-
+            batch.push(
+                Color::CYAN,
+                vehicle
+                    .trajectory
+                    .as_polyline()
+                    .make_polygons(Distance::meters(5.0)),
+            );
             ctx.upload(batch)
         });
 
@@ -377,28 +337,24 @@ impl State<App> for Replay {
                 if let Some(id) = self.selected_vehicle {
                     if self.world.get_hovering().is_none() {
                         let vehicle = &app.model.vehicles[id.0];
-                        if let Some(trajectory) = if self.panel.is_checked("trajectory source") {
-                            vehicle.alt_trajectory.as_ref()
-                        } else {
-                            Some(&vehicle.trajectory)
-                        } {
-                            let hits = trajectory.times_near_pos(pt, Distance::meters(30.0));
-                            if !hits.is_empty() {
-                                batch.push(
-                                    Color::CYAN,
-                                    Circle::new(hits[0].1, Distance::meters(30.0)).to_polygon(),
-                                );
-                                let n = hits.len();
-                                for (idx, (time, _)) in hits.into_iter().enumerate() {
-                                    txt.add_line(Line(format!("Here at {time}")));
-                                    if idx == 0 {
-                                        time_warp = Some(time);
-                                    }
-                                    txt.append(Line("  (press W to time-warp)"));
-                                    if idx == 4 {
-                                        txt.append(Line(format!(" (and {} more times)", n - 5)));
-                                        break;
-                                    }
+                        let hits = vehicle
+                            .trajectory
+                            .times_near_pos(pt, Distance::meters(30.0));
+                        if !hits.is_empty() {
+                            batch.push(
+                                Color::CYAN,
+                                Circle::new(hits[0].1, Distance::meters(30.0)).to_polygon(),
+                            );
+                            let n = hits.len();
+                            for (idx, (time, _)) in hits.into_iter().enumerate() {
+                                txt.add_line(Line(format!("Here at {time}")));
+                                if idx == 0 {
+                                    time_warp = Some(time);
+                                }
+                                txt.append(Line("  (press W to time-warp)"));
+                                if idx == 4 {
+                                    txt.append(Line(format!(" (and {} more times)", n - 5)));
+                                    break;
                                 }
                             }
                         }
@@ -427,9 +383,6 @@ impl State<App> for Replay {
             g.redraw(draw);
         }
         self.world.draw(g);
-        if let Some(draw) = self.show_alt_position.value() {
-            g.redraw(draw);
-        }
         if let Some((txt, draw, _)) = self.snap_to_trajectory.value() {
             g.redraw(draw);
             g.draw_mouse_tooltip(txt.clone());
@@ -482,7 +435,6 @@ fn update_world(
     world: &mut World<Obj>,
     events: &Events,
     prev_events: &mut usize,
-    use_alt_trajectory_source: bool,
     selected_vehicle: Option<VehicleID>,
 ) -> Widget {
     // Delete all existing vehicles
@@ -503,20 +455,8 @@ fn update_world(
     let mut idling = 0;
     let mut moving = 0;
 
-    let get_vehicle_state = |vehicle: &Vehicle| {
-        if use_alt_trajectory_source {
-            if let Some(ref trajectory) = vehicle.alt_trajectory {
-                trajectory.interpolate(app.time)
-            } else {
-                None
-            }
-        } else {
-            vehicle.trajectory.interpolate(app.time)
-        }
-    };
-
     for vehicle in &app.model.vehicles {
-        if let Some((pos, speed)) = get_vehicle_state(vehicle) {
+        if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
             if speed == Speed::ZERO {
                 idling += 1;
             } else {
@@ -557,7 +497,7 @@ fn update_world(
         hover.push(Color::GREEN, Circle::new(ev.pos, radius).to_polygon());
         // Where's the bus at this time?
         if let Some(vehicle) = app.model.lookup_vehicle(&ev.vehicle_name) {
-            if let Some((pos, _)) = get_vehicle_state(vehicle) {
+            if let Some((pos, _)) = vehicle.trajectory.interpolate(app.time) {
                 if let Ok(line) = geom::Line::new(ev.pos, pos) {
                     hover.push(Color::YELLOW, line.make_polygons(Distance::meters(15.0)));
                     txt.add_line(format!(
