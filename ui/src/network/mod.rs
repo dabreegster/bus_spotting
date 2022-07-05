@@ -5,7 +5,7 @@ mod variant;
 
 use std::collections::BTreeSet;
 
-use geom::{Circle, Distance, Pt2D};
+use geom::{Circle, Distance, Pt2D, Time};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::{Color, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text};
 
@@ -179,4 +179,14 @@ fn make_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
 
     world.initialize_hover(ctx);
     world
+}
+
+fn compare_time(scheduled: Time, actual: Time) -> String {
+    if scheduled == actual {
+        return "on time".to_string();
+    }
+    if scheduled < actual {
+        return format!("{} late", actual - scheduled);
+    }
+    format!("{} early", scheduled - actual)
 }

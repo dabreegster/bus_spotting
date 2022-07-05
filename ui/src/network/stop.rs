@@ -1,5 +1,4 @@
 use abstutil::Counter;
-use geom::Time;
 use widgetry::{
     Choice, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
@@ -115,7 +114,7 @@ fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) 
                 "{} (actually {} -- {}) -- {} new riders, {} transfers by {:?}",
                 scheduled,
                 actual.arrival_time,
-                compare_time(scheduled, actual.arrival_time),
+                super::compare_time(scheduled, actual.arrival_time),
                 actual.new_riders.len(),
                 actual.transfers.len(),
                 actual.vehicle,
@@ -125,16 +124,6 @@ fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) 
         }
     }
     txt.into_widget(ctx)
-}
-
-fn compare_time(scheduled: Time, actual: Time) -> String {
-    if scheduled == actual {
-        return "on time".to_string();
-    }
-    if scheduled < actual {
-        return format!("{} late", actual - scheduled);
-    }
-    format!("{} early", scheduled - actual)
 }
 
 // TODO Use the variants list to filter by day
