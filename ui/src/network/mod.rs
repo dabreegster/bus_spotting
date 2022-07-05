@@ -1,6 +1,7 @@
 mod filters;
 mod search;
 mod stop;
+mod variant;
 
 use std::collections::BTreeSet;
 
@@ -56,9 +57,20 @@ impl State<App> for Viewer {
         app.savestate_mode = crate::SavestateMode::NetworkViewer;
         app.sync_mapbox(ctx);
 
-        if let WorldOutcome::ClickedObject(Obj::Stop(id)) = self.world.event(ctx) {
-            self.world.hack_unset_hovering();
-            return self.on_click_stop(ctx, app, id);
+        match self.world.event(ctx) {
+            WorldOutcome::ClickedObject(Obj::Stop(id)) => {
+                self.world.hack_unset_hovering();
+                return self.on_click_stop(ctx, app, id);
+            }
+            WorldOutcome::ClickedObject(Obj::Route(id)) => {
+                self.world.hack_unset_hovering();
+                return Transition::Push(variant::VariantInfo::new_state(
+                    ctx,
+                    app,
+                    app.model.gtfs.variant(id),
+                ));
+            }
+            _ => {}
         }
 
         match self.panel.event(ctx) {
