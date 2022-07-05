@@ -1,4 +1,4 @@
-use geom::{Distance, Time};
+use geom::{Distance, Duration, Time};
 
 use crate::gtfs::{RouteVariantID, TripID};
 use crate::{Model, Timetable, VehicleID};
@@ -64,22 +64,37 @@ impl Model {
     ) -> Vec<ActualTrip> {
         let trips = self.get_trip_times(vehicle, variant);
 
-        // Match to actual trip IDs in order. Don't attempt to match up times at all yet.
         let gtfs_trips = &self.gtfs.variant(variant).trips;
         if trips.len() > gtfs_trips.len() {
-            println!(
-                "Found {} actual trips, but GTFS only has {}",
+            warn!(
+                "For {:?}, found {} actual trips, but GTFS only has {}",
+                variant,
                 trips.len(),
                 gtfs_trips.len()
             );
         }
 
         let mut results = Vec::new();
-        for (stop_times, gtfs_trip) in trips.into_iter().zip(gtfs_trips.into_iter()) {
+
+        for stop_times in trips {
+            // Which GTFS trip is this? If all scheduled trips occurred, we could just match them
+            // up in order, but that's rarely the case. Minimize the sum of time differences over
+            // all stops.
+            let trip = gtfs_trips
+                .iter()
+                .min_by_key(|trip| {
+                    let mut sum_diff = Duration::ZERO;
+                    for (actual_time, stop_time) in stop_times.iter().zip(trip.stop_times.iter()) {
+                        sum_diff += (*actual_time - stop_time.arrival_time).abs();
+                    }
+                    sum_diff
+                })
+                .map(|trip| trip.id)
+                .unwrap();
             results.push(ActualTrip {
                 vehicle,
                 variant,
-                trip: gtfs_trip.id,
+                trip,
                 stop_times,
             });
         }
