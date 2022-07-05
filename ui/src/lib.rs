@@ -6,8 +6,6 @@ extern crate log;
 mod components;
 mod network;
 mod replay;
-mod stop;
-mod trajectories;
 
 use abstutil::Timer;
 use anyhow::Result;
@@ -59,7 +57,7 @@ fn run(settings: Settings) {
 
     widgetry::run(settings, move |ctx| {
         let model = ctx.loading_screen("initialize model", |_, timer| {
-            let mut model = args.load(timer).unwrap();
+            let model = args.load(timer).unwrap();
             // TODO Experiments turned on
             //model.look_for_best_matches_by_pos_and_time();
             //model.supply_demand_matching().unwrap();

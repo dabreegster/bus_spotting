@@ -1,5 +1,6 @@
 mod filters;
 mod search;
+mod stop;
 
 use std::collections::BTreeSet;
 
@@ -46,9 +47,7 @@ impl Viewer {
             .collect::<Vec<RouteVariantID>>();
 
         let first = variants[0];
-        Transition::Push(crate::stop::StopInfo::new_state(
-            ctx, app, stop, variants, first,
-        ))
+        Transition::Push(stop::StopInfo::new_state(ctx, app, stop, variants, first))
     }
 }
 

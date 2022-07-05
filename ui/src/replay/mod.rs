@@ -1,4 +1,5 @@
 mod events;
+mod trajectories;
 mod vehicle_route;
 
 use abstutil::prettyprint_usize;
@@ -232,7 +233,7 @@ impl State<App> for Replay {
                             list.extend(more);
                         }
                         let clip_avl_time = false;
-                        return Transition::Push(crate::trajectories::Compare::new_state(
+                        return Transition::Push(trajectories::Compare::new_state(
                             ctx,
                             list,
                             clip_avl_time,
@@ -246,7 +247,7 @@ impl State<App> for Replay {
                             list.extend(more);
                         }
                         let clip_avl_time = true;
-                        return Transition::Push(crate::trajectories::Compare::new_state(
+                        return Transition::Push(trajectories::Compare::new_state(
                             ctx,
                             list,
                             clip_avl_time,
