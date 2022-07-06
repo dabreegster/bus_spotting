@@ -3,6 +3,8 @@ use geom::{Distance, Duration, Time};
 use crate::gtfs::{RouteVariantID, TripID};
 use crate::{Model, Timetable, VehicleID};
 
+pub const BUS_TO_STOP_THRESHOLD: Distance = Distance::const_meters(10.0);
+
 impl Model {
     /// Given one vehicle, use `get_trips_for_vehicle_and_variant` against all possible variants,
     /// then merge the results into one schedule through the day. Returns non-overlapping trips in
@@ -114,10 +116,9 @@ impl Model {
         let mut times_near_stops: Vec<Vec<Time>> = Vec::new();
         let mut min_times = usize::MAX;
         for stop in variant.stops() {
-            let threshold = Distance::meters(10.0);
             let stop_pos = self.gtfs.stops[&stop].pos;
             let times: Vec<Time> = trajectory
-                .times_near_pos(stop_pos, threshold)
+                .times_near_pos(stop_pos, BUS_TO_STOP_THRESHOLD)
                 .into_iter()
                 .map(|(t, _)| t)
                 .collect();

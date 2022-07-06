@@ -53,10 +53,18 @@ impl Viewer {
         // Labeled stops
         for (idx, id) in variant.stops().into_iter().enumerate() {
             let pt = app.model.gtfs.stops[&id].pos;
-            draw.push(
-                Color::BLUE,
-                Circle::new(pt, Distance::meters(50.0)).to_polygon(),
-            );
+
+            // If the vehicle never gets close to this stop, point that out
+            let color = if trajectory
+                .times_near_pos(pt, model::BUS_TO_STOP_THRESHOLD)
+                .is_empty()
+            {
+                Color::RED
+            } else {
+                Color::BLUE
+            };
+
+            draw.push(color, Circle::new(pt, Distance::meters(50.0)).to_polygon());
             draw.append(
                 Text::from(Line(format!("{}", idx + 1)).fg(Color::WHITE))
                     .render(ctx)
