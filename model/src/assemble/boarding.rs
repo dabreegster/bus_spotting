@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use abstutil::{prettyprint_usize, Timer};
 use anyhow::Result;
-use geom::Time;
+use geom::{Histogram, Time};
 use serde::{Deserialize, Serialize};
 
 use crate::gtfs::{RouteVariantID, StopID, TripID};
@@ -106,6 +106,9 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
     // the bus and match to the most recent stop time.
     let mut matched_events = 0;
     let mut unmatched_events = 0;
+
+    let mut route_name_mismatches = 0;
+    let mut delay_before_ticketing = Histogram::new();
     for (journey_idx, journey) in model.journeys.iter().enumerate() {
         for (leg_idx, leg) in journey.legs.iter().enumerate() {
             let mut ok = false;
@@ -119,9 +122,21 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
                     .iter_mut()
                     .rev()
                 {
-                    if leg.time >= event.arrival_time {
-                        // TODO This time should occur shortly after the stop
-                        // TODO Make sure the route short name matches up!
+                    if leg.time <= event.arrival_time {
+                        // Sanity check: does the route on the ticketing event match what we've
+                        // assigned the vehicle?
+                        let vehicle_route = model.gtfs.routes
+                            [&model.gtfs.variant(event.variant).route_id]
+                            .short_name
+                            .as_ref()
+                            .unwrap();
+                        if &leg.route_short_name != vehicle_route {
+                            route_name_mismatches += 1;
+                        }
+
+                        // Sanity check: the ticketing event should happen shortly after the
+                        // vehicle arrives at the stop
+                        delay_before_ticketing.add(event.arrival_time - leg.time);
 
                         ok = true;
                         if leg_idx == 0 {
@@ -129,6 +144,7 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
                         } else {
                             event.transfers.push(JourneyID(journey_idx));
                         }
+                        break;
                     }
                 }
             }
@@ -145,6 +161,14 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
         "{} ticketing events matched to actual trips. {} unmatched",
         prettyprint_usize(matched_events),
         prettyprint_usize(unmatched_events)
+    );
+    info!(
+        "Of the matched, {} don't actually match the route name",
+        prettyprint_usize(route_name_mismatches)
+    );
+    info!(
+        "Of the matched, how long between the bus arriving and the ticketing? {}",
+        delay_before_ticketing.describe()
     );
 
     // Flatten (not sure how boarding events will be used yet; this is obviously not the final
