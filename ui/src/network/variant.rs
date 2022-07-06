@@ -56,16 +56,29 @@ impl State<App> for VariantInfo {
 
 fn table(ctx: &mut EventCtx, app: &App, variant: &RouteVariant) -> Widget {
     let mut headers = Vec::new();
+    headers.push("Vehicle".text_widget(ctx));
     for idx in 0..variant.stops().len() {
         headers.push(format!("Stop {}", idx + 1).text_widget(ctx));
     }
 
     let mut rows = Vec::new();
-    for trip in &variant.trips {
+    'TRIP: for trip in &variant.trips {
         let mut row = Vec::new();
         for stop_time in &trip.stop_times {
             let mut txt = Text::from(format!("{}", stop_time.arrival_time));
             if let Some(event) = app.model.find_boarding_event(trip.id, stop_time.stop_id) {
+                if row.is_empty() {
+                    // Show what vehicle served this trip
+                    let (mut entry, hitbox) = Text::from(Line(format!("{:?}", event.vehicle)))
+                        .render_autocropped(ctx)
+                        .batch()
+                        .container()
+                        .padding(10.0)
+                        .into_geom(ctx, None);
+                    entry.push(Color::RED.alpha(0.2), hitbox);
+                    row.push(entry);
+                }
+
                 txt.add_line(Line(super::compare_time(
                     stop_time.arrival_time,
                     event.arrival_time,
@@ -77,6 +90,9 @@ fn table(ctx: &mut EventCtx, app: &App, variant: &RouteVariant) -> Widget {
                         event.transfers.len()
                     )));
                 }
+            } else {
+                // Skip unmatched trips for now, to make the table display less overwhelming
+                continue 'TRIP;
             }
 
             let (mut entry, hitbox) = txt
