@@ -53,15 +53,18 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
     let mut events_per_vehicle: BTreeMap<VehicleID, Vec<BoardingEvent>> = BTreeMap::new();
 
     // Fill out empty BoardingEvents for each stop along each trip
-    for (vehicle, events) in timer.parallelize(
+    let mut all_trip_durations = Histogram::new();
+    for (vehicle, events, trip_durations) in timer.parallelize(
         "calculate schedule for vehicles",
         model.vehicles.iter().map(|v| v.id).collect(),
         |vehicle| {
             let mut events = Vec::new();
+            let mut trip_durations = Vec::new();
             let debug = false;
             for trip in model.infer_vehicle_schedule(vehicle, debug) {
                 let variant = model.gtfs.variant(trip.variant);
                 assert_eq!(trip.stop_times.len(), variant.stops().len());
+                trip_durations.push(trip.end_time() - trip.start_time());
                 for (time, stop) in trip.stop_times.into_iter().zip(variant.stops().into_iter()) {
                     events.push(BoardingEvent {
                         vehicle: trip.vehicle,
@@ -75,10 +78,13 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
                     });
                 }
             }
-            (vehicle, events)
+            (vehicle, events, trip_durations)
         },
     ) {
         events_per_vehicle.insert(vehicle, events);
+        for d in trip_durations {
+            all_trip_durations.add(d);
+        }
     }
 
     // Sanity check multiple vehicles aren't assigned to the same trip.
@@ -92,6 +98,7 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
         }
     }
     let mut trip_problems = 0;
+    let total_found_trips = trip_to_vehicles.len();
     for (trip, vehicles) in trip_to_vehicles {
         if vehicles.len() > 1 {
             trip_problems += 1;
@@ -177,6 +184,19 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
             }
         }
     }
+
+    info!("Final model quality");
+    let total_expected_gtfs_trips = model
+        .get_gtfs_trip_demand()
+        .into_values()
+        .map(|list| list.len())
+        .sum();
+    info!(
+        "{} total trips matched (GTFS says to expect {})",
+        prettyprint_usize(total_found_trips),
+        prettyprint_usize(total_expected_gtfs_trips)
+    );
+    info!("Trip durations: {}", all_trip_durations.describe());
 
     info!(
         "{} ticketing events matched to actual trips. {} unmatched",

@@ -29,24 +29,7 @@ impl Model {
             timetable_per_vehicle.insert(vehicle.id, Timetable::new());
         }
 
-        // The demand: all trips today, broken down by route short name
-        let filter = VariantFilter {
-            date_filter: DateFilter::SingleDay(self.main_date),
-            minimum_trips_per_day: 0,
-        };
-        let mut trips_to_assign: BTreeMap<String, Vec<(TripID, Time, Time)>> = BTreeMap::new();
-        for variant in &self.gtfs.variants_matching_filter(&filter) {
-            let variant = self.gtfs.variant(*variant);
-            if let Some(ref route_short_name) = self.gtfs.routes[&variant.route_id].short_name {
-                for trip in &variant.trips {
-                    let (t1, t2) = trip.time_range();
-                    trips_to_assign
-                        .entry(route_short_name.clone())
-                        .or_insert_with(Vec::new)
-                        .push((trip.id, t1, t2));
-                }
-            }
-        }
+        let trips_to_assign = self.get_gtfs_trip_demand();
 
         // Then per route short name, let's match things up...
         let mut assigned_trips = 0;
@@ -67,6 +50,28 @@ impl Model {
         info!("{assigned_trips} assigned, {unassigned_trips} left unassigned");
 
         Ok(())
+    }
+
+    // All trips today, broken down by route short name
+    pub fn get_gtfs_trip_demand(&self) -> BTreeMap<String, Vec<(TripID, Time, Time)>> {
+        let filter = VariantFilter {
+            date_filter: DateFilter::SingleDay(self.main_date),
+            minimum_trips_per_day: 0,
+        };
+        let mut trips_to_assign: BTreeMap<String, Vec<(TripID, Time, Time)>> = BTreeMap::new();
+        for variant in &self.gtfs.variants_matching_filter(&filter) {
+            let variant = self.gtfs.variant(*variant);
+            if let Some(ref route_short_name) = self.gtfs.routes[&variant.route_id].short_name {
+                for trip in &variant.trips {
+                    let (t1, t2) = trip.time_range();
+                    trips_to_assign
+                        .entry(route_short_name.clone())
+                        .or_insert_with(Vec::new)
+                        .push((trip.id, t1, t2));
+                }
+            }
+        }
+        trips_to_assign
     }
 }
 
