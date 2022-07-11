@@ -2,7 +2,10 @@ use geom::Time;
 
 // TODO Unit test
 
-/// A sequence of something, with non-overlapping and sorted time intervals
+/// A sequence of something, with non-overlapping and sorted time intervals.
+///
+/// Intervals are "open", aka, it's fine for one interval to end right at 7am and the next to the
+/// start right at 7am.
 pub struct Timetable<T>(pub Vec<(Time, Time, T)>);
 
 impl<T> Timetable<T> {
@@ -31,7 +34,7 @@ impl<T> Timetable<T> {
 
 fn overlaps(pair1: (Time, Time), pair2: (Time, Time)) -> bool {
     fn contains(t: Time, pair: (Time, Time)) -> bool {
-        t >= pair.0 && t <= pair.1
+        t > pair.0 && t < pair.1
     }
 
     contains(pair1.0, pair2)
