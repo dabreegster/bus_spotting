@@ -217,9 +217,10 @@ impl State<App> for Replay {
                         let mut lines =
                             vec!["See STDOUT for skipped trips".to_string(), String::new()];
                         let mut last_time = None;
+                        let debug = true;
                         for trip in app
                             .model
-                            .infer_vehicle_schedule(self.selected_vehicle.unwrap())
+                            .infer_vehicle_schedule(self.selected_vehicle.unwrap(), debug)
                         {
                             if let Some(t) = last_time {
                                 lines.push(format!("{} gap", trip.start_time() - t));

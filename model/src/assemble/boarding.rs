@@ -58,7 +58,8 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
         model.vehicles.iter().map(|v| v.id).collect(),
         |vehicle| {
             let mut events = Vec::new();
-            for trip in model.infer_vehicle_schedule(vehicle) {
+            let debug = false;
+            for trip in model.infer_vehicle_schedule(vehicle, debug) {
                 let variant = model.gtfs.variant(trip.variant);
                 assert_eq!(trip.stop_times.len(), variant.stops().len());
                 for (time, stop) in trip.stop_times.into_iter().zip(variant.stops().into_iter()) {
@@ -102,6 +103,15 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
     }
     error!("{} trips with multiple vehicles", trip_problems);
 
+    // Debug one vehicle
+    let debug_vehicle = VehicleID(220);
+    if false {
+        info!("Debugging events for {:?}", debug_vehicle);
+        for ev in &events_per_vehicle[&debug_vehicle] {
+            info!("  {}", ev.arrival_time);
+        }
+    }
+
     // Match each ticketing event to the appropriate vehicle. Assume people tap on AFTER boarding
     // the bus and match to the most recent stop time.
     let mut matched_events = 0;
@@ -109,6 +119,7 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
 
     let mut route_name_mismatches = 0;
     let mut delay_before_ticketing = Histogram::new();
+    let mut stop_dist_to_ticketing = Histogram::new();
     for (journey_idx, journey) in model.journeys.iter().enumerate() {
         for (leg_idx, leg) in journey.legs.iter().enumerate() {
             let mut ok = false;
@@ -122,7 +133,7 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
                     .iter_mut()
                     .rev()
                 {
-                    if leg.time <= event.arrival_time {
+                    if leg.time >= event.arrival_time {
                         // Sanity check: does the route on the ticketing event match what we've
                         // assigned the vehicle?
                         let vehicle_route = model.gtfs.routes
@@ -136,7 +147,12 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
 
                         // Sanity check: the ticketing event should happen shortly after the
                         // vehicle arrives at the stop
-                        delay_before_ticketing.add(event.arrival_time - leg.time);
+                        delay_before_ticketing.add(leg.time - event.arrival_time);
+
+                        // Sanity check: the ticketing event shouldn't occur too far physically
+                        // from the stop
+                        stop_dist_to_ticketing
+                            .add(leg.pos.dist_to(model.gtfs.stops[&event.stop].pos));
 
                         ok = true;
                         if leg_idx == 0 {
@@ -144,6 +160,11 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
                         } else {
                             event.transfers.push(JourneyID(journey_idx));
                         }
+
+                        if false && vehicle == debug_vehicle {
+                            info!("... someone boards that vehicle at {}. {} after arrival at stop, and {} away", leg.time, leg.time - event.arrival_time, leg.pos.dist_to(model.gtfs.stops[&event.stop].pos));
+                        }
+
                         break;
                     }
                 }
@@ -169,6 +190,10 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
     info!(
         "Of the matched, how long between the bus arriving and the ticketing? {}",
         delay_before_ticketing.describe()
+    );
+    info!(
+        "Of the matched, how far between the bus stop and the ticketing event? {}",
+        stop_dist_to_ticketing.describe()
     );
 
     // Flatten (not sure how boarding events will be used yet; this is obviously not the final

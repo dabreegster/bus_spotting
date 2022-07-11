@@ -12,7 +12,7 @@ impl Model {
     ///
     /// Note we don't check that the same TripID isn't covered by two different vehicles. This
     /// method looks at one vehicle only.
-    pub fn infer_vehicle_schedule(&self, vehicle: VehicleID) -> Vec<ActualTrip> {
+    pub fn infer_vehicle_schedule(&self, vehicle: VehicleID, debug: bool) -> Vec<ActualTrip> {
         let mut all_possible_trips = Vec::new();
         for variant in self.vehicle_to_possible_routes(vehicle) {
             all_possible_trips.extend(self.get_trips_for_vehicle_and_variant(vehicle, variant));
@@ -33,7 +33,7 @@ impl Model {
                     .unwrap_or(true)
                 {
                     final_schedule.push(trip);
-                } else {
+                } else if debug {
                     println!("Skipping {}", trip.summary());
                 }
             }
@@ -46,7 +46,7 @@ impl Model {
         for trip in all_possible_trips {
             if timetable.is_free((trip.start_time(), trip.end_time())) {
                 timetable.assign((trip.start_time(), trip.end_time()), trip);
-            } else {
+            } else if debug {
                 println!("Skipping {}", trip.summary());
             }
         }

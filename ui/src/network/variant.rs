@@ -96,6 +96,7 @@ fn table(ctx: &mut EventCtx, app: &App, variant: &RouteVariant) -> Widget {
                     row.push(entry);
                 }
 
+                txt.add_line(Line(format!("Actually {}", event.arrival_time)));
                 txt.add_line(Line(super::compare_time(
                     stop_time.arrival_time,
                     event.arrival_time,
