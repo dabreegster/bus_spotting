@@ -9,7 +9,10 @@ abstutil = { git = "https://github.com/dabreegster/abstreet" }
 anyhow = "1.0.38"
 chrono = { version = "0.4.19", features=["serde"] }
 csv = "1.1.4"
+geo = "0.22.0"
+geojson = { version = "0.22.2", features = ["geo-types"] }
 geom = { git = "https://github.com/dabreegster/abstreet" }
 log = "0.4.14"
 serde = "1.0.123"
+serde_json = "1.0.61"
 zip = { version = "0.6.2", default-features = false, features=["deflate"] }

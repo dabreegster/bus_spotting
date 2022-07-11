@@ -1674,9 +1674,12 @@ dependencies = [
  "anyhow",
  "chrono",
  "csv",
+ "geo 0.22.0",
+ "geojson",
  "geom",
  "log",
  "serde",
+ "serde_json",
  "zip",
 ]
 

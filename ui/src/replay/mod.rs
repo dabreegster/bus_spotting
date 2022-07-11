@@ -122,6 +122,14 @@ impl Replay {
                 .btn_plain
                 .text("score against trips")
                 .build_def(ctx),
+            if cfg!(not(target_arch = "wasm32")) {
+                ctx.style()
+                    .btn_plain
+                    .text("write trajectory to CSV")
+                    .build_def(ctx)
+            } else {
+                Widget::nothing()
+            },
         ];
         for v in app.model.vehicle_to_possible_routes(id) {
             controls.push(
@@ -264,6 +272,17 @@ impl State<App> for Replay {
                         {
                             println!("- {:?} has score of {}", trip, score);
                         }
+                        return Transition::Keep;
+                    }
+                    "write trajectory to CSV" => {
+                        let vehicle = &app.model.vehicles[self.selected_vehicle.unwrap().0];
+                        vehicle
+                            .trajectory
+                            .write_to_csv(
+                                format!("trajectory_vehicle_{}.csv", vehicle.id.0),
+                                &app.model.gps_bounds,
+                            )
+                            .unwrap();
                         return Transition::Keep;
                     }
                     _ => {}

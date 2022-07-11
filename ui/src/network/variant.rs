@@ -2,11 +2,12 @@ use widgetry::{
     DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
-use model::gtfs::RouteVariant;
+use model::gtfs::{RouteVariant, RouteVariantID};
 
 use crate::{App, Transition};
 
 pub struct VariantInfo {
+    id: RouteVariantID,
     panel: Panel,
 }
 
@@ -21,19 +22,35 @@ impl VariantInfo {
                     ctx.style().btn_close_widget(ctx),
                 ]),
                 variant.describe(&app.model.gtfs).text_widget(ctx),
+                ctx.style()
+                    .btn_outline
+                    .text("export to GeoJSON")
+                    .build_def(ctx),
                 table(ctx, app, variant),
             ]))
             .build(ctx),
+            id: variant.variant_id,
         })
     }
 }
 
 impl State<App> for VariantInfo {
-    fn event(&mut self, ctx: &mut EventCtx, _: &mut App) -> Transition {
+    fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => match x.as_ref() {
                 "close" => {
                     return Transition::Pop;
+                }
+                "export to GeoJSON" => {
+                    app.model
+                        .gtfs
+                        .variant(self.id)
+                        .export_to_geojson(
+                            format!("route_{}.geojson", self.id.0),
+                            &app.model.gtfs,
+                            &app.model.gps_bounds,
+                        )
+                        .unwrap();
                 }
                 // Can't click trips yet
                 _ => {}

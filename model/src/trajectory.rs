@@ -1,5 +1,8 @@
+use std::fs::File;
+use std::io::Write;
+
 use anyhow::Result;
-use geom::{Distance, Duration, Line, PolyLine, Pt2D, Speed, Time};
+use geom::{Distance, Duration, GPSBounds, Line, PolyLine, Pt2D, Speed, Time};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -264,5 +267,15 @@ impl Trajectory {
             sum += pt1.dist_to(pt2);
         }
         sum
+    }
+
+    pub fn write_to_csv(&self, path: String, gps_bounds: &GPSBounds) -> Result<()> {
+        let mut f = File::create(path)?;
+        writeln!(f, "time,longitude,latitude")?;
+        for (pt, time) in &self.inner {
+            let gps = pt.to_gps(gps_bounds);
+            writeln!(f, "{},{},{}", time.inner_seconds(), gps.x(), gps.y())?;
+        }
+        Ok(())
     }
 }

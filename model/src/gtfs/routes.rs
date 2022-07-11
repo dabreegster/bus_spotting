@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use geom::PolyLine;
+use geom::{GPSBounds, PolyLine};
 use serde::{Deserialize, Serialize};
 
 use super::{ServiceID, ShapeID, StopID, Trip, GTFS};
@@ -80,6 +80,52 @@ impl RouteVariant {
             pts.push(gtfs.stops[&stop_id].pos);
         }
         PolyLine::new(pts)
+    }
+
+    pub fn export_to_geojson(
+        &self,
+        path: String,
+        gtfs: &GTFS,
+        gps_bounds: &GPSBounds,
+    ) -> Result<()> {
+        use geojson::{Feature, FeatureCollection, GeoJson};
+
+        let mut features = Vec::new();
+
+        let mut feature = Feature {
+            bbox: None,
+            geometry: Some(self.polyline(gtfs)?.to_geojson(Some(gps_bounds))),
+            id: None,
+            properties: None,
+            foreign_members: None,
+        };
+        feature.set_property("type", "route");
+        features.push(feature);
+
+        for (idx, stop) in self.stops().into_iter().enumerate() {
+            let pos = gtfs.stops[&stop].pos.to_gps(gps_bounds);
+            let mut feature = Feature {
+                bbox: None,
+                geometry: Some(geojson::Geometry::new(geojson::Value::Point(vec![
+                    pos.x(),
+                    pos.y(),
+                ]))),
+                id: None,
+                properties: None,
+                foreign_members: None,
+            };
+            feature.set_property("type", "stop");
+            feature.set_property("stop_sequence", idx + 1);
+            features.push(feature);
+        }
+
+        let gj = GeoJson::FeatureCollection(FeatureCollection {
+            features,
+            bbox: None,
+            foreign_members: None,
+        });
+        std::fs::write(path, serde_json::to_string_pretty(&gj)?)?;
+        Ok(())
     }
 }
 
