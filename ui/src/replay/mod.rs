@@ -492,7 +492,9 @@ fn update_world(
 
             world
                 .add(Obj::Bus(vehicle.id))
-                .hitbox(Circle::new(pos, radius).to_polygon())
+                // Use this for the vehicle radius, so it's visually clear if we're close enough to
+                // a stop for it to count
+                .hitbox(Circle::new(pos, model::BUS_TO_STOP_THRESHOLD).to_polygon())
                 .draw_color(color)
                 .hover_alpha(0.5)
                 .tooltip(Text::from(format!(

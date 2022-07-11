@@ -3,7 +3,7 @@ use geom::{Distance, Duration, Time};
 use crate::gtfs::{RouteVariantID, TripID};
 use crate::{Model, Timetable, VehicleID};
 
-pub const BUS_TO_STOP_THRESHOLD: Distance = Distance::const_meters(10.0);
+pub const BUS_TO_STOP_THRESHOLD: Distance = Distance::const_meters(30.0);
 
 impl Model {
     /// Given one vehicle, use `get_trips_for_vehicle_and_variant` against all possible variants,
