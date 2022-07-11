@@ -180,6 +180,15 @@ impl Trajectory {
         unreachable!()
     }
 
+    /// Interpolate the front position of the vehicle, then trace back and draw some length.
+    pub fn interpolate_along_path(&self, time: Time, length: Distance) -> Option<(PolyLine, Speed)> {
+        let (front, speed) = self.interpolate(time)?;
+        let pl = self.as_polyline();
+        let (dist, _) = pl.dist_along_of_point(front)?;
+        let slice = pl.maybe_exact_slice(dist - length, dist).ok()?;
+        Some((slice, speed))
+    }
+
     pub fn start_time(&self) -> Time {
         self.inner[0].1
     }

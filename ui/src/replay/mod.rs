@@ -19,6 +19,9 @@ use self::events::Events;
 use crate::components::{describe, MainMenu, TimeControls};
 use crate::{App, Transition};
 
+const VEHICLE_LEN: Distance = Distance::const_meters(20.0);
+const VEHICLE_THICKNESS: Distance = Distance::const_meters(5.0);
+
 pub struct Replay {
     panel: Panel,
     time_controls: TimeControls,
@@ -477,7 +480,7 @@ fn update_world(
     let mut moving = 0;
 
     for vehicle in &app.model.vehicles {
-        if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
+        if let Some((pl, speed)) = vehicle.trajectory.interpolate_along_path(app.time, VEHICLE_LEN) {
             if speed == Speed::ZERO {
                 idling += 1;
             } else {
@@ -494,7 +497,7 @@ fn update_world(
                 .add(Obj::Bus(vehicle.id))
                 // Use this for the vehicle radius, so it's visually clear if we're close enough to
                 // a stop for it to count
-                .hitbox(Circle::new(pos, model::BUS_TO_STOP_THRESHOLD).to_polygon())
+                .hitbox(pl.make_polygons(VEHICLE_THICKNESS))
                 .draw_color(color)
                 .hover_alpha(0.5)
                 .tooltip(Text::from(format!(
