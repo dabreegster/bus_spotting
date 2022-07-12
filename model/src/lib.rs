@@ -47,6 +47,8 @@ pub struct Vehicle {
     pub id: VehicleID,
     pub original_id: VehicleName,
     pub trajectory: Trajectory,
+    // Calculated
+    pub timetable: Timetable<gtfs::TripID>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -89,6 +91,7 @@ impl Model {
                     id,
                     original_id,
                     trajectory,
+                    timetable: Timetable::new(),
                 });
             }
         }

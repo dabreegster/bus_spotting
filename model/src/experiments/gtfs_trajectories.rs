@@ -2,7 +2,7 @@ use anyhow::Result;
 use geom::{Distance, PolyLine, Time};
 
 use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID, TripID, VariantFilter};
-use crate::{IDMapping, Model, Trajectory, Vehicle, VehicleName};
+use crate::{IDMapping, Model, Timetable, Trajectory, Vehicle, VehicleName};
 
 impl Model {
     // Turn each trip of a variant into a trajectory, using the stop times.
@@ -63,6 +63,7 @@ impl Model {
                 id,
                 original_id,
                 trajectory,
+                timetable: Timetable::new(),
             });
         }
     }

@@ -1,4 +1,5 @@
 use geom::Time;
+use serde::{Deserialize, Serialize};
 
 // TODO Unit test
 
@@ -6,6 +7,7 @@ use geom::Time;
 ///
 /// Intervals are "open", aka, it's fine for one interval to end right at 7am and the next to the
 /// start right at 7am.
+#[derive(Serialize, Deserialize)]
 pub struct Timetable<T>(pub Vec<(Time, Time, T)>);
 
 impl<T> Timetable<T> {
@@ -29,6 +31,16 @@ impl<T> Timetable<T> {
         } else {
             self.0.push((pair.0, pair.1, obj));
         }
+    }
+
+    /// If this is right on the boundary of two intervals, the first is returned
+    pub fn get_at_time(&self, time: Time) -> Option<&T> {
+        for (t1, t2, obj) in &self.0 {
+            if time >= *t1 && time <= *t2 {
+                return Some(obj);
+            }
+        }
+        None
     }
 }
 

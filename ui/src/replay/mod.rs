@@ -5,7 +5,7 @@ mod vehicle_route;
 
 use abstutil::prettyprint_usize;
 use chrono::Datelike;
-use geom::{Circle, Distance, Duration, Pt2D, Speed, Time, UnitFmt};
+use geom::{Circle, Distance, Duration, Pt2D, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{PopupMsg, PromptInput};
 use widgetry::{
@@ -102,12 +102,11 @@ impl Replay {
             // What're they doing right now?
             let label = if let Some(ev) = app.model.most_recent_boarding_event_for_bus(v, app.time)
             {
-                format!(
-                    "Currently serving: {:?} (last stop {} ago)",
-                    ev.variant,
-                    app.time - ev.arrival_time
-                )
-                .text_widget(ctx)
+                Text::from_multiline(vec![
+                    Line(format!("Currently serving: {:?}", ev.variant)),
+                    Line(format!("(last stop {} ago)", app.time - ev.arrival_time)),
+                ])
+                .into_widget(ctx)
             } else {
                 format!("Currently serving: ???").text_widget(ctx)
             };
@@ -497,22 +496,24 @@ fn update_world(
 
     let radius = Distance::meters(50.0);
 
-    let mut away = 0;
-    let mut idling = 0;
-    let mut moving = 0;
+    let mut serving_route = 0;
+    let mut not_serving_route = 0;
 
     for vehicle in &app.model.vehicles {
         if let Some((pos, speed)) = vehicle.trajectory.interpolate(app.time) {
-            if speed == Speed::ZERO {
-                idling += 1;
+            let current_trip = vehicle.timetable.get_at_time(app.time);
+            if current_trip.is_some() {
+                serving_route += 1;
             } else {
-                moving += 1;
+                not_serving_route += 1;
             }
 
             let color = if Some(vehicle.id) == selected_vehicle {
                 Color::YELLOW
-            } else {
+            } else if current_trip.is_some() {
                 Color::RED
+            } else {
+                Color::PINK
             };
 
             world
@@ -523,14 +524,13 @@ fn update_world(
                 .draw_color(color)
                 .hover_alpha(0.5)
                 .tooltip(Text::from(format!(
-                    "{:?} currently has speed {}",
+                    "{:?} currently has speed {}, doing {:?}",
                     vehicle.original_id,
-                    speed.to_string(&UnitFmt::metric())
+                    speed.to_string(&UnitFmt::metric()),
+                    current_trip
                 )))
                 .clickable()
                 .build(ctx);
-        } else {
-            away += 1;
         }
     }
 
@@ -590,16 +590,12 @@ fn update_world(
 
     world.initialize_hover(ctx);
 
-    Text::from_multiline(vec![
-        Line(format!("Away: {}", prettyprint_usize(away))),
-        Line(format!("Idling: {}", prettyprint_usize(idling))),
-        Line(format!("Moving: {}", prettyprint_usize(moving))),
-        Line(format!(
-            "Stops: {}",
-            prettyprint_usize(app.model.gtfs.stops.len())
-        )),
-    ])
-    .into_widget(ctx)
+    format!(
+        "{} serving a route, {} not",
+        prettyprint_usize(serving_route),
+        prettyprint_usize(not_serving_route)
+    )
+    .text_widget(ctx)
 }
 
 fn warp_to_vehicle_at_current_time(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) {

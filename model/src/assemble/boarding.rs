@@ -6,7 +6,7 @@ use geom::{Histogram, Time};
 use serde::{Deserialize, Serialize};
 
 use crate::gtfs::{RouteVariantID, StopID, TripID};
-use crate::{JourneyID, Model, VehicleID};
+use crate::{JourneyID, Model, Timetable, VehicleID};
 
 // TODO UIs
 // - for just a variant (click in the world)
@@ -77,14 +77,19 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
 
     // Fill out empty BoardingEvents for each stop along each trip
     let mut all_trip_durations = Histogram::new();
-    for (vehicle, events, trip_durations) in timer.parallelize(
+    for (vehicle, events, trip_durations, timetable) in timer.parallelize(
         "calculate schedule for vehicles",
         model.vehicles.iter().map(|v| v.id).collect(),
         |vehicle| {
             let mut events = Vec::new();
             let mut trip_durations = Vec::new();
+            // Build up a summary timetable
+            let mut timetable = Timetable::new();
+
             let debug = false;
             for trip in model.infer_vehicle_schedule(vehicle, debug) {
+                timetable.assign((trip.start_time(), trip.end_time()), trip.trip);
+
                 let variant = model.gtfs.variant(trip.variant);
                 assert_eq!(trip.stop_times.len(), variant.stops().len());
                 trip_durations.push(trip.end_time() - trip.start_time());
@@ -101,13 +106,15 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
                     });
                 }
             }
-            (vehicle, events, trip_durations)
+            (vehicle, events, trip_durations, timetable)
         },
     ) {
         events_per_vehicle.insert(vehicle, events);
         for d in trip_durations {
             all_trip_durations.add(d);
         }
+
+        model.vehicles[vehicle.0].timetable = timetable;
     }
 
     // Sanity check multiple vehicles aren't assigned to the same trip.
