@@ -24,6 +24,8 @@ everything.
 
 ## Design
 
+See [here](design.md) for more recent notes.
+
 - Generally assuming the unit of analysis is one day at a time
 - Agnostic to the transit agency; as soon as we have ticketing or GPS data from
   another group, we can transform it into the same common formats
