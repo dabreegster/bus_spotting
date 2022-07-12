@@ -41,6 +41,17 @@ impl Model {
             .find(|ev| ev.trip == trip && ev.stop == stop)
     }
 
+    pub fn most_recent_boarding_event_for_bus(
+        &self,
+        vehicle: VehicleID,
+        time: Time,
+    ) -> Option<&BoardingEvent> {
+        self.boardings
+            .iter()
+            .rev()
+            .find(|ev| ev.vehicle == vehicle && ev.arrival_time <= time)
+    }
+
     pub fn all_boarding_events_at_stop(&self, stop: StopID) -> Vec<&BoardingEvent> {
         self.boardings.iter().filter(|ev| ev.stop == stop).collect()
     }
@@ -221,6 +232,7 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
     for (_, events) in events_per_vehicle {
         model.boardings.extend(events);
     }
+    model.boardings.sort_by_key(|ev| ev.arrival_time);
 
     timer.stop("populate_boarding");
     Ok(())

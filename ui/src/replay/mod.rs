@@ -97,6 +97,22 @@ impl Replay {
             self.selected_vehicle,
         );
         self.time_controls.panel.replace(ctx, "stats", stats);
+
+        if let Some(v) = self.selected_vehicle {
+            // What're they doing right now?
+            let label = if let Some(ev) = app.model.most_recent_boarding_event_for_bus(v, app.time)
+            {
+                format!(
+                    "Currently serving: {:?} (last stop {} ago)",
+                    ev.variant,
+                    app.time - ev.arrival_time
+                )
+                .text_widget(ctx)
+            } else {
+                format!("Currently serving: ???").text_widget(ctx)
+            };
+            self.panel.replace(ctx, "current route", label);
+        }
     }
 
     fn on_select_vehicle(
@@ -122,6 +138,9 @@ impl Replay {
                     .icon_bytes(include_labeled_bytes!("../../assets/location.svg"))
                     .build_widget(ctx, "goto this vehicle"),
             ]),
+            format!("Currently serving: ???")
+                .text_widget(ctx)
+                .named("current route"),
             Widget::row(vec![
                 "Show stops for variant: ".text_widget(ctx),
                 Widget::dropdown(ctx, "variant stops", variant, stops_choices),

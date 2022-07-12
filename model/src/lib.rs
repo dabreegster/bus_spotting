@@ -34,6 +34,7 @@ pub struct Model {
     pub journeys: Vec<Journey>,
 
     // TODO This is derived from other things, and may outright replace it at some point
+    // Sorted by arrival time
     pub boardings: Vec<BoardingEvent>,
 
     // If we've loaded journey and vehicle data, this is the one day covered. If not, it's an
