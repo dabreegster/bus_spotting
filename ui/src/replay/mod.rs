@@ -1,4 +1,5 @@
 mod events;
+mod page;
 mod trajectories;
 mod vehicle_route;
 
@@ -84,7 +85,13 @@ impl Replay {
         self.time_controls.panel.replace(ctx, "stats", stats);
     }
 
-    fn on_select_vehicle(&mut self, ctx: &mut EventCtx, app: &App, id: VehicleID) {
+    fn on_select_vehicle(
+        &mut self,
+        ctx: &mut EventCtx,
+        app: &App,
+        id: VehicleID,
+        variant: Option<RouteVariantID>,
+    ) {
         self.selected_vehicle = Some(id);
         self.draw_stop_order = Drawable::empty(ctx);
 
@@ -103,7 +110,7 @@ impl Replay {
             ]),
             Widget::row(vec![
                 "Show stops for variant: ".text_widget(ctx),
-                Widget::dropdown(ctx, "variant stops", None, stops_choices),
+                Widget::dropdown(ctx, "variant stops", variant, stops_choices),
             ]),
             ctx.style()
                 .btn_outline
@@ -143,6 +150,31 @@ impl Replay {
         self.panel
             .replace(ctx, "vehicle controls", Widget::col(controls).section(ctx));
     }
+
+    fn on_select_variant(
+        &mut self,
+        ctx: &mut EventCtx,
+        app: &App,
+        variant: Option<RouteVariantID>,
+    ) {
+        let mut batch = GeomBatch::new();
+        if let Some(v) = variant {
+            for (idx, id) in app.model.gtfs.variant(v).stops().into_iter().enumerate() {
+                let pt = app.model.gtfs.stops[&id].pos;
+                batch.append(
+                    Text::from(Line(format!("{}", idx + 1)).fg(Color::WHITE))
+                        .render(ctx)
+                        .centered_on(pt),
+                );
+                if let Ok(p) =
+                    Circle::new(pt, Distance::meters(50.0)).to_outline(Distance::meters(3.0))
+                {
+                    batch.push(Color::WHITE, p);
+                }
+            }
+        }
+        self.draw_stop_order = batch.upload(ctx);
+    }
 }
 
 impl State<App> for Replay {
@@ -167,7 +199,7 @@ impl State<App> for Replay {
                 self.on_time_change(ctx, app);
             }
             WorldOutcome::ClickedObject(Obj::Bus(id)) => {
-                self.on_select_vehicle(ctx, app, id);
+                self.on_select_vehicle(ctx, app, id, None);
                 self.on_time_change(ctx, app);
             }
             WorldOutcome::ClickedObject(Obj::Stop(stop)) => {
@@ -204,35 +236,11 @@ impl State<App> for Replay {
                         return warp_to_vehicle(ctx);
                     }
                     "goto this vehicle" => {
-                        if let Some((pt, _)) = app.model.vehicles[self.selected_vehicle.unwrap().0]
-                            .trajectory
-                            .interpolate(app.time)
-                        {
-                            ctx.canvas.cam_zoom = 1.0;
-                            ctx.canvas.center_on_map_pt(pt);
-                        }
+                        warp_to_vehicle_at_current_time(ctx, app, self.selected_vehicle.unwrap());
                         return Transition::Keep;
                     }
                     "view schedule" => {
-                        let mut lines =
-                            vec!["See STDOUT for skipped trips".to_string(), String::new()];
-                        let mut last_time = None;
-                        let debug = true;
-                        for trip in app
-                            .model
-                            .infer_vehicle_schedule(self.selected_vehicle.unwrap(), debug)
-                        {
-                            if let Some(t) = last_time {
-                                lines.push(format!("{} gap", trip.start_time() - t));
-                            }
-                            last_time = Some(trip.end_time());
-                            lines.push(trip.summary());
-                        }
-                        return Transition::Push(PopupMsg::new_state(
-                            ctx,
-                            "Vehicle schedule",
-                            lines,
-                        ));
+                        return view_schedule(ctx, app, self.selected_vehicle.unwrap());
                     }
                     "compare trajectories (by variants)" => {
                         let id = self.selected_vehicle.unwrap();
@@ -307,23 +315,7 @@ impl State<App> for Replay {
             }
             Outcome::Changed(x) => match x.as_ref() {
                 "variant stops" => {
-                    let mut batch = GeomBatch::new();
-                    if let Some(v) = self.panel.dropdown_value("variant stops") {
-                        for (idx, id) in app.model.gtfs.variant(v).stops().into_iter().enumerate() {
-                            let pt = app.model.gtfs.stops[&id].pos;
-                            batch.append(
-                                Text::from(Line(format!("{}", idx + 1)).fg(Color::WHITE))
-                                    .render(ctx)
-                                    .centered_on(pt),
-                            );
-                            if let Ok(p) = Circle::new(pt, Distance::meters(50.0))
-                                .to_outline(Distance::meters(3.0))
-                            {
-                                batch.push(Color::WHITE, p);
-                            }
-                        }
-                    }
-                    self.draw_stop_order = batch.upload(ctx);
+                    self.on_select_variant(ctx, app, self.panel.dropdown_value("variant stops"));
                 }
                 _ => unreachable!(),
             },
@@ -577,6 +569,16 @@ fn update_world(
     .into_widget(ctx)
 }
 
+fn warp_to_vehicle_at_current_time(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) {
+    if let Some((pt, _)) = app.model.vehicles[vehicle.0]
+        .trajectory
+        .interpolate(app.time)
+    {
+        ctx.canvas.cam_zoom = 1.0;
+        ctx.canvas.center_on_map_pt(pt);
+    }
+}
+
 fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
     Transition::Push(PromptInput::new_state(
         ctx,
@@ -590,7 +592,7 @@ fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
 
                     if let Ok(x) = response.parse::<usize>() {
                         if let Some(vehicle) = app.model.vehicles.get(x) {
-                            state.on_select_vehicle(ctx, app, vehicle.id);
+                            state.on_select_vehicle(ctx, app, vehicle.id, None);
                             // Redraw the selected vehicle
                             state.on_time_change(ctx, app);
                             ctx.canvas.cam_zoom = 1.0;
@@ -606,6 +608,58 @@ fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
                             }
                         }
                     }
+                })),
+            ])
+        }),
+    ))
+}
+
+fn view_schedule(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) -> Transition {
+    let mut page = page::PageBuilder::new();
+
+    let mut col = vec![
+        "See STDOUT for skipped trips".text_widget(ctx),
+        // TODO blank line
+    ];
+
+    let mut last_time = None;
+    let debug = true;
+    for trip in app.model.infer_vehicle_schedule(vehicle, debug) {
+        if let Some(t) = last_time {
+            col.push(format!("{} gap", trip.start_time() - t).text_widget(ctx));
+        }
+        last_time = Some(trip.end_time());
+        col.push(page.btn_data(
+            ctx,
+            ctx.style().btn_plain.text(trip.summary()),
+            (vehicle, trip.variant, trip.start_time()),
+        ));
+    }
+
+    // TODO Up to this point, it's great! Next things I want:
+    // - Specify routing for every "page" in the app, with some kind of enum. (It could map to a
+    //   URL string if needed)
+    // - Mostly ditch the state/transition concept. Universal routing to pages.
+    // - (With history controls)
+    // Different pages for base replayer, vs replayer with vehicle, vs replayer with vehicle and
+    // variant selected?
+
+    // TODO Actually, warp to vehicle + route schedule probably
+    Transition::Push(page.build(
+        ctx,
+        "Vehicle schedule",
+        Widget::col(col),
+        Box::new(|_, _, hyperlink| {
+            Transition::Multi(vec![
+                Transition::Pop,
+                Transition::ModifyState(Box::new(move |state, ctx, app| {
+                    let state = state.downcast_mut::<Replay>().unwrap();
+                    let (vehicle, variant, time) = hyperlink;
+                    state.on_select_vehicle(ctx, app, vehicle, Some(variant));
+                    state.on_select_variant(ctx, app, Some(variant));
+                    app.time = time;
+                    state.on_time_change(ctx, app);
+                    warp_to_vehicle_at_current_time(ctx, app, vehicle);
                 })),
             ])
         }),
