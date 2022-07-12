@@ -2,8 +2,8 @@ use geom::{Duration, Time};
 use widgetry::tools::PromptInput;
 use widgetry::{
     include_labeled_bytes, Choice, ControlState, EdgeInsets, EventCtx, GfxCtx, HorizontalAlignment,
-    Key, Line, Outcome, Panel, PersistentSplit, ScreenDims, Slider, Text, VerticalAlignment,
-    Widget,
+    Key, Line, Outcome, Panel, PersistentSplit, ScreenDims, Slider, Text, Toggle,
+    VerticalAlignment, Widget,
 };
 
 use crate::{App, Transition};
@@ -25,6 +25,7 @@ pub struct TimeControls {
     pub panel: Panel,
     time: Time,
     paused: bool,
+    rewinding: bool,
     setting: SpeedSetting,
 }
 
@@ -58,6 +59,7 @@ impl TimeControls {
             .build(ctx),
             time: app.time,
             paused: true,
+            rewinding: false,
             setting: SpeedSetting::Realtime,
         };
         time.update_controls(ctx, app);
@@ -163,7 +165,12 @@ impl TimeControls {
                 .build_widget(ctx, "jump to specific time"),
         );
 
-        self.panel.replace(ctx, "controls", Widget::custom_row(row));
+        let col = Widget::col(vec![
+            Widget::custom_row(row),
+            Toggle::checkbox(ctx, "Rewind", None, self.rewinding),
+        ]);
+
+        self.panel.replace(ctx, "controls", col);
     }
 
     fn on_time_change(&mut self, ctx: &mut EventCtx) {
@@ -224,7 +231,11 @@ impl TimeControls {
                     )));
                 }
                 "step forwards" => {
-                    app.time += app.time_increment;
+                    if self.rewinding {
+                        app.time = app.time.clamped_sub(app.time_increment);
+                    } else {
+                        app.time += app.time_increment;
+                    }
                 }
                 _ => unreachable!(),
             },
@@ -235,6 +246,9 @@ impl TimeControls {
                 "time slider" => {
                     app.time =
                         end_of_day().percent_of(self.panel.slider("time slider").get_percent());
+                }
+                "Rewind" => {
+                    self.rewinding = self.panel.is_checked("Rewind");
                 }
                 _ => unreachable!(),
             },
@@ -290,7 +304,11 @@ impl TimeControls {
                     SpeedSetting::Fastest => 3600.0,
                 };
                 let dt = multiplier * real_dt;
-                app.time += dt;
+                if self.rewinding {
+                    app.time = app.time.clamped_sub(dt);
+                } else {
+                    app.time += dt;
+                }
             }
         }
 
