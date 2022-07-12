@@ -101,14 +101,14 @@ impl Viewer {
 }
 
 impl State<App> for Viewer {
-    fn event(&mut self, ctx: &mut EventCtx, _: &mut App) -> Transition {
+    fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
         ctx.canvas_movement();
 
         if let Outcome::Clicked(x) = self.panel.event(ctx) {
             if x == "close" {
                 return Transition::Pop;
             } else if let Some(x) = x.strip_prefix("trip ") {
-                return trip_schedule(ctx, &self.trips[x.parse::<usize>().unwrap()]);
+                return trip_schedule(ctx, app, &self.trips[x.parse::<usize>().unwrap()]);
             } else {
                 unreachable!();
             }
@@ -150,20 +150,36 @@ impl State<App> for Viewer {
     }
 }
 
-fn trip_schedule(ctx: &mut EventCtx, trip: &ActualTrip) -> Transition {
+fn trip_schedule(ctx: &mut EventCtx, app: &App, trip: &ActualTrip) -> Transition {
     let mut page = PageBuilder::new();
     let mut col = Vec::new();
 
+    let stops = app.model.gtfs.variant(trip.variant).stops();
     let mut last_time = trip.stop_times[0];
     for (idx, time) in trip.stop_times.iter().enumerate() {
         let time = *time;
+
+        let boardings = if let Some(ev) =
+            app.model
+                .boarding_event_for_vehicle_stop_time(trip.vehicle, stops[idx], time)
+        {
+            format!(
+                "+{} new riders, +{} transfers",
+                ev.new_riders.len(),
+                ev.transfers.len()
+            )
+        } else {
+            "didn't match to actual trip".to_string()
+        };
+
         col.push(page.btn_data(
             ctx,
             ctx.style().btn_plain.text(format!(
-                "  Stop {}: {} ({})",
+                "  Stop {}: {} ({}) - {}",
                 idx + 1,
                 time,
-                time - last_time
+                time - last_time,
+                boardings
             )),
             (trip.vehicle, trip.variant, time),
         ));

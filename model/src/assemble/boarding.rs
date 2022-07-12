@@ -34,11 +34,23 @@ pub struct BoardingEvent {
     pub transfers: Vec<JourneyID>,
 }
 
+// It's basically SQL at this point, happy?
 impl Model {
     pub fn find_boarding_event(&self, trip: TripID, stop: StopID) -> Option<&BoardingEvent> {
         self.boardings
             .iter()
             .find(|ev| ev.trip == trip && ev.stop == stop)
+    }
+
+    pub fn boarding_event_for_vehicle_stop_time(
+        &self,
+        vehicle: VehicleID,
+        stop: StopID,
+        time: Time,
+    ) -> Option<&BoardingEvent> {
+        self.boardings
+            .iter()
+            .find(|ev| ev.vehicle == vehicle && ev.stop == stop && ev.arrival_time == time)
     }
 
     pub fn most_recent_boarding_event_for_bus(
