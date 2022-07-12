@@ -191,27 +191,27 @@ pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
         .into_values()
         .map(|list| list.len())
         .sum();
-    info!(
+    println!(
         "{} total trips matched (GTFS says to expect {})",
         prettyprint_usize(total_found_trips),
         prettyprint_usize(total_expected_gtfs_trips)
     );
-    info!("Trip durations: {}", all_trip_durations.describe());
+    println!("Trip durations: {}", all_trip_durations.describe());
 
-    info!(
+    println!(
         "{} ticketing events matched to actual trips. {} unmatched",
         prettyprint_usize(matched_events),
         prettyprint_usize(unmatched_events)
     );
-    info!(
+    println!(
         "Of the matched, {} don't actually match the route name",
         prettyprint_usize(route_name_mismatches)
     );
-    info!(
+    println!(
         "Of the matched, how long between the bus arriving and the ticketing? {}",
         delay_before_ticketing.describe()
     );
-    info!(
+    println!(
         "Of the matched, how far between the bus stop and the ticketing event? {}",
         stop_dist_to_ticketing.describe()
     );

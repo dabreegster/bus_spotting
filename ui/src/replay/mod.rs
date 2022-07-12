@@ -106,25 +106,25 @@ impl Replay {
                 Widget::dropdown(ctx, "variant stops", None, stops_choices),
             ]),
             ctx.style()
-                .btn_plain
+                .btn_outline
                 .text("view schedule")
                 .hotkey(Key::S)
                 .build_def(ctx),
             ctx.style()
-                .btn_plain
+                .btn_outline
                 .text("compare trajectories (by variants)")
                 .build_def(ctx),
             ctx.style()
-                .btn_plain
+                .btn_outline
                 .text("compare trajectories (by trips)")
                 .build_def(ctx),
             ctx.style()
-                .btn_plain
+                .btn_outline
                 .text("score against trips")
                 .build_def(ctx),
             if cfg!(not(target_arch = "wasm32")) {
                 ctx.style()
-                    .btn_plain
+                    .btn_outline
                     .text("write trajectory to CSV")
                     .build_def(ctx)
             } else {
@@ -134,7 +134,7 @@ impl Replay {
         for v in app.model.vehicle_to_possible_routes(id) {
             controls.push(
                 ctx.style()
-                    .btn_plain
+                    .btn_outline
                     .text(format!("match to variant {}", v.0))
                     .build_def(ctx),
             );

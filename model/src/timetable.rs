@@ -24,7 +24,7 @@ impl<T> Timetable<T> {
 
     // Assumes is_free is true. Maybe combine them?
     pub fn assign(&mut self, pair: (Time, Time), obj: T) {
-        if let Some(idx) = self.0.iter().position(|(t1, _, _)| pair.1 < *t1) {
+        if let Some(idx) = self.0.iter().position(|(t1, _, _)| pair.1 <= *t1) {
             self.0.insert(idx, (pair.0, pair.1, obj));
         } else {
             self.0.push((pair.0, pair.1, obj));
