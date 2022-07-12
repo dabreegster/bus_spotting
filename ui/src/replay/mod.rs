@@ -73,6 +73,20 @@ impl Replay {
         Box::new(state)
     }
 
+    fn use_hyperlink_state(
+        &mut self,
+        ctx: &mut EventCtx,
+        app: &mut App,
+        hyperlink: (VehicleID, RouteVariantID, Time),
+    ) {
+        let (vehicle, variant, time) = hyperlink;
+        self.on_select_vehicle(ctx, app, vehicle, Some(variant));
+        self.on_select_variant(ctx, app, Some(variant));
+        app.time = time;
+        self.on_time_change(ctx, app);
+        warp_to_vehicle_at_current_time(ctx, app, vehicle);
+    }
+
     fn on_time_change(&mut self, ctx: &mut EventCtx, app: &App) {
         let stats = update_world(
             ctx,
@@ -616,7 +630,6 @@ fn warp_to_vehicle(ctx: &mut EventCtx) -> Transition {
 
 fn view_schedule(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) -> Transition {
     let mut page = page::PageBuilder::new();
-
     let mut col = vec![
         "See STDOUT for skipped trips".text_widget(ctx),
         // TODO blank line
@@ -654,12 +667,7 @@ fn view_schedule(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) -> Transitio
                 Transition::Pop,
                 Transition::ModifyState(Box::new(move |state, ctx, app| {
                     let state = state.downcast_mut::<Replay>().unwrap();
-                    let (vehicle, variant, time) = hyperlink;
-                    state.on_select_vehicle(ctx, app, vehicle, Some(variant));
-                    state.on_select_variant(ctx, app, Some(variant));
-                    app.time = time;
-                    state.on_time_change(ctx, app);
-                    warp_to_vehicle_at_current_time(ctx, app, vehicle);
+                    state.use_hyperlink_state(ctx, app, hyperlink);
                 })),
             ])
         }),

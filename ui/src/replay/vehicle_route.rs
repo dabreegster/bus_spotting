@@ -1,13 +1,15 @@
 use geom::{Circle, Distance, Pt2D};
 use model::gtfs::RouteVariantID;
 use model::{ActualTrip, Trajectory, VehicleID};
-use widgetry::tools::PopupMsg;
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome,
     Panel, State, Text, TextExt, VerticalAlignment, Widget,
 };
 
 use crate::{App, Transition};
+
+use super::page::PageBuilder;
+use super::Replay;
 
 pub struct Viewer {
     panel: Panel,
@@ -106,11 +108,7 @@ impl State<App> for Viewer {
             if x == "close" {
                 return Transition::Pop;
             } else if let Some(x) = x.strip_prefix("trip ") {
-                return Transition::Push(PopupMsg::new_state(
-                    ctx,
-                    "Schedule",
-                    self.trips[x.parse::<usize>().unwrap()].show_schedule(),
-                ));
+                return trip_schedule(ctx, &self.trips[x.parse::<usize>().unwrap()]);
             } else {
                 unreachable!();
             }
@@ -150,4 +148,44 @@ impl State<App> for Viewer {
             g.draw_mouse_tooltip(txt.clone());
         }
     }
+}
+
+fn trip_schedule(ctx: &mut EventCtx, trip: &ActualTrip) -> Transition {
+    let mut page = PageBuilder::new();
+    let mut col = Vec::new();
+
+    let mut last_time = trip.stop_times[0];
+    for (idx, time) in trip.stop_times.iter().enumerate() {
+        let time = *time;
+        col.push(page.btn_data(
+            ctx,
+            ctx.style().btn_plain.text(format!(
+                "  Stop {}: {} ({})",
+                idx + 1,
+                time,
+                time - last_time
+            )),
+            (trip.vehicle, trip.variant, time),
+        ));
+        last_time = time;
+    }
+
+    Transition::Push(page.build(
+        ctx,
+        "Schedule for one trip",
+        Widget::col(col),
+        Box::new(|_, _, hyperlink| {
+            Transition::Multi(vec![
+                Transition::Pop,
+                // TODO Knowing how many times to pop is brittle and weird.
+                Transition::Pop,
+                // TODO ModifyState is just to avoid recreating some of the replay state from
+                // scratch
+                Transition::ModifyState(Box::new(move |state, ctx, app| {
+                    let state = state.downcast_mut::<Replay>().unwrap();
+                    state.use_hyperlink_state(ctx, app, hyperlink);
+                })),
+            ])
+        }),
+    ))
 }
