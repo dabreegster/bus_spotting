@@ -1,7 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 use widgetry::{Choice, EventCtx, Panel, Spinner, TextExt, Toggle, Widget};
 
-use model::gtfs::{DateFilter, DaysOfWeek};
+use gtfs::{DateFilter, DaysOfWeek};
 
 pub fn to_controls(ctx: &mut EventCtx, filters: &DateFilter) -> Widget {
     let mut col = vec![Widget::row(vec![

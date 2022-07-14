@@ -3,8 +3,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::Result;
 use geom::Time;
 
-use crate::gtfs::{DateFilter, TripID, VariantFilter};
 use crate::{Model, Timetable, VehicleID};
+use gtfs::{DateFilter, TripID, VariantFilter};
 
 impl Model {
     // Per route short name, we can find all vehicles serving it at least part of the day (supply)

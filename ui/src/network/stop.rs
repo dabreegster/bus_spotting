@@ -2,7 +2,7 @@ use widgetry::{
     Choice, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
-use model::gtfs::{RouteVariant, RouteVariantID, Stop, StopID};
+use gtfs::{RouteVariant, RouteVariantID, Stop, StopID};
 
 use crate::components::describe;
 use crate::{App, Transition};

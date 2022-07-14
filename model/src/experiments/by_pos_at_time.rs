@@ -1,7 +1,7 @@
 use geom::Distance;
 
-use crate::gtfs::TripID;
 use crate::{Model, VehicleID};
+use gtfs::TripID;
 
 impl Model {
     pub fn look_for_best_matches_by_pos_and_time(&self) {

@@ -1,3 +1,8 @@
+#[macro_use]
+extern crate anyhow;
+#[macro_use]
+extern crate log;
+
 mod calendar;
 mod ids;
 mod routes;

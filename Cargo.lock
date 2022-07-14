@@ -1133,6 +1133,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "gtfs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "csv",
+ "geojson",
+ "geom",
+ "log",
+ "serde",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
 name = "gtk-sys"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1674,12 +1689,11 @@ dependencies = [
  "anyhow",
  "chrono",
  "csv",
- "geo 0.22.0",
  "geojson",
  "geom",
+ "gtfs",
  "log",
  "serde",
- "serde_json",
  "zip",
 ]
 
@@ -2835,6 +2849,7 @@ dependencies = [
  "fs-err",
  "futures-channel",
  "geom",
+ "gtfs",
  "log",
  "model",
  "rfd",

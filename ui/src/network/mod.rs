@@ -9,7 +9,7 @@ use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::{Color, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text};
 
-use model::gtfs::{RouteVariantID, StopID};
+use gtfs::{RouteVariantID, StopID};
 
 pub use self::filters::Filters;
 use crate::components::{describe, MainMenu};

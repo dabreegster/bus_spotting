@@ -1,8 +1,8 @@
 use anyhow::Result;
 use geom::Distance;
 
-use crate::gtfs::RouteVariantID;
 use crate::{Model, Trajectory, VehicleID};
+use gtfs::RouteVariantID;
 
 impl Model {
     // Find all times the AVL is close to endpoints of a possible variant's shape. Use those to clip

@@ -2,13 +2,12 @@ use widgetry::{
     Color, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
 
-use model::gtfs::{RouteVariant, RouteVariantID};
+use gtfs::RouteVariant;
 
 use crate::components::render_table;
 use crate::{App, Transition};
 
 pub struct VariantInfo {
-    id: RouteVariantID,
     panel: Panel,
 }
 
@@ -26,13 +25,12 @@ impl VariantInfo {
                 table(ctx, app, variant),
             ]))
             .build(ctx),
-            id: variant.variant_id,
         })
     }
 }
 
 impl State<App> for VariantInfo {
-    fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
+    fn event(&mut self, ctx: &mut EventCtx, _: &mut App) -> Transition {
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => match x.as_ref() {
                 "close" => {

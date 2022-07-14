@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use geom::Time;
 
-use crate::gtfs::{DateFilter, RouteVariantID};
 use crate::{Model, VehicleID, VehicleName};
+use gtfs::{DateFilter, RouteVariantID};
 
 // BIL data says somebody boarded a vehicle and rode route_short_name. Use that, along with the
 // variants actually served that day, to figure out possible route variants per vehicle.

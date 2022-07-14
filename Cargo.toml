@@ -1,5 +1,5 @@
 [workspace]
-members = ["model", "ui"]
+members = ["gtfs", "model", "ui"]
 
 # See https://doc.rust-lang.org/cargo/reference/profiles.html#overrides. This
 # compiles all external dependencies as release mode, yielding great runtime

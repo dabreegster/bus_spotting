@@ -1,7 +1,7 @@
 use geom::{Distance, Duration, Time};
 
-use crate::gtfs::{RouteVariantID, TripID};
 use crate::{Model, Timetable, VehicleID};
+use gtfs::{RouteVariantID, TripID};
 
 pub const BUS_TO_STOP_THRESHOLD: Distance = Distance::const_meters(30.0);
 

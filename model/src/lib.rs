@@ -6,7 +6,6 @@ extern crate log;
 mod assemble;
 mod avl;
 mod experiments;
-pub mod gtfs;
 mod ticketing;
 mod timetable;
 mod trajectory;
@@ -19,8 +18,9 @@ use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
+use gtfs::{IDMapping, GTFS};
+
 pub use self::assemble::*;
-use self::gtfs::{IDMapping, GTFS};
 pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::timetable::Timetable;
 pub use self::trajectory::Trajectory;

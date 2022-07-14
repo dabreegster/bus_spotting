@@ -2,8 +2,8 @@ use abstutil::Timer;
 use anyhow::Result;
 use geom::{Distance, Time};
 
-use crate::gtfs::{DateFilter, RouteVariant, RouteVariantID};
 use crate::{Model, VehicleID};
+use gtfs::{DateFilter, RouteVariant, RouteVariantID};
 
 impl Model {
     // For each possible variant shape, snap ticketing events to a distance along that shape. For a

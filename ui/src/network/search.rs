@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use widgetry::{Autocomplete, EventCtx, GfxCtx, Line, Outcome, Panel, State, Widget};
 
-use model::gtfs::{DateFilter, RouteVariantID, VariantFilter};
+use gtfs::{DateFilter, RouteVariantID, VariantFilter};
 
 use super::filters::Filters;
 use super::Viewer;

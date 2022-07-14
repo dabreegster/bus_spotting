@@ -1,5 +1,5 @@
 use geom::{Circle, Distance, Pt2D};
-use model::gtfs::RouteVariantID;
+use gtfs::RouteVariantID;
 use model::{ActualTrip, Trajectory, VehicleID};
 use widgetry::{
     Cached, Color, Drawable, EventCtx, GeomBatch, GfxCtx, HorizontalAlignment, Line, Outcome,

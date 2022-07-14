@@ -19,6 +19,7 @@ base64 = "0.13.0"
 chrono = { version = "0.4.19", features=["serde"] }
 futures-channel = { version = "0.3.12"}
 geom = { git = "https://github.com/dabreegster/abstreet" }
+gtfs = { path = "../gtfs" }
 log = "0.4.14"
 model = { path = "../model" }
 rfd = "0.8.0"

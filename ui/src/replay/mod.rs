@@ -15,7 +15,7 @@ use widgetry::{
     Key, Line, Outcome, Panel, State, Text, TextExt, UpdateType, Widget,
 };
 
-use model::gtfs::{DateFilter, RouteVariantID, StopID};
+use gtfs::{DateFilter, RouteVariantID, StopID};
 use model::VehicleID;
 
 use self::events::Events;

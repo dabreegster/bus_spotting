@@ -5,8 +5,8 @@ use anyhow::Result;
 use geom::{Histogram, Time};
 use serde::{Deserialize, Serialize};
 
-use crate::gtfs::{RouteVariantID, StopID, TripID};
 use crate::{JourneyID, Model, Timetable, VehicleID};
+use gtfs::{RouteVariantID, StopID, TripID};
 
 // TODO UIs
 // - for just a variant (click in the world)

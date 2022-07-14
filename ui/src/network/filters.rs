@@ -4,7 +4,7 @@ use widgetry::{
     include_labeled_bytes, lctrl, Choice, EventCtx, Key, Line, Panel, Spinner, TextExt, Widget,
 };
 
-use model::gtfs::{DateFilter, RouteVariantID, VariantFilter};
+use gtfs::{DateFilter, RouteVariantID, VariantFilter};
 
 use crate::components::{date_filter, describe};
 use crate::App;
