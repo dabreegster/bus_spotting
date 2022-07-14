@@ -5,6 +5,7 @@ mod variant;
 
 use std::collections::BTreeSet;
 
+use abstutil::Timer;
 use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::{Color, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text};
@@ -31,11 +32,13 @@ impl Viewer {
     }
 
     fn on_filter_change(&mut self, ctx: &mut EventCtx, app: &App) {
-        let controls = app.filters.to_controls(ctx, app);
-        self.panel.replace(ctx, "contents", controls);
+        ctx.loading_screen("update filters", |ctx, timer| {
+            let controls = app.filters.to_controls(ctx, app);
+            self.panel.replace(ctx, "contents", controls);
 
-        let world = make_world(ctx, app);
-        self.world = world;
+            let world = make_world(ctx, app, timer);
+            self.world = world;
+        });
     }
 
     fn on_click_stop(&self, ctx: &mut EventCtx, app: &App, stop_id: StopID) -> Transition {
@@ -121,13 +124,15 @@ enum Obj {
 }
 impl ObjectID for Obj {}
 
-fn make_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
+fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
     let selected_variants = app.filters.selected_variants(app);
     let mut world = World::bounded(&app.model.bounds);
 
     // Draw every route variant. Track what stops we visit
     let mut stops: BTreeSet<StopID> = BTreeSet::new();
+    timer.start_iter("draw variants", selected_variants.len());
     for id in &selected_variants {
+        timer.next();
         let variant = app.model.gtfs.variant(*id);
         for stop_time in &variant.trips[0].stop_times {
             stops.insert(stop_time.stop_id);
@@ -156,7 +161,9 @@ fn make_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
     let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
 
     // Only draw visited stops
+    timer.start_iter("draw stops", stops.len());
     for id in stops {
+        timer.next();
         let stop = &app.model.gtfs.stops[&id];
         let mut txt = describe::stop(stop);
         txt.add_line(format!(
