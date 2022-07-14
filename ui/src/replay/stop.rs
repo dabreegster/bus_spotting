@@ -1,3 +1,4 @@
+use abstutil::Counter;
 use widgetry::{
     Choice, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
 };
@@ -45,7 +46,8 @@ impl StopInfo {
                             .collect(),
                     ),
                 ]),
-                schedule(ctx, stop, app.model.gtfs.variant(variant)),
+                total_counts_per_variant(ctx, app, stop).section(ctx),
+                schedule(ctx, app, stop, app.model.gtfs.variant(variant)),
             ]))
             .build(ctx),
             variants,
@@ -101,13 +103,55 @@ impl State<App> for StopInfo {
     }
 }
 
-fn schedule(ctx: &mut EventCtx, stop: &Stop, variant: &RouteVariant) -> Widget {
+fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) -> Widget {
     let mut txt = Text::new();
     txt.add_line(Line("Schedule").small_heading());
     txt.add_line(Line(""));
     for trip in &variant.trips {
         let scheduled = trip.arrival_at(stop.id);
-        txt.add_line(Line(format!("{}", scheduled)));
+        if let Some(actual) = app.model.find_boarding_event(trip.id, stop.id) {
+            txt.add_line(Line(format!(
+                "{} (actually {} -- {}) -- {} new riders, {} transfers by {:?}",
+                scheduled,
+                actual.arrival_time,
+                super::compare_time(scheduled, actual.arrival_time),
+                actual.new_riders.len(),
+                actual.transfers.len(),
+                actual.vehicle,
+            )));
+        } else {
+            txt.add_line(Line(format!("{} (no real data)", scheduled)));
+        }
     }
     txt.into_widget(ctx)
+}
+
+// TODO Use the variants list to filter by day
+fn total_counts_per_variant(ctx: &mut EventCtx, app: &App, stop: &Stop) -> Widget {
+    let mut trips_per_variant = Counter::new();
+    let mut new_riders_per_variant = Counter::new();
+    let mut transfers_per_variant = Counter::new();
+
+    for event in app.model.all_boarding_events_at_stop(stop.id) {
+        trips_per_variant.inc(event.variant);
+        new_riders_per_variant.add(event.variant, event.new_riders.len());
+        transfers_per_variant.add(event.variant, event.transfers.len());
+    }
+
+    let mut col = vec![Line("Totals per variant").small_heading().into_widget(ctx)];
+    for (variant, num_trips) in trips_per_variant.consume() {
+        col.push(
+            ctx.style()
+                .btn_plain
+                .text(format!(
+                    "{:?}: {} trips, {} new riders, {} transfers",
+                    variant,
+                    num_trips,
+                    new_riders_per_variant.get(variant),
+                    transfers_per_variant.get(variant)
+                ))
+                .build_widget(ctx, format!("Variant {}", variant.0)),
+        );
+    }
+    Widget::col(col)
 }

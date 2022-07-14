@@ -1,5 +1,6 @@
 mod events;
 mod page;
+mod stop;
 mod trajectories;
 mod vehicle_route;
 
@@ -7,7 +8,7 @@ use abstutil::prettyprint_usize;
 use chrono::Datelike;
 use geom::{Circle, Distance, Duration, Pt2D, Time, UnitFmt};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::tools::{PopupMsg, PromptInput};
+use widgetry::tools::PromptInput;
 use widgetry::{
     include_labeled_bytes, lctrl, Cached, Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx,
     Key, Line, Outcome, Panel, State, Text, TextExt, UpdateType, Widget,
@@ -235,20 +236,18 @@ impl State<App> for Replay {
                 self.on_time_change(ctx, app);
             }
             WorldOutcome::ClickedObject(Obj::Stop(stop)) => {
-                if let Some(vehicle) = self.selected_vehicle {
-                    let stop_pos = app.model.gtfs.stops[&stop].pos;
-                    let threshold = Distance::meters(10.0);
-                    return Transition::Push(PopupMsg::new_state(
-                        ctx,
-                        "Vehicle near this stop at...",
-                        app.model.vehicles[vehicle.0]
-                            .trajectory
-                            .times_near_pos(stop_pos, threshold)
-                            .into_iter()
-                            .map(|(t, _)| t.to_string())
-                            .collect(),
-                    ));
-                }
+                self.world.hack_unset_hovering();
+
+                let stop = &app.model.gtfs.stops[&stop];
+                let variants = stop
+                    .route_variants
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<RouteVariantID>>();
+                let first = variants[0];
+                return Transition::Push(stop::StopInfo::new_state(
+                    ctx, app, stop, variants, first,
+                ));
             }
             _ => {}
         }
@@ -687,4 +686,14 @@ fn view_schedule(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) -> Transitio
             ])
         }),
     ))
+}
+
+fn compare_time(scheduled: Time, actual: Time) -> String {
+    if scheduled == actual {
+        return "on time".to_string();
+    }
+    if scheduled < actual {
+        return format!("{} late", actual - scheduled);
+    }
+    format!("{} early", scheduled - actual)
 }
