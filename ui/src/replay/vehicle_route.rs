@@ -74,10 +74,16 @@ impl Viewer {
             );
         }
 
-        let mut col = vec![Widget::row(vec![
-            Line("Vehicle + route").small_heading().into_widget(ctx),
-            ctx.style().btn_close_widget(ctx),
-        ])];
+        let mut col = vec![
+            Widget::row(vec![
+                Line("Vehicle + route").small_heading().into_widget(ctx),
+                ctx.style().btn_close_widget(ctx),
+            ]),
+            ctx.style()
+                .btn_outline
+                .text("See all trips for this variant")
+                .build_def(ctx),
+        ];
         for (idx, trip) in trips.iter().enumerate() {
             col.push(Widget::row(vec![
                 ctx.style()
@@ -109,6 +115,12 @@ impl State<App> for Viewer {
                 return Transition::Pop;
             } else if let Some(x) = x.strip_prefix("trip ") {
                 return trip_schedule(ctx, app, &self.trips[x.parse::<usize>().unwrap()]);
+            } else if x == "See all trips for this variant" {
+                return Transition::Push(super::variant::VariantInfo::new_state(
+                    ctx,
+                    app,
+                    app.model.gtfs.variant(self.trips[0].variant),
+                ));
             } else {
                 unreachable!();
             }

@@ -23,11 +23,7 @@ impl VariantInfo {
                     ctx.style().btn_close_widget(ctx),
                 ]),
                 variant.describe(&app.model.gtfs).text_widget(ctx),
-                ctx.style()
-                    .btn_outline
-                    .text("export to GeoJSON")
-                    .build_def(ctx),
-                table(ctx, variant),
+                table(ctx, app, variant),
             ]))
             .build(ctx),
             id: variant.variant_id,
@@ -41,17 +37,6 @@ impl State<App> for VariantInfo {
             Outcome::Clicked(x) => match x.as_ref() {
                 "close" => {
                     return Transition::Pop;
-                }
-                "export to GeoJSON" => {
-                    app.model
-                        .gtfs
-                        .variant(self.id)
-                        .export_to_geojson(
-                            format!("route_{}.geojson", self.id.0),
-                            &app.model.gtfs,
-                            &app.model.gps_bounds,
-                        )
-                        .unwrap();
                 }
                 // Can't click trips yet
                 _ => {}
@@ -72,7 +57,7 @@ impl State<App> for VariantInfo {
     }
 }
 
-fn table(ctx: &mut EventCtx, variant: &RouteVariant) -> Widget {
+fn table(ctx: &mut EventCtx, app: &App, variant: &RouteVariant) -> Widget {
     let mut headers = Vec::new();
     headers.push("Vehicle".text_widget(ctx));
     for idx in 0..variant.stops().len() {
@@ -80,10 +65,40 @@ fn table(ctx: &mut EventCtx, variant: &RouteVariant) -> Widget {
     }
 
     let mut rows = Vec::new();
-    for trip in &variant.trips {
+    'TRIP: for trip in &variant.trips {
         let mut row = Vec::new();
         for stop_time in &trip.stop_times {
-            let txt = Text::from(format!("{}", stop_time.arrival_time));
+            let mut txt = Text::from(format!("{}", stop_time.arrival_time));
+            if let Some(event) = app.model.find_boarding_event(trip.id, stop_time.stop_id) {
+                if row.is_empty() {
+                    // Show what vehicle served this trip
+                    let (mut entry, hitbox) = Text::from(Line(format!("{:?}", event.vehicle)))
+                        .render_autocropped(ctx)
+                        .batch()
+                        .container()
+                        .padding(10.0)
+                        .into_geom(ctx, None);
+                    entry.push(Color::RED.alpha(0.2), hitbox);
+                    row.push(entry);
+                }
+
+                txt.add_line(Line(format!("Actually {}", event.arrival_time)));
+                txt.add_line(Line(super::compare_time(
+                    stop_time.arrival_time,
+                    event.arrival_time,
+                )));
+                if event.new_riders.len() + event.transfers.len() > 0 {
+                    txt.add_line(Line(format!(
+                        "+{}, {}",
+                        event.new_riders.len(),
+                        event.transfers.len()
+                    )));
+                }
+            } else {
+                // Skip unmatched trips for now, to make the table display less overwhelming
+                continue 'TRIP;
+            }
+
             let (mut entry, hitbox) = txt
                 .render_autocropped(ctx)
                 .batch()

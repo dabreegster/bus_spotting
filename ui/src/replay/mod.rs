@@ -2,6 +2,7 @@ mod events;
 mod page;
 mod stop;
 mod trajectories;
+mod variant;
 mod vehicle_route;
 
 use abstutil::prettyprint_usize;
