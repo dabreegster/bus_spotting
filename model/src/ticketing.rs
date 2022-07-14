@@ -29,26 +29,23 @@ pub struct JourneyLeg {
     pub vehicle_name: VehicleName,
 }
 
-pub fn load<R: std::io::Read>(
+pub fn load_journeys<R: std::io::Read>(
     reader: R,
     gps_bounds: &GPSBounds,
-) -> Result<(Vec<Journey>, NaiveDate)> {
+    expected_date: NaiveDate,
+) -> Result<Vec<Journey>> {
     let mut per_card: BTreeMap<CardID, Vec<JourneyLeg>> = BTreeMap::new();
-    let mut main_date = None;
 
     for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: BIL = rec?;
 
         let datetime = NaiveDateTime::parse_from_str(&rec.datetime, "%d/%m/%Y %H:%M:%S")?;
         // Assume the input is sorted by time. Entries at the very end may leak over into the next
-        // day. Until we handle multi-day fully, just add 24 hours to the time.
-        if main_date.is_none() {
-            main_date = Some(datetime.date());
-        }
-        let next_day = if Some(datetime.date()) == main_date {
+        // day.
+        let next_day = if datetime.date() == expected_date {
             Duration::ZERO
         } else {
-            // Assume next day
+            // TODO Assumes next day
             Duration::hours(24)
         };
 
@@ -70,10 +67,7 @@ pub fn load<R: std::io::Read>(
             });
     }
 
-    Ok((
-        per_card.into_iter().flat_map(split_into_journeys).collect(),
-        main_date.unwrap(),
-    ))
+    Ok(per_card.into_iter().flat_map(split_into_journeys).collect())
 }
 
 #[derive(Deserialize)]

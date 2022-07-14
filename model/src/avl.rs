@@ -7,19 +7,24 @@ use serde::Deserialize;
 
 use crate::{Trajectory, VehicleName};
 
-pub fn load<R: std::io::Read>(
+pub fn load_trajectories<R: std::io::Read>(
     reader: R,
     gps_bounds: &GPSBounds,
-) -> Result<(BTreeMap<VehicleName, Trajectory>, NaiveDate)> {
+    expected_date: NaiveDate,
+) -> Result<BTreeMap<VehicleName, Trajectory>> {
     // Read raw data
     let mut data_per_vehicle: BTreeMap<VehicleName, Vec<(LonLat, Time)>> = BTreeMap::new();
-    let mut main_date = None;
     for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: AVL = rec?;
 
         let datetime = NaiveDateTime::parse_from_str(&rec.datetime, "%Y-%m-%d %H:%M:%S")?;
-        // Assume each file only covers one date
-        main_date = Some(datetime.date());
+        if datetime.date() != expected_date {
+            bail!(
+                "An AVL file for {} contains a record for {}",
+                expected_date,
+                datetime
+            );
+        }
 
         let time = datetime.time();
         let time = Time::START_OF_DAY
@@ -44,7 +49,7 @@ pub fn load<R: std::io::Read>(
         }
         results.insert(vehicle_name, Trajectory::new(points)?);
     }
-    Ok((results, main_date.unwrap()))
+    Ok(results)
 }
 
 #[derive(Deserialize)]
