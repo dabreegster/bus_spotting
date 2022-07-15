@@ -5,8 +5,9 @@ mod components;
 mod network;
 mod replay;
 
+use geom::{Bounds, GPSBounds};
 use structopt::StructOpt;
-use widgetry::Settings;
+use widgetry::{EventCtx, Settings};
 
 use model::{Model, MultidayModel};
 
@@ -122,4 +123,30 @@ pub fn run_wasm() {
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
     fn sync_mapbox_canvas(lon1: f64, lat1: f64, lon2: f64, lat2: f64);
+}
+
+pub struct MapboxSync(Bounds);
+
+impl MapboxSync {
+    pub fn new() -> Self {
+        Self(Bounds::new())
+    }
+
+    #[allow(unused)]
+    pub fn sync(&mut self, ctx: &mut EventCtx, gps_bounds: &GPSBounds) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            // This method is usually called for every single event, but the camera hasn't always
+            // moved
+            let bounds = ctx.canvas.get_screen_bounds();
+            if self.0 == bounds {
+                return;
+            }
+            self.0 = bounds;
+
+            let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(gps_bounds);
+            let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(gps_bounds);
+            sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
+        }
+    }
 }

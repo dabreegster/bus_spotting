@@ -5,7 +5,6 @@ mod variant;
 mod viewer;
 
 use abstutil::Timer;
-use geom::Bounds;
 use serde::{Deserialize, Serialize};
 use widgetry::{Canvas, Color, EventCtx, GfxCtx, SharedAppState};
 
@@ -13,15 +12,14 @@ use model::MultidayModel;
 
 use self::filters::Filters;
 pub use self::viewer::Viewer;
+use crate::MapboxSync;
 
 pub struct App {
     model: MultidayModel,
 
     filters: Filters,
 
-    // Avoid syncing when bounds match
-    #[allow(unused)]
-    mapbox_bounds: Bounds,
+    mapbox: MapboxSync,
 }
 
 impl SharedAppState for App {
@@ -54,25 +52,7 @@ impl App {
 
             filters: Filters::new(),
 
-            mapbox_bounds: Bounds::new(),
-        }
-    }
-
-    #[allow(unused)]
-    pub fn sync_mapbox(&mut self, ctx: &mut EventCtx) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            // This method is usually called for every single event, but the camera hasn't always
-            // moved
-            let bounds = ctx.canvas.get_screen_bounds();
-            if self.mapbox_bounds == bounds {
-                return;
-            }
-            self.mapbox_bounds = bounds;
-
-            let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(&self.model.gps_bounds);
-            let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(&self.model.gps_bounds);
-            sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
+            mapbox: MapboxSync::new(),
         }
     }
 

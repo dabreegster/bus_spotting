@@ -7,12 +7,13 @@ mod trajectories;
 mod variant;
 mod vehicle_route;
 
-use geom::{Bounds, Duration, Time};
+use geom::{Duration, Time};
 use serde::{Deserialize, Serialize};
 use widgetry::{Canvas, Color, EventCtx, GfxCtx, SharedAppState};
 
 use model::Model;
 
+use crate::MapboxSync;
 pub use replay::Replay;
 use speed::TimeControls;
 
@@ -22,9 +23,8 @@ pub struct App {
     time: Time,
     time_increment: Duration,
 
-    // Avoid syncing when bounds match
     #[allow(unused)]
-    mapbox_bounds: Bounds,
+    mapbox: MapboxSync,
 }
 
 impl SharedAppState for App {
@@ -59,25 +59,7 @@ impl App {
             time: Time::START_OF_DAY,
             time_increment: Duration::minutes(10),
 
-            mapbox_bounds: Bounds::new(),
-        }
-    }
-
-    #[allow(unused)]
-    pub fn sync_mapbox(&mut self, ctx: &mut EventCtx) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            // This method is usually called for every single event, but the camera hasn't always
-            // moved
-            let bounds = ctx.canvas.get_screen_bounds();
-            if self.mapbox_bounds == bounds {
-                return;
-            }
-            self.mapbox_bounds = bounds;
-
-            let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(&self.model.gps_bounds);
-            let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(&self.model.gps_bounds);
-            sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
+            mapbox: MapboxSync::new(),
         }
     }
 

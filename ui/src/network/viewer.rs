@@ -53,7 +53,7 @@ impl Viewer {
 
 impl State<App> for Viewer {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
-        app.sync_mapbox(ctx);
+        app.mapbox.sync(ctx, &app.model.gps_bounds);
 
         match self.world.event(ctx) {
             WorldOutcome::ClickedObject(Obj::Stop(id)) => {
