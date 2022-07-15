@@ -100,6 +100,8 @@ impl GTFS {
             archive.by_name("gtfs/calendar_dates.txt")?,
         )?;
 
+        dump_bounding_box(&gps_bounds);
+
         Ok((gtfs, gps_bounds))
     }
 
@@ -185,4 +187,30 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
 pub struct VariantFilter {
     pub date_filter: DateFilter,
     pub minimum_trips_per_day: usize,
+}
+
+fn dump_bounding_box(gps_bounds: &GPSBounds) {
+    use geojson::{Feature, FeatureCollection, GeoJson};
+
+    let feature = Feature {
+        bbox: None,
+        geometry: Some(
+            gps_bounds
+                .to_bounds()
+                .get_rectangle()
+                .to_geojson(Some(gps_bounds)),
+        ),
+        id: None,
+        properties: None,
+        foreign_members: None,
+    };
+    let gj = GeoJson::FeatureCollection(FeatureCollection {
+        features: vec![feature],
+        bbox: None,
+        foreign_members: None,
+    });
+    info!(
+        "GeoJSON covering the bounding box: {}",
+        serde_json::to_string(&gj).unwrap()
+    );
 }
