@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use abstutil::Timer;
 use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::{Color, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text};
+use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text};
 
 use gtfs::{RouteVariantID, StopID};
 
@@ -148,7 +148,8 @@ fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
                 .add(Obj::Route(*id))
                 .hitbox(pl.make_polygons(Distance::meters(20.0)))
                 .draw_color(Color::RED)
-                .hover_alpha(0.5)
+                // Since they overlap, no use wasting memory here for an effect
+                .invisibly_hoverable()
                 .tooltip(txt)
                 .clickable()
                 .build(ctx);
@@ -159,6 +160,9 @@ fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
     let radius = Distance::meters(50.0);
     // Optimization
     let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
+    let circle_outline = Circle::new(Pt2D::zero(), radius)
+        .to_outline(Distance::meters(3.0))
+        .unwrap();
 
     // Only draw visited stops
     timer.start_iter("draw stops", stops.len());
@@ -174,10 +178,18 @@ fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
                 .len()
         ));
 
+        let hitbox = circle.translate(stop.pos.x(), stop.pos.y());
+        let mut batch = GeomBatch::new();
+        batch.push(Color::BLUE, hitbox.clone());
+        batch.push(
+            Color::WHITE,
+            circle_outline.translate(stop.pos.x(), stop.pos.y()),
+        );
+
         world
             .add(Obj::Stop(id))
-            .hitbox(circle.translate(stop.pos.x(), stop.pos.y()))
-            .draw_color(Color::BLUE)
+            .hitbox(hitbox)
+            .draw(batch)
             .hover_alpha(0.5)
             .tooltip(txt)
             .clickable()
