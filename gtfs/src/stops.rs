@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{orig, IDMapping, RouteVariantID, StopID};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Stop {
     pub id: StopID,
     pub orig_id: orig::StopID,

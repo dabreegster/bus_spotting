@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{orig, IDMapping, RouteID, ServiceID, ShapeID, StopID, StopTime, TripID};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Trip {
     pub id: TripID,
     pub orig_id: orig::TripID,

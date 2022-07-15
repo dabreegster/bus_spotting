@@ -9,7 +9,7 @@ use super::{ServiceID, ShapeID, StopID, Trip, GTFS};
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RouteID(String);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Route {
     pub route_id: RouteID,
     pub short_name: Option<String>,
@@ -19,7 +19,7 @@ pub struct Route {
     pub variants: Vec<RouteVariant>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RouteVariant {
     pub route_id: RouteID,
     pub variant_id: RouteVariantID,

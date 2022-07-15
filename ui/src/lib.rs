@@ -42,11 +42,13 @@ impl Args {
             return Ok(Model::empty());
         }
         let bytes = fs_err::read(self.import_zip.take().unwrap())?;
-        let model = Model::import_zip_bytes(bytes, timer)?;
-
-        let save_model = base64::encode(abstutil::to_binary(&model));
-        abstio::write_file("data/output/model.bin".to_string(), save_model)?;
-        Ok(model)
+        let mut models = Model::import_zip_bytes(bytes, timer)?;
+        for model in &models {
+            let save_model = base64::encode(abstutil::to_binary(model));
+            abstio::write_file(format!("data/output/{}.bin", model.main_date), save_model)?;
+        }
+        // Just load one of the days arbitrarily
+        Ok(models.remove(0))
     }
 }
 

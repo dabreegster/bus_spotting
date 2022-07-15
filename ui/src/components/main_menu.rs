@@ -117,17 +117,21 @@ fn import_data(ctx: &mut EventCtx) -> Transition {
             match maybe_bytes {
                 Ok(Some(bytes)) => ctx.loading_screen("import model", |ctx, timer| {
                     match Model::import_zip_bytes(bytes, timer) {
-                        Ok(model) => {
-                            // TODO This silently fails in the browser unless we skip serializing
-                            // vehicles. Apparently there are file size limits.
-                            let save_model = base64::encode(abstutil::to_binary(&model));
-                            if let Err(err) =
-                                abstio::write_file("data/output/model.bin".to_string(), save_model)
-                            {
-                                error!("Couldn't save imported model: {err}");
+                        Ok(mut models) => {
+                            for model in &models {
+                                // TODO This silently fails in the browser unless we skip
+                                // serializing vehicles. Apparently there are file size limits.
+                                let save_model = base64::encode(abstutil::to_binary(model));
+                                if let Err(err) = abstio::write_file(
+                                    format!("data/output/{}.bin", model.main_date),
+                                    save_model,
+                                ) {
+                                    error!("Couldn't save imported model: {err}");
+                                }
                             }
 
-                            *app = App::new(ctx, model);
+                            // Just load one of the days arbitrarily
+                            *app = App::new(ctx, models.remove(0));
                             Transition::Multi(vec![Transition::Pop, Transition::Recreate])
                         }
                         Err(err) => Transition::Replace(PopupMsg::new_state(

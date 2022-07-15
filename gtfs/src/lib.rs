@@ -26,7 +26,7 @@ pub use stop_times::StopTime;
 pub use stops::Stop;
 pub use trips::Trip;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GTFS {
     pub stops: BTreeMap<StopID, Stop>,
     pub routes: BTreeMap<RouteID, Route>,

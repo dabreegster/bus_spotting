@@ -7,13 +7,13 @@ use serde::{Deserialize, Deserializer, Serialize};
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ServiceID(String);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Calendar {
     pub services: BTreeMap<ServiceID, Service>,
     // TODO All the exceptions
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Service {
     pub service_id: ServiceID,
     pub days_of_week: DaysOfWeek,
@@ -24,7 +24,7 @@ pub struct Service {
     pub removed_days: BTreeSet<NaiveDate>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct DaysOfWeek {
     pub monday: bool,
     pub tuesday: bool,

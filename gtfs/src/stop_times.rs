@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{orig, IDMapping, StopID, TripID};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct StopTime {
     pub arrival_time: Time,
     pub departure_time: Time,

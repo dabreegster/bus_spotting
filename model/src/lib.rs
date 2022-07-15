@@ -67,7 +67,8 @@ impl gtfs::CheapID for VehicleID {
 }
 
 impl Model {
-    pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Self> {
+    /// Returns a daily model for everything in the input .zip
+    pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Vec<Self>> {
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
 
         timer.start("loading GTFS");
@@ -78,7 +79,10 @@ impl Model {
         let bil_files = find_all_files(&archive, "bil/bil_");
         let daily_input_files = find_common_files(avl_files, bil_files);
 
+        let mut output_models = Vec::new();
+
         for (date, avl_path, bil_path) in daily_input_files {
+            timer.start(format!("import daily data for {date}"));
             let mut vehicles = Vec::new();
             let mut vehicle_ids = IDMapping::new();
 
@@ -103,32 +107,36 @@ impl Model {
 
             let mut model = Self {
                 bounds: gps_bounds.to_bounds(),
-                gps_bounds,
+                gps_bounds: gps_bounds.clone(),
                 vehicles,
                 vehicle_ids,
-                gtfs,
+                gtfs: gtfs.clone(),
                 journeys,
                 boardings: Vec::new(),
                 main_date: date,
             };
             assemble::populate_boarding(&mut model, timer)?;
 
-            // TODO Just handle one file for now
-            return Ok(model);
+            output_models.push(model);
+            timer.stop(format!("import daily data for {date}"));
         }
 
-        // An empty GTFS-only model
-        let main_date = gtfs.calendar.services.values().next().unwrap().start_date;
-        Ok(Self {
-            bounds: gps_bounds.to_bounds(),
-            gps_bounds,
-            vehicles: Vec::new(),
-            vehicle_ids: IDMapping::new(),
-            gtfs,
-            journeys: Vec::new(),
-            boardings: Vec::new(),
-            main_date,
-        })
+        if output_models.is_empty() {
+            // An empty GTFS-only model
+            let main_date = gtfs.calendar.services.values().next().unwrap().start_date;
+            output_models.push(Self {
+                bounds: gps_bounds.to_bounds(),
+                gps_bounds,
+                vehicles: Vec::new(),
+                vehicle_ids: IDMapping::new(),
+                gtfs,
+                journeys: Vec::new(),
+                boardings: Vec::new(),
+                main_date,
+            });
+        }
+
+        Ok(output_models)
     }
 
     pub fn empty() -> Self {
