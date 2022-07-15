@@ -11,7 +11,7 @@ use geom::{Bounds, Duration, Time};
 use serde::{Deserialize, Serialize};
 use widgetry::{Canvas, Color, EventCtx, GfxCtx, SharedAppState};
 
-use model::{Model, VehicleID};
+use model::Model;
 
 pub use replay::Replay;
 use speed::TimeControls;
@@ -25,8 +25,6 @@ pub struct App {
     // Avoid syncing when bounds match
     #[allow(unused)]
     mapbox_bounds: Bounds,
-
-    savestate_mode: SavestateMode,
 }
 
 impl SharedAppState for App {
@@ -41,7 +39,7 @@ impl SharedAppState for App {
             cam_x: canvas.cam_x,
             cam_y: canvas.cam_y,
             cam_zoom: canvas.cam_zoom,
-            mode: self.savestate_mode.clone(),
+            time: self.time,
         };
         abstio::write_json("data/save_replay.json".to_string(), &ss);
     }
@@ -62,8 +60,6 @@ impl App {
             time_increment: Duration::minutes(10),
 
             mapbox_bounds: Bounds::new(),
-
-            savestate_mode: SavestateMode::Replayer(Time::START_OF_DAY, None),
         }
     }
 
@@ -95,10 +91,7 @@ impl App {
             ctx.canvas.cam_x = savestate.cam_x;
             ctx.canvas.cam_y = savestate.cam_y;
             ctx.canvas.cam_zoom = savestate.cam_zoom;
-            if let SavestateMode::Replayer(time, _selected_vehicle) = savestate.mode {
-                self.time = time;
-                // TODO Also restore selected_vehicle
-            }
+            self.time = savestate.time;
         }
     }
 }
@@ -108,13 +101,7 @@ pub struct Savestate {
     cam_x: f64,
     cam_y: f64,
     cam_zoom: f64,
-    // TODO Embed?
-    mode: SavestateMode,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum SavestateMode {
-    Replayer(Time, Option<VehicleID>),
+    time: Time,
 }
 
 fn compare_time(scheduled: Time, actual: Time) -> String {

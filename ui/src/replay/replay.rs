@@ -206,7 +206,6 @@ impl Replay {
 
 impl State<App> for Replay {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
-        app.savestate_mode = super::SavestateMode::Replayer(app.time, self.selected_vehicle);
         app.sync_mapbox(ctx);
 
         let prev_time = app.time;
