@@ -9,7 +9,7 @@ use geom::{Bounds, GPSBounds};
 use structopt::StructOpt;
 use widgetry::{EventCtx, Settings};
 
-use model::{Model, MultidayModel};
+use model::{DailyModel, MultidayModel};
 
 // TODO These args only make sense on native, because they read files
 // TODO Could probably make this an optional enum now
@@ -52,10 +52,10 @@ fn run(settings: Settings) {
         widgetry::run(settings, move |ctx| {
             let app = ctx.loading_screen("initialize model", |ctx, timer| {
                 let bytes = fs_err::read(path).unwrap();
-                let models = Model::import_zip_bytes(bytes, timer).unwrap();
+                let models = DailyModel::import_zip_bytes(bytes, timer).unwrap();
                 for model in &models {
                     let save_model = base64::encode(abstutil::to_binary(model));
-                    abstio::write_file(format!("data/output/{}.bin", model.main_date), save_model)
+                    abstio::write_file(format!("data/output/{}.bin", model.date), save_model)
                         .unwrap();
                 }
 
@@ -76,7 +76,7 @@ fn run(settings: Settings) {
             let mut app = ctx.loading_screen("initialize model", |ctx, _timer| {
                 let bytes = fs_err::read(path).unwrap();
                 let decoded = base64::decode(bytes).unwrap();
-                let model = abstutil::from_binary::<Model>(&decoded).unwrap();
+                let model = abstutil::from_binary::<DailyModel>(&decoded).unwrap();
                 // TODO Experiments turned on
                 //model.look_for_best_matches_by_pos_and_time();
                 //model.supply_demand_matching().unwrap();

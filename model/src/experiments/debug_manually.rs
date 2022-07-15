@@ -1,9 +1,9 @@
 use anyhow::Result;
 use geom::UnitFmt;
 
-use crate::{Model, Trajectory, VehicleID};
+use crate::{DailyModel, Trajectory, VehicleID};
 
-impl Model {
+impl DailyModel {
     // These might be easy to inspect manually.
     //
     // But they mostly seem to be very short routes around a campus

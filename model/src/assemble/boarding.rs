@@ -5,7 +5,7 @@ use anyhow::Result;
 use geom::{Histogram, Time};
 use serde::{Deserialize, Serialize};
 
-use crate::{JourneyID, Model, Timetable, VehicleID};
+use crate::{DailyModel, JourneyID, Timetable, VehicleID};
 use gtfs::{RouteVariantID, StopID, TripID};
 
 // TODO UIs
@@ -35,7 +35,7 @@ pub struct BoardingEvent {
 }
 
 // It's basically SQL at this point, happy?
-impl Model {
+impl DailyModel {
     pub fn find_boarding_event(&self, trip: TripID, stop: StopID) -> Option<&BoardingEvent> {
         self.boardings
             .iter()
@@ -69,7 +69,7 @@ impl Model {
     }
 }
 
-pub fn populate_boarding(model: &mut Model, timer: &mut Timer) -> Result<()> {
+pub fn populate_boarding(model: &mut DailyModel, timer: &mut Timer) -> Result<()> {
     timer.start("populate_boarding");
 
     // Every stop a vehicle visits through the day, in order

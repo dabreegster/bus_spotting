@@ -43,12 +43,7 @@ impl Replay {
             draw_stop_order: Drawable::empty(ctx),
         };
         let controls = Widget::col(vec![
-            format!(
-                "Date: {} ({})",
-                app.model.main_date,
-                app.model.main_date.weekday()
-            )
-            .text_widget(ctx),
+            format!("Date: {} ({})", app.model.date, app.model.date.weekday()).text_widget(ctx),
             ctx.style()
                 .btn_outline
                 .text("Replace vehicles with GTFS")
@@ -552,7 +547,7 @@ fn update_world(
             .model
             .gtfs
             .calendar
-            .services_matching_dates(&DateFilter::SingleDay(app.model.main_date));
+            .services_matching_dates(&DateFilter::SingleDay(app.model.date));
         let mut matching_routes = 0;
         for route in app.model.gtfs.routes.values() {
             if route.short_name.as_ref() != Some(&ev.route_short_name) {

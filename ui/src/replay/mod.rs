@@ -11,14 +11,14 @@ use geom::{Duration, Time};
 use serde::{Deserialize, Serialize};
 use widgetry::{Canvas, Color, EventCtx, GfxCtx, SharedAppState};
 
-use model::Model;
+use model::DailyModel;
 
 use crate::MapboxSync;
 pub use replay::Replay;
 use speed::TimeControls;
 
 pub struct App {
-    model: Model,
+    model: DailyModel,
 
     time: Time,
     time_increment: Duration,
@@ -48,7 +48,7 @@ impl SharedAppState for App {
 pub type Transition = widgetry::Transition<App>;
 
 impl App {
-    pub fn new(ctx: &mut EventCtx, model: Model) -> Self {
+    pub fn new(ctx: &mut EventCtx, model: DailyModel) -> Self {
         let bounds = &model.bounds;
         ctx.canvas.map_dims = (bounds.max_x, bounds.max_y);
         ctx.canvas.center_on_map_pt(bounds.center());

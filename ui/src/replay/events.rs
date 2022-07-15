@@ -1,6 +1,6 @@
 use geom::{Duration, Pt2D, Time};
 
-use model::{Model, VehicleName};
+use model::{DailyModel, VehicleName};
 
 pub struct Events {
     events: Vec<Event>,
@@ -29,7 +29,7 @@ impl Event {
 }
 
 impl Events {
-    pub fn ticketing(model: &Model) -> Self {
+    pub fn ticketing(model: &DailyModel) -> Self {
         let mut events = Vec::new();
         for journey in &model.journeys {
             for (idx, leg) in journey.legs.iter().enumerate() {

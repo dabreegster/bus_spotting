@@ -2,10 +2,10 @@ use abstutil::Timer;
 use anyhow::Result;
 use geom::{Distance, Time};
 
-use crate::{Model, VehicleID};
+use crate::{DailyModel, VehicleID};
 use gtfs::{DateFilter, RouteVariant, RouteVariantID};
 
-impl Model {
+impl DailyModel {
     // For each possible variant shape, snap ticketing events to a distance along that shape. For a
     // good match, you'd expect the distances to increase over time as the vehicle proceeds.
     //
@@ -22,7 +22,7 @@ impl Model {
         let services = self
             .gtfs
             .calendar
-            .services_matching_dates(&DateFilter::SingleDay(self.main_date));
+            .services_matching_dates(&DateFilter::SingleDay(self.date));
         for (vehicle, assignment) in &vehicles {
             timer.next();
 
@@ -81,7 +81,7 @@ struct PossibleMatch {
 
 impl PossibleMatch {
     fn new(
-        model: &Model,
+        model: &DailyModel,
         vehicle: VehicleID,
         variant: &RouteVariant,
         t1: Time,

@@ -3,10 +3,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::Result;
 use geom::Time;
 
-use crate::{Model, Timetable, VehicleID};
+use crate::{DailyModel, Timetable, VehicleID};
 use gtfs::{DateFilter, TripID, VariantFilter};
 
-impl Model {
+impl DailyModel {
     // Per route short name, we can find all vehicles serving it at least part of the day (supply)
     // and all the GTFS trips supposed to happen (demand). We can then try to match things up,
     // assuming a vehicle can only serve one trip at a time.
@@ -55,7 +55,7 @@ impl Model {
     // All trips today, broken down by route short name
     pub fn get_gtfs_trip_demand(&self) -> BTreeMap<String, Vec<(TripID, Time, Time)>> {
         let filter = VariantFilter {
-            date_filter: DateFilter::SingleDay(self.main_date),
+            date_filter: DateFilter::SingleDay(self.date),
             minimum_trips_per_day: 0,
         };
         let mut trips_to_assign: BTreeMap<String, Vec<(TripID, Time, Time)>> = BTreeMap::new();

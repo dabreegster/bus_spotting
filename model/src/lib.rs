@@ -27,9 +27,11 @@ pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::timetable::Timetable;
 pub use self::trajectory::Trajectory;
 
-// TODO Rearrange some of this as a DailyModel?
+/// Detailed bus data for one day
 #[derive(Serialize, Deserialize)]
-pub struct Model {
+pub struct DailyModel {
+    pub date: NaiveDate,
+
     pub bounds: Bounds,
     pub gps_bounds: GPSBounds,
     // TODO TiVec
@@ -41,10 +43,6 @@ pub struct Model {
     // TODO This is derived from other things, and may outright replace it at some point
     // Sorted by arrival time
     pub boardings: Vec<BoardingEvent>,
-
-    // If we've loaded journey and vehicle data, this is the one day covered. If not, it's an
-    // arbitrary date covered by some GTFS service.
-    pub main_date: NaiveDate,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -68,7 +66,7 @@ impl gtfs::CheapID for VehicleID {
     }
 }
 
-impl Model {
+impl DailyModel {
     /// Returns a daily model for everything in the input .zip and the multiday summary
     pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Vec<Self>> {
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
@@ -115,7 +113,7 @@ impl Model {
                 gtfs: gtfs.clone(),
                 journeys,
                 boardings: Vec::new(),
-                main_date: date,
+                date: date,
             };
             assemble::populate_boarding(&mut model, timer)?;
 
@@ -125,7 +123,7 @@ impl Model {
 
         if output_models.is_empty() {
             // An empty GTFS-only model
-            let main_date = gtfs.calendar.services.values().next().unwrap().start_date;
+            let date = gtfs.calendar.services.values().next().unwrap().start_date;
             output_models.push(Self {
                 bounds: gps_bounds.to_bounds(),
                 gps_bounds,
@@ -134,7 +132,7 @@ impl Model {
                 gtfs,
                 journeys: Vec::new(),
                 boardings: Vec::new(),
-                main_date,
+                date,
             });
         }
 
@@ -151,7 +149,7 @@ impl Model {
             gtfs: GTFS::empty(),
             journeys: Vec::new(),
             boardings: Vec::new(),
-            main_date: NaiveDate::from_ymd(2020, 1, 1),
+            date: NaiveDate::from_ymd(2020, 1, 1),
         }
     }
 

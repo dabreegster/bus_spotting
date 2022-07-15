@@ -3,13 +3,13 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use geom::Time;
 
-use crate::{Model, VehicleID, VehicleName};
+use crate::{DailyModel, VehicleID, VehicleName};
 use gtfs::{DateFilter, RouteVariantID};
 
 // BIL data says somebody boarded a vehicle and rode route_short_name. Use that, along with the
 // variants actually served that day, to figure out possible route variants per vehicle.
 
-impl Model {
+impl DailyModel {
     pub fn vehicle_to_possible_routes(&self, id: VehicleID) -> Vec<RouteVariantID> {
         match self.vehicles_to_possible_routes().unwrap().remove(&id) {
             Some(list) => list,
@@ -23,7 +23,7 @@ impl Model {
         let services = self
             .gtfs
             .calendar
-            .services_matching_dates(&DateFilter::SingleDay(self.main_date));
+            .services_matching_dates(&DateFilter::SingleDay(self.date));
         let mut result = BTreeMap::new();
         for (vehicle, assignment) in self.vehicle_to_route_short_name()? {
             // Start simple

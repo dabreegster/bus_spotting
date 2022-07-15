@@ -1,10 +1,10 @@
 use anyhow::Result;
 use geom::{Distance, PolyLine, Time};
 
-use crate::{IDMapping, Model, Timetable, Trajectory, Vehicle, VehicleName};
+use crate::{DailyModel, IDMapping, Timetable, Trajectory, Vehicle, VehicleName};
 use gtfs::{DateFilter, RouteVariant, RouteVariantID, TripID, VariantFilter};
 
-impl Model {
+impl DailyModel {
     // Turn each trip of a variant into a trajectory, using the stop times.
     //
     // Interesting to replay the "expected state", but hard to compare to real data. As delays
@@ -37,9 +37,9 @@ impl Model {
         self.journeys.clear();
         self.boardings.clear();
 
-        // Only for the main_date
+        // Only for the date
         let filter = VariantFilter {
-            date_filter: DateFilter::SingleDay(self.main_date),
+            date_filter: DateFilter::SingleDay(self.date),
             minimum_trips_per_day: 0,
         };
 
@@ -70,7 +70,7 @@ impl Model {
 }
 
 fn split_shape_by_stops(
-    model: &Model,
+    model: &DailyModel,
     shape_pl: &PolyLine,
     variant: &RouteVariant,
 ) -> Result<Vec<PolyLine>> {

@@ -1,11 +1,11 @@
 use geom::{Distance, Duration, Time};
 
-use crate::{Model, Timetable, VehicleID};
+use crate::{DailyModel, Timetable, VehicleID};
 use gtfs::{RouteVariantID, TripID};
 
 pub const BUS_TO_STOP_THRESHOLD: Distance = Distance::const_meters(30.0);
 
-impl Model {
+impl DailyModel {
     /// Given one vehicle, use `get_trips_for_vehicle_and_variant` against all possible variants,
     /// then merge the results into one schedule through the day. Returns non-overlapping trips in
     /// order.

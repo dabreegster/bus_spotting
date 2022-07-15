@@ -1,10 +1,10 @@
 use anyhow::Result;
 use geom::Distance;
 
-use crate::{Model, Trajectory, VehicleID};
+use crate::{DailyModel, Trajectory, VehicleID};
 use gtfs::RouteVariantID;
 
-impl Model {
+impl DailyModel {
     // Find all times the AVL is close to endpoints of a possible variant's shape. Use those to clip
     // into multiple pieces, just view the result
     //

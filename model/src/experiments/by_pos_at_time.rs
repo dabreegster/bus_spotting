@@ -1,9 +1,9 @@
 use geom::Distance;
 
-use crate::{Model, VehicleID};
+use crate::{DailyModel, VehicleID};
 use gtfs::TripID;
 
-impl Model {
+impl DailyModel {
     pub fn look_for_best_matches_by_pos_and_time(&self) {
         let mut best = Vec::new();
         for vehicle in &self.vehicles {

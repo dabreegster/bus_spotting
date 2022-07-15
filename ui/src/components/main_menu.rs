@@ -3,7 +3,7 @@ use serde::de::DeserializeOwned;
 use widgetry::tools::PopupMsg;
 use widgetry::{EventCtx, HorizontalAlignment, Line, Panel, Transition, VerticalAlignment, Widget};
 
-use model::{Model, MultidayModel};
+use model::{DailyModel, MultidayModel};
 
 use crate::components::FileLoader;
 
@@ -51,7 +51,7 @@ impl MainMenu {
     pub fn on_click_replay(ctx: &mut EventCtx, x: &str) -> Option<Transition<crate::replay::App>> {
         match x {
             "Load model" => {
-                return Some(load_model::<crate::replay::App, Model>(
+                return Some(load_model::<crate::replay::App, DailyModel>(
                     ctx,
                     Box::new(|ctx, app, model| {
                         *app = crate::replay::App::new(ctx, model);
@@ -109,7 +109,7 @@ fn load_model<A: 'static, M: 'static + DeserializeOwned>(
 
 fn import_data<A: 'static>(
     ctx: &mut EventCtx,
-    replace: Box<dyn Fn(&mut EventCtx, &mut A, MultidayModel, Vec<Model>)>,
+    replace: Box<dyn Fn(&mut EventCtx, &mut A, MultidayModel, Vec<DailyModel>)>,
 ) -> Transition<A> {
     // TODO Restrict to .zip?
     Transition::Push(FileLoader::new_state(
@@ -117,14 +117,14 @@ fn import_data<A: 'static>(
         Box::new(move |ctx, app, maybe_bytes: Result<Option<Vec<u8>>>| {
             match maybe_bytes {
                 Ok(Some(bytes)) => ctx.loading_screen("import model", |ctx, timer| {
-                    match Model::import_zip_bytes(bytes, timer) {
+                    match DailyModel::import_zip_bytes(bytes, timer) {
                         Ok(models) => {
                             for model in &models {
                                 // TODO This silently fails in the browser unless we skip
                                 // serializing vehicles. Apparently there are file size limits.
                                 let save_model = base64::encode(abstutil::to_binary(model));
                                 if let Err(err) = abstio::write_file(
-                                    format!("data/output/{}.bin", model.main_date),
+                                    format!("data/output/{}.bin", model.date),
                                     save_model,
                                 ) {
                                     error!("Couldn't save imported model: {err}");
