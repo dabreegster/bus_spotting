@@ -48,22 +48,22 @@ impl MainMenu {
         }
     }
 
-    pub fn on_click_replay(ctx: &mut EventCtx, x: &str) -> Option<Transition<crate::App>> {
+    pub fn on_click_replay(ctx: &mut EventCtx, x: &str) -> Option<Transition<crate::replay::App>> {
         match x {
             "Load model" => {
-                return Some(load_model::<crate::App, Model>(
+                return Some(load_model::<crate::replay::App, Model>(
                     ctx,
                     Box::new(|ctx, app, model| {
-                        *app = crate::App::new(ctx, model);
+                        *app = crate::replay::App::new(ctx, model);
                     }),
                 ));
             }
             "Import data" => {
-                return Some(import_data::<crate::App>(
+                return Some(import_data::<crate::replay::App>(
                     ctx,
                     Box::new(|ctx, app, _, mut singles| {
                         // Just load one of the days arbitrarily
-                        *app = crate::App::new(ctx, singles.remove(0));
+                        *app = crate::replay::App::new(ctx, singles.remove(0));
                     }),
                 ));
             }

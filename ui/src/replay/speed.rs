@@ -6,7 +6,7 @@ use widgetry::{
     VerticalAlignment, Widget,
 };
 
-use crate::{App, Transition};
+use super::{App, Transition};
 
 // TODO Maybe the component pattern is to
 //

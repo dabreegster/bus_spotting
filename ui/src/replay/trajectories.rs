@@ -5,7 +5,7 @@ use widgetry::{
     Panel, State, Text, TextExt, VerticalAlignment, Widget,
 };
 
-use crate::{App, Transition};
+use super::{App, Transition};
 
 pub struct Compare {
     items: Vec<Item>,

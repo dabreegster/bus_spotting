@@ -6,10 +6,8 @@ use widgetry::{
     Panel, State, Text, TextExt, VerticalAlignment, Widget,
 };
 
-use crate::{App, Transition};
-
 use super::page::PageBuilder;
-use super::Replay;
+use super::{App, Replay, Transition};
 
 pub struct Viewer {
     panel: Panel,

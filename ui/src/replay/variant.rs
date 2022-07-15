@@ -4,8 +4,8 @@ use widgetry::{
 
 use gtfs::RouteVariant;
 
+use super::{App, Transition};
 use crate::components::render_table;
-use crate::{App, Transition};
 
 pub struct VariantInfo {
     panel: Panel,

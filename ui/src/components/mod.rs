@@ -3,9 +3,7 @@ pub mod describe;
 mod file_loader;
 mod main_menu;
 mod render_table;
-mod speed;
 
 pub use file_loader::FileLoader;
 pub use main_menu::MainMenu;
 pub use render_table::render_table;
-pub use speed::TimeControls;

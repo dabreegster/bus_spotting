@@ -5,8 +5,8 @@ use widgetry::{
 
 use gtfs::{RouteVariant, RouteVariantID, Stop, StopID};
 
+use super::{App, Transition};
 use crate::components::describe;
-use crate::{App, Transition};
 
 pub struct StopInfo {
     panel: Panel,
