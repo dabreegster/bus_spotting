@@ -26,6 +26,8 @@ struct Args {
     import_zip: Option<String>,
 }
 
+// This is a bit complex -- based on the input args, enter daily or multiday mode. They're two
+// totally separate UIs; they just live in one crate and are deployed as one binary for now.
 fn run(settings: Settings) {
     abstutil::logger::setup();
 
