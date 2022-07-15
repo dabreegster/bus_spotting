@@ -6,6 +6,7 @@ extern crate log;
 mod assemble;
 mod avl;
 mod experiments;
+mod multiday;
 mod ticketing;
 mod timetable;
 mod trajectory;
@@ -21,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use gtfs::{IDMapping, GTFS};
 
 pub use self::assemble::*;
+pub use self::multiday::MultidayModel;
 pub use self::ticketing::{CardID, Journey, JourneyID, JourneyLeg};
 pub use self::timetable::Timetable;
 pub use self::trajectory::Trajectory;
@@ -67,7 +69,7 @@ impl gtfs::CheapID for VehicleID {
 }
 
 impl Model {
-    /// Returns a daily model for everything in the input .zip
+    /// Returns a daily model for everything in the input .zip and the multiday summary
     pub fn import_zip_bytes(bytes: Vec<u8>, timer: &mut Timer) -> Result<Vec<Self>> {
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
 

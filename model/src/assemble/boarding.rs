@@ -21,7 +21,7 @@ use gtfs::{RouteVariantID, StopID, TripID};
 // raw AVL and BIL data.
 //
 // Uniquely keyed by (TripID, StopID)
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct BoardingEvent {
     pub vehicle: VehicleID,
     // For convenience

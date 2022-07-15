@@ -47,6 +47,13 @@ impl Args {
             let save_model = base64::encode(abstutil::to_binary(model));
             abstio::write_file(format!("data/output/{}.bin", model.main_date), save_model)?;
         }
+
+        let multiday = model::MultidayModel::new_from_daily_models(&models);
+        abstio::write_file(
+            "data/output/multiday.bin".to_string(),
+            base64::encode(abstutil::to_binary(&multiday)),
+        )?;
+
         // Just load one of the days arbitrarily
         Ok(models.remove(0))
     }

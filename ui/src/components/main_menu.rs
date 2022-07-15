@@ -130,6 +130,14 @@ fn import_data(ctx: &mut EventCtx) -> Transition {
                                 }
                             }
 
+                            let multiday = model::MultidayModel::new_from_daily_models(&models);
+                            if let Err(err) = abstio::write_file(
+                                "data/output/multiday.bin".to_string(),
+                                base64::encode(abstutil::to_binary(&multiday)),
+                            ) {
+                                error!("Couldn't save imported model: {err}");
+                            }
+
                             // Just load one of the days arbitrarily
                             *app = App::new(ctx, models.remove(0));
                             Transition::Multi(vec![Transition::Pop, Transition::Recreate])
