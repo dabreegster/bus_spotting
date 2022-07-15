@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use geom::{Bounds, GPSBounds};
+use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
 use gtfs::GTFS;
@@ -38,5 +38,15 @@ impl MultidayModel {
         output.boardings_per_day.sort_by_key(|(d, _)| *d);
 
         output
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            // Avoid crashing the UI with empty bounds
+            bounds: Bounds::from(&[Pt2D::zero(), Pt2D::new(1.0, 1.0)]),
+            gps_bounds: GPSBounds::new(),
+            gtfs: GTFS::empty(),
+            boardings_per_day: Vec::new(),
+        }
     }
 }

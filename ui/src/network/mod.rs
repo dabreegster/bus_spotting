@@ -12,9 +12,8 @@ use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, 
 
 use gtfs::{RouteVariantID, StopID};
 
-pub use self::filters::Filters;
+use self::filters::Filters;
 use crate::components::{describe, MainMenu};
-use crate::{App, Transition};
 
 pub struct Viewer {
     panel: Panel,
@@ -24,7 +23,7 @@ pub struct Viewer {
 impl Viewer {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
-            panel: crate::components::MainMenu::panel(ctx, crate::components::Mode::Network),
+            panel: crate::components::MainMenu::panel(ctx),
             world: World::unbounded(),
         };
         state.on_filter_change(ctx, app);
@@ -57,7 +56,6 @@ impl Viewer {
 
 impl State<App> for Viewer {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
-        app.savestate_mode = crate::SavestateMode::NetworkViewer;
         app.sync_mapbox(ctx);
 
         match self.world.event(ctx) {
@@ -78,7 +76,7 @@ impl State<App> for Viewer {
 
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => {
-                if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
+                if let Some(t) = MainMenu::on_click_network(ctx, x.as_ref()) {
                     return t;
                 } else {
                     match x.as_ref() {
@@ -198,4 +196,94 @@ fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
 
     world.initialize_hover(ctx);
     world
+}
+
+// TODO Split files
+
+use geom::Bounds;
+use model::MultidayModel;
+use serde::{Deserialize, Serialize};
+use widgetry::{Canvas, SharedAppState};
+
+pub struct App {
+    model: MultidayModel,
+
+    filters: Filters,
+
+    // Avoid syncing when bounds match
+    #[allow(unused)]
+    mapbox_bounds: Bounds,
+}
+
+impl SharedAppState for App {
+    fn draw_default(&self, g: &mut GfxCtx) {
+        if cfg!(not(target_arch = "wasm32")) {
+            g.clear(Color::BLACK);
+        }
+    }
+
+    fn before_quit(&self, canvas: &Canvas) {
+        let ss = Savestate {
+            cam_x: canvas.cam_x,
+            cam_y: canvas.cam_y,
+            cam_zoom: canvas.cam_zoom,
+        };
+        abstio::write_json("data/save_network.json".to_string(), &ss);
+    }
+}
+
+pub type Transition = widgetry::Transition<App>;
+
+impl App {
+    pub fn new(ctx: &mut EventCtx, model: MultidayModel) -> Self {
+        let bounds = &model.bounds;
+        ctx.canvas.map_dims = (bounds.max_x, bounds.max_y);
+        ctx.canvas.center_on_map_pt(bounds.center());
+
+        Self {
+            model,
+
+            filters: Filters::new(),
+
+            mapbox_bounds: Bounds::new(),
+        }
+    }
+
+    #[allow(unused)]
+    pub fn sync_mapbox(&mut self, ctx: &mut EventCtx) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            // This method is usually called for every single event, but the camera hasn't always
+            // moved
+            let bounds = ctx.canvas.get_screen_bounds();
+            if self.mapbox_bounds == bounds {
+                return;
+            }
+            self.mapbox_bounds = bounds;
+
+            let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(&self.model.gps_bounds);
+            let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(&self.model.gps_bounds);
+            sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
+        }
+    }
+
+    // This only makes sense on native, with the same model used across different runs.
+    // before_quit is never called on web, and web starts with an empty model.
+    pub fn restore_savestate(&self, ctx: &mut EventCtx) {
+        if let Ok(savestate) = abstio::maybe_read_json::<Savestate>(
+            "data/save.json".to_string(),
+            &mut Timer::throwaway(),
+        ) {
+            ctx.canvas.cam_x = savestate.cam_x;
+            ctx.canvas.cam_y = savestate.cam_y;
+            ctx.canvas.cam_zoom = savestate.cam_zoom;
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Savestate {
+    cam_x: f64,
+    cam_y: f64,
+    cam_zoom: f64,
 }

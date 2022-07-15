@@ -5,8 +5,7 @@ use widgetry::{Autocomplete, EventCtx, GfxCtx, Line, Outcome, Panel, State, Widg
 use gtfs::{DateFilter, RouteVariantID, VariantFilter};
 
 use super::filters::Filters;
-use super::Viewer;
-use crate::{App, Transition};
+use super::{App, Transition, Viewer};
 
 pub struct SearchForRouteVariant {
     panel: Panel,

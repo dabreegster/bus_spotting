@@ -1,101 +1,106 @@
 #[macro_use]
-extern crate anyhow;
-#[macro_use]
 extern crate log;
 
 mod components;
 mod network;
 mod replay;
 
-use abstutil::Timer;
-use anyhow::Result;
 use geom::{Bounds, Duration, Time};
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use widgetry::{Canvas, Color, EventCtx, GfxCtx, Settings, SharedAppState};
 
-use model::{Model, VehicleID};
+use model::{Model, MultidayModel, VehicleID};
 
+// TODO These args only make sense on native, because they read files
+// TODO Could probably make this an optional enum now
 #[derive(StructOpt)]
 struct Args {
-    /// The path to a previously built and serialized model
+    /// The path to a previously built and serialized daily model
     #[structopt(long)]
-    model: Option<String>,
-    /// The path to a .zip file with raw data to import
+    daily: Option<String>,
+    /// The path to a previously built and serialized multiday model
+    #[structopt(long)]
+    multiday: Option<String>,
+    /// The path to a .zip file with raw data to import. This'll enter the multiday mode after
+    /// importing
     #[structopt(long)]
     import_zip: Option<String>,
-}
-
-impl Args {
-    // TODO These args only make sense on native, because they read files
-    fn load(mut self, timer: &mut Timer) -> Result<Model> {
-        if let Some(path) = self.model.take() {
-            if self.import_zip.is_some() {
-                bail!("You can't specify both --model and --import-zip");
-            }
-
-            let bytes = fs_err::read(path)?;
-            let decoded = base64::decode(bytes)?;
-            return abstutil::from_binary::<Model>(&decoded);
-        }
-        if self.import_zip.is_none() {
-            return Ok(Model::empty());
-        }
-        let bytes = fs_err::read(self.import_zip.take().unwrap())?;
-        let mut models = Model::import_zip_bytes(bytes, timer)?;
-        for model in &models {
-            let save_model = base64::encode(abstutil::to_binary(model));
-            abstio::write_file(format!("data/output/{}.bin", model.main_date), save_model)?;
-        }
-
-        let multiday = model::MultidayModel::new_from_daily_models(&models);
-        abstio::write_file(
-            "data/output/multiday.bin".to_string(),
-            base64::encode(abstutil::to_binary(&multiday)),
-        )?;
-
-        // Just load one of the days arbitrarily
-        Ok(models.remove(0))
-    }
 }
 
 fn run(settings: Settings) {
     abstutil::logger::setup();
 
     let args = Args::from_iter(abstutil::cli_args());
-
-    widgetry::run(settings, move |ctx| {
-        let model = ctx.loading_screen("initialize model", |_, timer| {
-            let model = args.load(timer).unwrap();
-            // TODO Experiments turned on
-            //model.look_for_best_matches_by_pos_and_time();
-            //model.supply_demand_matching().unwrap();
-            //model.vehicles_with_few_stops().unwrap();
-            model
+    let n = [&args.daily, &args.multiday, &args.import_zip]
+        .iter()
+        .filter(|x| x.is_some())
+        .count();
+    if n == 0 {
+        // Empty network view
+        widgetry::run(settings, |ctx| {
+            let app = network::App::new(ctx, MultidayModel::empty());
+            let states = vec![crate::network::Viewer::new_state(ctx, &app)];
+            (app, states)
         });
+    } else if n > 1 {
+        panic!("You must specify one of --daily, --multiday, or --import-zip");
+    }
 
-        let mut app = App::new(ctx, model);
+    if let Some(path) = args.import_zip {
+        widgetry::run(settings, move |ctx| {
+            let app = ctx.loading_screen("initialize model", |ctx, timer| {
+                let bytes = fs_err::read(path).unwrap();
+                let models = Model::import_zip_bytes(bytes, timer).unwrap();
+                for model in &models {
+                    let save_model = base64::encode(abstutil::to_binary(model));
+                    abstio::write_file(format!("data/output/{}.bin", model.main_date), save_model)
+                        .unwrap();
+                }
 
-        let mut states = vec![crate::network::Viewer::new_state(ctx, &app)];
+                let multiday = MultidayModel::new_from_daily_models(&models);
+                abstio::write_file(
+                    "data/output/multiday.bin".to_string(),
+                    base64::encode(abstutil::to_binary(&multiday)),
+                )
+                .unwrap();
 
-        // This only makes sense on native, with the same model used across different runs.
-        // before_quit is never called on web, and web starts with an empty model.
-        if let Ok(savestate) = abstio::maybe_read_json::<Savestate>(
-            "data/save.json".to_string(),
-            &mut Timer::throwaway(),
-        ) {
-            ctx.canvas.cam_x = savestate.cam_x;
-            ctx.canvas.cam_y = savestate.cam_y;
-            ctx.canvas.cam_zoom = savestate.cam_zoom;
-            if let SavestateMode::Replayer(time, _selected_vehicle) = savestate.mode {
-                app.time = time;
-                // TODO Also restore selected_vehicle
-                states = vec![crate::replay::Replay::new_state(ctx, &app)];
-            }
-        }
-
-        (app, states)
-    });
+                network::App::new(ctx, multiday)
+            });
+            let states = vec![network::Viewer::new_state(ctx, &app)];
+            (app, states)
+        });
+    } else if let Some(path) = args.daily {
+        widgetry::run(settings, move |ctx| {
+            let mut app = ctx.loading_screen("initialize model", |ctx, _timer| {
+                let bytes = fs_err::read(path).unwrap();
+                let decoded = base64::decode(bytes).unwrap();
+                let model = abstutil::from_binary::<Model>(&decoded).unwrap();
+                // TODO Experiments turned on
+                //model.look_for_best_matches_by_pos_and_time();
+                //model.supply_demand_matching().unwrap();
+                //model.vehicles_with_few_stops().unwrap();
+                App::new(ctx, model)
+            });
+            app.restore_savestate(ctx);
+            let states = vec![replay::Replay::new_state(ctx, &app)];
+            (app, states)
+        });
+    } else if let Some(path) = args.multiday {
+        widgetry::run(settings, move |ctx| {
+            let app = ctx.loading_screen("initialize model", |ctx, _timer| {
+                let bytes = fs_err::read(path).unwrap();
+                let decoded = base64::decode(bytes).unwrap();
+                network::App::new(
+                    ctx,
+                    abstutil::from_binary::<MultidayModel>(&decoded).unwrap(),
+                )
+            });
+            let states = vec![network::Viewer::new_state(ctx, &app)];
+            app.restore_savestate(ctx);
+            (app, states)
+        });
+    }
 }
 
 pub fn main() {
@@ -121,9 +126,6 @@ extern "C" {
 
 pub struct App {
     model: Model,
-
-    // Mostly applies to the network viewer now, but we want to preserve it when switching modes
-    filters: network::Filters,
 
     // Sticky state for the replayer
     time: Time,
@@ -165,8 +167,6 @@ impl App {
         Self {
             model,
 
-            filters: network::Filters::new(),
-
             time: Time::START_OF_DAY,
             time_increment: Duration::minutes(10),
 
@@ -191,6 +191,23 @@ impl App {
             let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(&self.model.gps_bounds);
             let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(&self.model.gps_bounds);
             sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
+        }
+    }
+
+    // This only makes sense on native, with the same model used across different runs.
+    // before_quit is never called on web, and web starts with an empty model.
+    pub fn restore_savestate(&mut self, ctx: &mut EventCtx) {
+        if let Ok(savestate) = abstio::maybe_read_json::<Savestate>(
+            "data/save.json".to_string(),
+            &mut abstutil::Timer::throwaway(),
+        ) {
+            ctx.canvas.cam_x = savestate.cam_x;
+            ctx.canvas.cam_y = savestate.cam_y;
+            ctx.canvas.cam_zoom = savestate.cam_zoom;
+            if let SavestateMode::Replayer(time, _selected_vehicle) = savestate.mode {
+                self.time = time;
+                // TODO Also restore selected_vehicle
+            }
         }
     }
 }

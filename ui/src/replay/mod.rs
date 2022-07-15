@@ -38,7 +38,7 @@ pub struct Replay {
 impl Replay {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
-            panel: crate::components::MainMenu::panel(ctx, crate::components::Mode::Replay),
+            panel: crate::components::MainMenu::panel(ctx),
             time_controls: TimeControls::new(ctx, app),
             world: make_static_world(ctx, app),
             events: Events::ticketing(&app.model),
@@ -339,7 +339,7 @@ impl State<App> for Replay {
                     ));
                 }
 
-                if let Some(t) = MainMenu::on_click(ctx, app, x.as_ref()) {
+                if let Some(t) = MainMenu::on_click_replay(ctx, x.as_ref()) {
                     return t;
                 } else {
                     unreachable!()

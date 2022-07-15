@@ -6,8 +6,8 @@ use widgetry::{
 
 use gtfs::{DateFilter, RouteVariantID, VariantFilter};
 
+use super::App;
 use crate::components::{date_filter, describe};
-use crate::App;
 
 pub struct Filters {
     pub filter: VariantFilter,
