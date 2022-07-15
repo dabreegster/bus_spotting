@@ -9,7 +9,7 @@ anyhow = "1.0.38"
 chrono = { version = "0.4.19", features=["serde"] }
 csv = "1.1.4"
 geojson = { version = "0.22.2" }
-geom = { git = "https://github.com/dabreegster/abstreet" }
+geom = { git = "https://github.com/a-b-street/abstreet" }
 log = "0.4.14"
 serde = "1.0.123"
 serde_json = "1.0.61"

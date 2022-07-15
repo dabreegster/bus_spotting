@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#1a9b0715aca1a8eb12844c17d101b7f7db766cdd"
+source = "git+https://github.com/a-b-street/abstreet#7e2667bf3762d1824c7c08b7936f007affe6fc3e"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -38,7 +38,7 @@ dependencies = [
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#1a9b0715aca1a8eb12844c17d101b7f7db766cdd"
+source = "git+https://github.com/a-b-street/abstreet#7e2667bf3762d1824c7c08b7936f007affe6fc3e"
 dependencies = [
  "anyhow",
  "bincode",
@@ -970,7 +970,7 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#1a9b0715aca1a8eb12844c17d101b7f7db766cdd"
+source = "git+https://github.com/a-b-street/abstreet#7e2667bf3762d1824c7c08b7936f007affe6fc3e"
 dependencies = [
  "aabb-quadtree",
  "abstutil",
@@ -984,6 +984,7 @@ dependencies = [
  "ordered-float",
  "polylabel",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3238,7 +3239,7 @@ checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/dabreegster/abstreet#1a9b0715aca1a8eb12844c17d101b7f7db766cdd"
+source = "git+https://github.com/a-b-street/abstreet#7e2667bf3762d1824c7c08b7936f007affe6fc3e"
 dependencies = [
  "aabb-quadtree",
  "abstio",

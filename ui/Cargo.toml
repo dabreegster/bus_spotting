@@ -13,12 +13,12 @@ wasm = ["wasm-bindgen", "widgetry/wasm-backend"]
 
 [dependencies]
 anyhow = "1.0.38"
-abstio = { git = "https://github.com/dabreegster/abstreet" }
-abstutil = { git = "https://github.com/dabreegster/abstreet" }
+abstio = { git = "https://github.com/a-b-street/abstreet" }
+abstutil = { git = "https://github.com/a-b-street/abstreet" }
 base64 = "0.13.0"
 chrono = { version = "0.4.19", features=["serde"] }
 futures-channel = { version = "0.3.12"}
-geom = { git = "https://github.com/dabreegster/abstreet" }
+geom = { git = "https://github.com/a-b-street/abstreet" }
 gtfs = { path = "../gtfs" }
 log = "0.4.14"
 model = { path = "../model" }
@@ -26,5 +26,5 @@ rfd = "0.8.0"
 serde = "1.0.123"
 structopt = "0.3.23"
 wasm-bindgen = { version = "0.2.70", optional = true }
-widgetry = { git = "https://github.com/dabreegster/abstreet" }
+widgetry = { git = "https://github.com/a-b-street/abstreet" }
 fs-err = "2.7.0"
