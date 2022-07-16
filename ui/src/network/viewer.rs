@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use abstutil::Timer;
 use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text};
+use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, Widget};
 
 use gtfs::{RouteVariantID, StopID};
 
@@ -27,7 +27,13 @@ impl Viewer {
 
     pub fn on_filter_change(&mut self, ctx: &mut EventCtx, app: &App) {
         ctx.loading_screen("update filters", |ctx, timer| {
-            let controls = app.filters.to_controls(ctx, app);
+            let controls = Widget::col(vec![
+                app.filters.to_controls(ctx, app),
+                ctx.style()
+                    .btn_outline
+                    .text("Boardings by variant")
+                    .build_def(ctx),
+            ]);
             self.panel.replace(ctx, "contents", controls);
 
             let world = make_world(ctx, app, timer);
@@ -84,6 +90,11 @@ impl State<App> for Viewer {
                                     app,
                                     app.model.gtfs.variants_matching_filter(&app.filters.filter),
                                 ),
+                            );
+                        }
+                        "Boardings by variant" => {
+                            return Transition::Push(
+                                super::analysis::Analysis::boardings_by_variant(ctx, app),
                             );
                         }
                         _ => unreachable!(),

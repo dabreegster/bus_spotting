@@ -1,3 +1,4 @@
+mod analysis;
 mod filters;
 mod search;
 mod stop;
