@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use abstutil::{prettyprint_usize, Timer};
+use abstutil::{prettyprint_usize, Counter, Timer};
 use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{ColorLegend, ColorScale};
@@ -43,7 +43,8 @@ impl Viewer {
                             .unwrap_or(StopStyle::None),
                         vec![
                             Choice::new("all", StopStyle::None),
-                            Choice::new("by boardings", StopStyle::ColorByBoardings),
+                            Choice::new("by boardings", StopStyle::Boardings),
+                            Choice::new("daily trips (any variant)", StopStyle::NumberTrips),
                         ],
                     ),
                 ]),
@@ -227,52 +228,22 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
                     .build(ctx);
             }
         }
-        StopStyle::ColorByBoardings => {
+        StopStyle::Boardings => {
             let mut counts = app.model.count_boardings_by_stop();
             counts.subset(&stops);
-            let max = counts.max() as f64;
-            let scale = ColorScale::from_colorous(colorous::COOL);
-
-            timer.start_iter("draw stops", stops.len());
-            for id in stops {
-                timer.next();
-                let stop = &app.model.gtfs.stops[&id];
-                let count = counts.get(id);
-
-                let mut txt = describe::stop(stop);
-                txt.add_line(format!("{} total boardings here", prettyprint_usize(count)));
-
-                let hitbox = circle.translate(stop.pos.x(), stop.pos.y());
-                let mut batch = GeomBatch::new();
-
-                let color = if max == 0.0 {
-                    scale.eval(0.0)
-                } else {
-                    scale.eval(count as f64 / max)
-                };
-                batch.push(color, hitbox.clone());
-                batch.push(
-                    Color::WHITE,
-                    circle_outline.translate(stop.pos.x(), stop.pos.y()),
-                );
-
-                world
-                    .add(Obj::Stop(id))
-                    .hitbox(hitbox)
-                    .draw(batch)
-                    .hover_alpha(0.5)
-                    .tooltip(txt)
-                    .clickable()
-                    .build(ctx);
-            }
-
-            // Also update the panel here, since we have the counts
-            let info = ColorLegend::gradient(
+            heatmap_stops(
                 ctx,
-                &scale,
-                vec!["0".to_string(), prettyprint_usize(max as usize)],
+                app,
+                panel,
+                &mut world,
+                counts,
+                "total boardings",
+                timer,
             );
-            panel.replace(ctx, "stop style info", info);
+        }
+        StopStyle::NumberTrips => {
+            let counts = count_daily_trips_per_stop(app, &stops, &selected_variants);
+            heatmap_stops(ctx, app, panel, &mut world, counts, "daily trips", timer);
         }
     }
 
@@ -283,6 +254,88 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
 #[derive(Clone, Debug, PartialEq)]
 enum StopStyle {
     None,
-    ColorByBoardings,
-    // number of trips, frequency
+    Boardings,
+    NumberTrips,
+    // frequency
+}
+
+fn count_daily_trips_per_stop(
+    app: &App,
+    stops: &BTreeSet<StopID>,
+    selected_variants: &BTreeSet<RouteVariantID>,
+) -> Counter<StopID> {
+    let mut cnt = Counter::new();
+    for stop in stops {
+        let mut trips = 0;
+        for variant in app.model.gtfs.stops[stop]
+            .route_variants
+            .intersection(selected_variants)
+        {
+            trips += app.model.gtfs.variant(*variant).trips.len();
+        }
+        cnt.add(*stop, trips);
+    }
+    cnt
+}
+
+fn heatmap_stops(
+    ctx: &mut EventCtx,
+    app: &App,
+    panel: &mut Panel,
+    world: &mut World<Obj>,
+    counts: Counter<StopID>,
+    label: &str,
+    timer: &mut Timer,
+) {
+    let max = counts.max() as f64;
+    let scale = ColorScale::from_colorous(colorous::COOL);
+
+    // TODO We really need unzoomed circles
+    let radius = Distance::meters(50.0);
+    // Optimization
+    let circle = Circle::new(Pt2D::zero(), radius).to_polygon();
+    let circle_outline = Circle::new(Pt2D::zero(), radius)
+        .to_outline(Distance::meters(3.0))
+        .unwrap();
+
+    timer.start_iter("draw stops", counts.borrow().len());
+    for (id, count) in counts.consume() {
+        timer.next();
+        let stop = &app.model.gtfs.stops[&id];
+
+        let mut txt = describe::stop(stop);
+        txt.add_line(Line(""));
+        txt.add_line(format!("{} {} here", prettyprint_usize(count), label));
+
+        let hitbox = circle.translate(stop.pos.x(), stop.pos.y());
+        let mut batch = GeomBatch::new();
+
+        let color = if max == 0.0 {
+            scale.eval(0.0)
+        } else {
+            scale.eval(count as f64 / max)
+        };
+        batch.push(color, hitbox.clone());
+        batch.push(
+            Color::WHITE,
+            circle_outline.translate(stop.pos.x(), stop.pos.y()),
+        );
+
+        world
+            .add(Obj::Stop(id))
+            .hitbox(hitbox)
+            .draw(batch)
+            .hover_alpha(0.5)
+            .tooltip(txt)
+            .clickable()
+            .build(ctx);
+    }
+
+    // Also update the panel here, since we have the counts
+    let info = ColorLegend::gradient(
+        ctx,
+        &scale,
+        vec!["0".to_string(), prettyprint_usize(max as usize)],
+    );
+    panel.replace(ctx, "stop style info", info);
 }
