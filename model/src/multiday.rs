@@ -1,8 +1,9 @@
+use abstutil::Counter;
 use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
-use gtfs::GTFS;
+use gtfs::{StopID, GTFS};
 
 use crate::{BoardingEvent, DailyModel};
 
@@ -48,5 +49,15 @@ impl MultidayModel {
             gtfs: GTFS::empty(),
             boardings_per_day: Vec::new(),
         }
+    }
+
+    pub fn count_boardings_by_stop(&self) -> Counter<StopID> {
+        let mut cnt = Counter::new();
+        for (_, events) in &self.boardings_per_day {
+            for ev in events {
+                cnt.add(ev.stop, ev.new_riders.len() + ev.transfers.len());
+            }
+        }
+        cnt
     }
 }

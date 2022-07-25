@@ -1,9 +1,12 @@
 use std::collections::BTreeSet;
 
-use abstutil::Timer;
+use abstutil::{prettyprint_usize, Timer};
 use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
-use widgetry::{Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, Widget};
+use widgetry::tools::{ColorLegend, ColorScale};
+use widgetry::{
+    Choice, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
+};
 
 use gtfs::{RouteVariantID, StopID};
 
@@ -29,6 +32,22 @@ impl Viewer {
         ctx.loading_screen("update filters", |ctx, timer| {
             let controls = Widget::col(vec![
                 app.filters.to_controls(ctx, app),
+                Widget::row(vec![
+                    "Show stops:".text_widget(ctx),
+                    // Weird pattern
+                    Widget::dropdown(
+                        ctx,
+                        "stop style",
+                        self.panel
+                            .maybe_dropdown_value("stop style")
+                            .unwrap_or(StopStyle::None),
+                        vec![
+                            Choice::new("all", StopStyle::None),
+                            Choice::new("by boardings", StopStyle::ColorByBoardings),
+                        ],
+                    ),
+                ]),
+                Widget::placeholder(ctx, "stop style info"),
                 ctx.style()
                     .btn_outline
                     .text("Boardings by variant")
@@ -36,7 +55,7 @@ impl Viewer {
             ]);
             self.panel.replace(ctx, "contents", controls);
 
-            let world = make_world(ctx, app, timer);
+            let world = make_world(ctx, app, &mut self.panel, timer);
             self.world = world;
         });
     }
@@ -102,6 +121,8 @@ impl State<App> for Viewer {
                 }
             }
             Outcome::Changed(_x) => {
+                // This also happens now for StopStyle
+
                 // If the user sets an impossible date, this won't run, and the controls will still
                 // be fixed at the last valid state
                 if let Some(filters) = Filters::from_controls(app, &self.panel) {
@@ -132,7 +153,7 @@ enum Obj {
 }
 impl ObjectID for Obj {}
 
-fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
+fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Timer) -> World<Obj> {
     let selected_variants = app.filters.selected_variants(app);
     let mut world = World::bounded(&app.model.bounds);
 
@@ -172,38 +193,96 @@ fn make_world(ctx: &mut EventCtx, app: &App, timer: &mut Timer) -> World<Obj> {
         .to_outline(Distance::meters(3.0))
         .unwrap();
 
-    // Only draw visited stops
-    timer.start_iter("draw stops", stops.len());
-    for id in stops {
-        timer.next();
-        let stop = &app.model.gtfs.stops[&id];
-        let mut txt = describe::stop(stop);
-        txt.add_line(format!(
-            "{} route variants",
-            stop.route_variants
-                .intersection(&selected_variants)
-                .collect::<Vec<_>>()
-                .len()
-        ));
+    match panel.dropdown_value("stop style") {
+        StopStyle::None => {
+            // Only draw visited stops
+            timer.start_iter("draw stops", stops.len());
+            for id in stops {
+                timer.next();
+                let stop = &app.model.gtfs.stops[&id];
+                let mut txt = describe::stop(stop);
+                txt.add_line(format!(
+                    "{} route variants",
+                    stop.route_variants
+                        .intersection(&selected_variants)
+                        .collect::<Vec<_>>()
+                        .len()
+                ));
 
-        let hitbox = circle.translate(stop.pos.x(), stop.pos.y());
-        let mut batch = GeomBatch::new();
-        batch.push(Color::BLUE, hitbox.clone());
-        batch.push(
-            Color::WHITE,
-            circle_outline.translate(stop.pos.x(), stop.pos.y()),
-        );
+                let hitbox = circle.translate(stop.pos.x(), stop.pos.y());
+                let mut batch = GeomBatch::new();
+                batch.push(Color::BLUE, hitbox.clone());
+                batch.push(
+                    Color::WHITE,
+                    circle_outline.translate(stop.pos.x(), stop.pos.y()),
+                );
 
-        world
-            .add(Obj::Stop(id))
-            .hitbox(hitbox)
-            .draw(batch)
-            .hover_alpha(0.5)
-            .tooltip(txt)
-            .clickable()
-            .build(ctx);
+                world
+                    .add(Obj::Stop(id))
+                    .hitbox(hitbox)
+                    .draw(batch)
+                    .hover_alpha(0.5)
+                    .tooltip(txt)
+                    .clickable()
+                    .build(ctx);
+            }
+        }
+        StopStyle::ColorByBoardings => {
+            let mut counts = app.model.count_boardings_by_stop();
+            counts.subset(&stops);
+            let max = counts.max() as f64;
+            let scale = ColorScale::from_colorous(colorous::COOL);
+
+            timer.start_iter("draw stops", stops.len());
+            for id in stops {
+                timer.next();
+                let stop = &app.model.gtfs.stops[&id];
+                let count = counts.get(id);
+
+                let mut txt = describe::stop(stop);
+                txt.add_line(format!("{} total boardings here", prettyprint_usize(count)));
+
+                let hitbox = circle.translate(stop.pos.x(), stop.pos.y());
+                let mut batch = GeomBatch::new();
+
+                let color = if max == 0.0 {
+                    scale.eval(0.0)
+                } else {
+                    scale.eval(count as f64 / max)
+                };
+                batch.push(color, hitbox.clone());
+                batch.push(
+                    Color::WHITE,
+                    circle_outline.translate(stop.pos.x(), stop.pos.y()),
+                );
+
+                world
+                    .add(Obj::Stop(id))
+                    .hitbox(hitbox)
+                    .draw(batch)
+                    .hover_alpha(0.5)
+                    .tooltip(txt)
+                    .clickable()
+                    .build(ctx);
+            }
+
+            // Also update the panel here, since we have the counts
+            let info = ColorLegend::gradient(
+                ctx,
+                &scale,
+                vec!["0".to_string(), prettyprint_usize(max as usize)],
+            );
+            panel.replace(ctx, "stop style info", info);
+        }
     }
 
     world.initialize_hover(ctx);
     world
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum StopStyle {
+    None,
+    ColorByBoardings,
+    // number of trips, frequency
 }

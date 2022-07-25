@@ -17,6 +17,7 @@ abstio = { git = "https://github.com/a-b-street/abstreet" }
 abstutil = { git = "https://github.com/a-b-street/abstreet" }
 base64 = "0.13.0"
 chrono = { version = "0.4.19", features=["serde"] }
+colorous = "1.0.3"
 futures-channel = { version = "0.3.12"}
 geom = { git = "https://github.com/a-b-street/abstreet" }
 gtfs = { path = "../gtfs" }
