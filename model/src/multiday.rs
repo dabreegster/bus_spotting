@@ -1,9 +1,10 @@
 use abstutil::Counter;
+use anyhow::Result;
 use chrono::NaiveDate;
-use geom::{Bounds, GPSBounds, Pt2D};
+use geom::{Bounds, GPSBounds, Pt2D, Time};
 use serde::{Deserialize, Serialize};
 
-use gtfs::{StopID, GTFS};
+use gtfs::{orig, RouteID, RouteVariantID, StopID, GTFS};
 
 use crate::{BoardingEvent, DailyModel};
 
@@ -31,6 +32,7 @@ impl MultidayModel {
             boardings_per_day: Vec::new(),
         };
 
+        // TODO Vehicle IDs over different days will conflict!
         for model in models {
             output
                 .boardings_per_day
@@ -60,4 +62,47 @@ impl MultidayModel {
         }
         cnt
     }
+
+    pub fn export_to_csv(&self) -> Result<String> {
+        let mut out = Vec::new();
+        {
+            let mut writer = csv::Writer::from_writer(&mut out);
+            for (date, events) in &self.boardings_per_day {
+                for ev in events {
+                    let route = self.gtfs.parent_of_variant(ev.variant);
+                    let variant = self.gtfs.variant(ev.variant);
+                    let trip = variant.trips.iter().find(|t| t.id == ev.trip).unwrap();
+
+                    writer.serialize(ExportBoardingRow {
+                        date: *date,
+                        route_id: route.route_id.clone(),
+                        route_variant: ev.variant,
+                        trip: trip.orig_id.clone(),
+                        stop: self.gtfs.stops[&ev.stop].orig_id.clone(),
+                        arrival_time: ev.arrival_time,
+                        departure_time: ev.departure_time,
+                        new_riders: ev.new_riders.len(),
+                        transfers: ev.transfers.len(),
+                    })?;
+                }
+            }
+            writer.flush()?;
+        }
+        let out = String::from_utf8(out)?;
+        Ok(out)
+    }
+}
+
+#[derive(Serialize)]
+struct ExportBoardingRow {
+    date: NaiveDate,
+    //vehicle: VehicleName,
+    route_id: RouteID,
+    route_variant: RouteVariantID,
+    trip: orig::TripID,
+    stop: orig::StopID,
+    arrival_time: Time,
+    departure_time: Time,
+    new_riders: usize,
+    transfers: usize,
 }

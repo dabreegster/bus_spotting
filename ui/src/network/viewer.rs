@@ -53,6 +53,7 @@ impl Viewer {
                     .btn_outline
                     .text("Boardings by variant")
                     .build_def(ctx),
+                ctx.style().btn_outline.text("Export to CSV").build_def(ctx),
             ]);
             self.panel.replace(ctx, "contents", controls);
 
@@ -116,6 +117,13 @@ impl State<App> for Viewer {
                             return Transition::Push(
                                 super::analysis::Analysis::boardings_by_variant(ctx, app),
                             );
+                        }
+                        "Export to CSV" => {
+                            abstio::write_file(
+                                "multiday.csv".to_string(),
+                                app.model.export_to_csv().unwrap(),
+                            )
+                            .unwrap();
                         }
                         _ => unreachable!(),
                     }

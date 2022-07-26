@@ -144,6 +144,18 @@ impl GTFS {
         panic!("Unknown {:?}", id);
     }
 
+    pub fn parent_of_variant(&self, id: RouteVariantID) -> &Route {
+        // TODO If the ID encodes the route, we can be much better
+        for route in self.routes.values() {
+            for variant in &route.variants {
+                if variant.variant_id == id {
+                    return route;
+                }
+            }
+        }
+        panic!("Unknown {:?}", id);
+    }
+
     pub fn all_variants(&self) -> Vec<RouteVariantID> {
         self.routes
             .values()
