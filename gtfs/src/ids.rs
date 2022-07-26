@@ -55,10 +55,25 @@ impl<K: Clone + std::fmt::Debug + Ord, V: CheapID> IDMapping<K, V> {
         Ok(cheap)
     }
 
+    pub fn insert_idempotent(&mut self, orig: &K) -> V {
+        match self.orig_to_cheap.get(orig) {
+            Some(x) => *x,
+            None => {
+                let v = V::new(self.orig_to_cheap.len());
+                self.orig_to_cheap.insert(orig.clone(), v);
+                v
+            }
+        }
+    }
+
     pub fn lookup(&self, orig: &K) -> Result<V> {
         match self.orig_to_cheap.get(orig) {
             Some(x) => Ok(*x),
             None => bail!("IDMapping lookup of {:?} failed", orig),
         }
+    }
+
+    pub fn borrow(&self) -> &BTreeMap<K, V> {
+        &self.orig_to_cheap
     }
 }

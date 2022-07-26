@@ -4,9 +4,9 @@ use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D, Time};
 use serde::{Deserialize, Serialize};
 
-use gtfs::{orig, RouteID, RouteVariantID, StopID, GTFS};
+use gtfs::{orig, IDMapping, RouteID, RouteVariantID, StopID, GTFS};
 
-use crate::{BoardingEvent, DailyModel};
+use crate::{BoardingEvent, DailyModel, VehicleID, VehicleName};
 
 /// Summarizes bus data for many days.
 #[derive(Serialize, Deserialize)]
@@ -17,6 +17,7 @@ pub struct MultidayModel {
 
     // The list of days is sorted. Boardings per day are sorted by arrival time
     pub boardings_per_day: Vec<(NaiveDate, Vec<BoardingEvent>)>,
+    pub vehicle_ids: IDMapping<VehicleName, VehicleID>,
     // TODO Include journeys too, probably. But re-express on top of the BoardingEvents / don't
     // store the route name and vehicle again.
 }
@@ -30,13 +31,22 @@ impl MultidayModel {
             gtfs: models[0].gtfs.clone(),
 
             boardings_per_day: Vec::new(),
+            vehicle_ids: IDMapping::new(),
         };
 
-        // TODO Vehicle IDs over different days will conflict!
         for model in models {
-            output
-                .boardings_per_day
-                .push((model.date, model.boardings.clone()));
+            let mut events = Vec::new();
+            for ev in &model.boardings {
+                // Vehicle ID assignment may change each day, so calculate again from the original
+                // VehicleName
+                let vehicle_name = &model.vehicles[ev.vehicle.0].original_id;
+                let vehicle_id = output.vehicle_ids.insert_idempotent(vehicle_name);
+                let mut ev = ev.clone();
+                ev.vehicle = vehicle_id;
+                events.push(ev);
+            }
+
+            output.boardings_per_day.push((model.date, events));
         }
         output.boardings_per_day.sort_by_key(|(d, _)| *d);
 
@@ -50,6 +60,7 @@ impl MultidayModel {
             gps_bounds: GPSBounds::new(),
             gtfs: GTFS::empty(),
             boardings_per_day: Vec::new(),
+            vehicle_ids: IDMapping::new(),
         }
     }
 
@@ -64,6 +75,14 @@ impl MultidayModel {
     }
 
     pub fn export_to_csv(&self) -> Result<String> {
+        let mut vehicle_ids: Vec<VehicleName> =
+            std::iter::repeat_with(|| VehicleName(String::new()))
+                .take(self.vehicle_ids.borrow().len())
+                .collect();
+        for (orig, cheap) in self.vehicle_ids.borrow() {
+            vehicle_ids[cheap.0] = orig.clone();
+        }
+
         let mut out = Vec::new();
         {
             let mut writer = csv::Writer::from_writer(&mut out);
@@ -75,6 +94,7 @@ impl MultidayModel {
 
                     writer.serialize(ExportBoardingRow {
                         date: *date,
+                        vehicle: vehicle_ids[ev.vehicle.0].clone(),
                         route_id: route.route_id.clone(),
                         route_variant: ev.variant,
                         trip: trip.orig_id.clone(),
@@ -96,7 +116,7 @@ impl MultidayModel {
 #[derive(Serialize)]
 struct ExportBoardingRow {
     date: NaiveDate,
-    //vehicle: VehicleName,
+    vehicle: VehicleName,
     route_id: RouteID,
     route_variant: RouteVariantID,
     trip: orig::TripID,
