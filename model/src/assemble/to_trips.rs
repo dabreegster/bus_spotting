@@ -12,9 +12,17 @@ impl DailyModel {
     ///
     /// Note we don't check that the same TripID isn't covered by two different vehicles. This
     /// method looks at one vehicle only.
-    pub fn infer_vehicle_schedule(&self, vehicle: VehicleID, debug: bool) -> Vec<ActualTrip> {
+    ///
+    /// Pass in `possible_variants` for optimization, otherwise this calculates it.
+    pub fn infer_vehicle_schedule(
+        &self,
+        vehicle: VehicleID,
+        debug: bool,
+        possible_variants: Option<Vec<RouteVariantID>>,
+    ) -> Vec<ActualTrip> {
         let mut all_possible_trips = Vec::new();
-        for variant in self.vehicle_to_possible_routes(vehicle) {
+        for variant in possible_variants.unwrap_or_else(|| self.vehicle_to_possible_routes(vehicle))
+        {
             all_possible_trips.extend(self.get_trips_for_vehicle_and_variant(vehicle, variant));
         }
 

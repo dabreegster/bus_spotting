@@ -10,6 +10,7 @@ use gtfs::{DateFilter, RouteVariantID};
 // variants actually served that day, to figure out possible route variants per vehicle.
 
 impl DailyModel {
+    // Expensive -- calculates a mapping for the full day, but only uses one vehicle
     pub fn vehicle_to_possible_routes(&self, id: VehicleID) -> Vec<RouteVariantID> {
         match self.vehicles_to_possible_routes().unwrap().remove(&id) {
             Some(list) => list,

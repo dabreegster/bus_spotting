@@ -639,7 +639,7 @@ fn view_schedule(ctx: &mut EventCtx, app: &App, vehicle: VehicleID) -> Transitio
 
     let mut last_time = None;
     let debug = true;
-    for trip in app.model.infer_vehicle_schedule(vehicle, debug) {
+    for trip in app.model.infer_vehicle_schedule(vehicle, debug, None) {
         if let Some(t) = last_time {
             col.push(format!("{} gap", trip.start_time() - t).text_widget(ctx));
         }

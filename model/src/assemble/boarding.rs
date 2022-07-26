@@ -75,6 +75,8 @@ pub fn populate_boarding(model: &mut DailyModel, timer: &mut Timer) -> Result<()
     // Every stop a vehicle visits through the day, in order
     let mut events_per_vehicle: BTreeMap<VehicleID, Vec<BoardingEvent>> = BTreeMap::new();
 
+    let vehicle_to_variants = model.vehicles_to_possible_routes()?;
+
     // Fill out empty BoardingEvents for each stop along each trip
     let mut all_trip_durations = Histogram::new();
     for (vehicle, events, trip_durations, timetable) in timer.parallelize(
@@ -87,7 +89,16 @@ pub fn populate_boarding(model: &mut DailyModel, timer: &mut Timer) -> Result<()
             let mut timetable = Timetable::new();
 
             let debug = false;
-            for trip in model.infer_vehicle_schedule(vehicle, debug) {
+            for trip in model.infer_vehicle_schedule(
+                vehicle,
+                debug,
+                Some(
+                    vehicle_to_variants
+                        .get(&vehicle)
+                        .cloned()
+                        .unwrap_or_else(Vec::new),
+                ),
+            ) {
                 timetable.assign((trip.start_time(), trip.end_time()), trip.trip);
 
                 let variant = model.gtfs.variant(trip.variant);
