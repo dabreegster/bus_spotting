@@ -209,7 +209,7 @@ impl Trajectory {
             if let Ok(pl) = PolyLine::new(vec![pair[0].0, pair[1].0]) {
                 let pt_on_pl = pl.project_pt(pos);
                 if pos.dist_to(pt_on_pl) < threshold {
-                    if let Some((dist, _)) = pl.dist_along_of_point(pl.project_pt(pos)) {
+                    if let Some((dist, _)) = pl.dist_along_of_point(pt_on_pl) {
                         let pct = dist / pl.length();
                         let t1 = pair[0].1;
                         let t2 = pair[1].1;
