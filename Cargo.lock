@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#65a55895f69aff41d4c13bc0fd58cacd64a894e8"
+source = "git+https://github.com/a-b-street/abstreet#fb39e716889b903cf6b57490b2e048bcba3bf262"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -38,7 +38,7 @@ dependencies = [
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#65a55895f69aff41d4c13bc0fd58cacd64a894e8"
+source = "git+https://github.com/a-b-street/abstreet#fb39e716889b903cf6b57490b2e048bcba3bf262"
 dependencies = [
  "anyhow",
  "bincode",
@@ -690,6 +690,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fixedbitset"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
+
+[[package]]
 name = "flate2"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -976,7 +982,7 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#65a55895f69aff41d4c13bc0fd58cacd64a894e8"
+source = "git+https://github.com/a-b-street/abstreet#fb39e716889b903cf6b57490b2e048bcba3bf262"
 dependencies = [
  "aabb-quadtree",
  "abstutil",
@@ -1143,14 +1149,17 @@ dependencies = [
 name = "gtfs"
 version = "0.1.0"
 dependencies = [
+ "abstutil",
  "anyhow",
  "chrono",
  "csv",
  "geojson",
  "geom",
+ "import_streets",
  "log",
  "serde",
  "serde_json",
+ "street_network",
  "zip",
 ]
 
@@ -1397,6 +1406,19 @@ dependencies = [
  "num-rational",
  "num-traits",
  "png",
+]
+
+[[package]]
+name = "import_streets"
+version = "0.1.0"
+source = "git+https://github.com/a-b-street/osm2streets#33081457c07223e364e60215373c1ea760408e1f"
+dependencies = [
+ "abstutil",
+ "anyhow",
+ "geom",
+ "log",
+ "roxmltree",
+ "street_network",
 ]
 
 [[package]]
@@ -2001,6 +2023,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
+name = "petgraph"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6d5014253a1331579ce62aa67443b4a658c5e7dd03d4bc6d302b94474888143"
+dependencies = [
+ "fixedbitset",
+ "indexmap",
+]
+
+[[package]]
 name = "pico-args"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2566,6 +2598,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
+name = "street_network"
+version = "0.1.0"
+source = "git+https://github.com/a-b-street/osm2streets#33081457c07223e364e60215373c1ea760408e1f"
+dependencies = [
+ "aabb-quadtree",
+ "abstutil",
+ "anyhow",
+ "geom",
+ "log",
+ "petgraph",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2862,6 +2909,7 @@ dependencies = [
  "model",
  "rfd",
  "serde",
+ "street_network",
  "structopt",
  "wasm-bindgen",
  "widgetry",
@@ -3246,7 +3294,7 @@ checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#65a55895f69aff41d4c13bc0fd58cacd64a894e8"
+source = "git+https://github.com/a-b-street/abstreet#fb39e716889b903cf6b57490b2e048bcba3bf262"
 dependencies = [
  "aabb-quadtree",
  "abstio",

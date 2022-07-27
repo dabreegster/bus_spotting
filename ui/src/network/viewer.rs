@@ -5,7 +5,8 @@ use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{ColorLegend, ColorScale};
 use widgetry::{
-    Choice, Color, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
+    Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text,
+    TextExt, Widget,
 };
 
 use gtfs::{RouteVariantID, StopID};
@@ -16,6 +17,7 @@ use crate::components::{describe, MainMenu};
 pub struct Viewer {
     panel: Panel,
     world: World<Obj>,
+    draw_streets: Drawable,
 }
 
 impl Viewer {
@@ -23,7 +25,17 @@ impl Viewer {
         let mut state = Self {
             panel: crate::components::MainMenu::panel(ctx),
             world: World::unbounded(),
+            draw_streets: Drawable::empty(ctx),
         };
+
+        let mut batch = GeomBatch::new();
+        batch.extend(Color::grey(0.5), app.model.gtfs.road_geometry.clone());
+        batch.extend(
+            Color::grey(0.7),
+            app.model.gtfs.intersection_geometry.clone(),
+        );
+        state.draw_streets = ctx.upload(batch);
+
         state.on_filter_change(ctx, app);
         Box::new(state)
     }
@@ -147,6 +159,7 @@ impl State<App> for Viewer {
 
     fn draw(&self, g: &mut GfxCtx, _: &App) {
         self.panel.draw(g);
+        g.redraw(&self.draw_streets);
         self.world.draw(g);
     }
 

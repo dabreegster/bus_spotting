@@ -7,14 +7,16 @@ mod calendar;
 mod ids;
 mod routes;
 mod shapes;
+mod snap;
 mod stop_times;
 mod stops;
 mod trips;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use abstutil::Timer;
 use anyhow::Result;
-use geom::{GPSBounds, PolyLine};
+use geom::{GPSBounds, PolyLine, Polygon};
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 
@@ -32,11 +34,17 @@ pub struct GTFS {
     pub routes: BTreeMap<RouteID, Route>,
     pub calendar: Calendar,
     pub shapes: BTreeMap<ShapeID, PolyLine>,
+
+    // This is only retained for debugging / visualization. Once StreetNetwork stashes final
+    // geometry directly, this could be simpler.
+    pub road_geometry: Vec<Polygon>,
+    pub intersection_geometry: Vec<Polygon>,
 }
 
 impl GTFS {
     pub fn load_from_dir(
         archive: &mut ZipArchive<std::io::Cursor<Vec<u8>>>,
+        timer: &mut Timer,
     ) -> Result<(Self, GPSBounds)> {
         let mut gtfs = Self::empty();
         let (stops, stop_ids, gps_bounds) = stops::load(archive.by_name("gtfs/stops.txt")?)?;
@@ -100,6 +108,10 @@ impl GTFS {
             archive.by_name("gtfs/calendar_dates.txt")?,
         )?;
 
+        if let Ok(osm_xml_input) = archive.by_name("osm_input.xml") {
+            snap::snap_routes(&mut gtfs, osm_xml_input, &gps_bounds, timer)?;
+        }
+
         dump_bounding_box(&gps_bounds);
 
         Ok((gtfs, gps_bounds))
@@ -113,6 +125,8 @@ impl GTFS {
                 services: BTreeMap::new(),
             },
             shapes: BTreeMap::new(),
+            road_geometry: Vec::new(),
+            intersection_geometry: Vec::new(),
         }
     }
 

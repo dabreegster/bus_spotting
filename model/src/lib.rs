@@ -72,7 +72,7 @@ impl DailyModel {
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
 
         timer.start("loading GTFS");
-        let (gtfs, gps_bounds) = GTFS::load_from_dir(&mut archive)?;
+        let (gtfs, gps_bounds) = GTFS::load_from_dir(&mut archive, timer)?;
         timer.stop("loading GTFS");
 
         let avl_files = find_all_files(&archive, "avl/avl_");

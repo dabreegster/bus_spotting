@@ -5,12 +5,15 @@ authors = ["Dustin Carlino <dabreegster@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+abstutil = { git = "https://github.com/a-b-street/abstreet" }
 anyhow = "1.0.38"
 chrono = { version = "0.4.19", features=["serde"] }
 csv = "1.1.4"
 geojson = { version = "0.22.2" }
 geom = { git = "https://github.com/a-b-street/abstreet" }
+import_streets = { git = "https://github.com/a-b-street/osm2streets" }
 log = "0.4.14"
 serde = "1.0.123"
 serde_json = "1.0.61"
+street_network = { git = "https://github.com/a-b-street/osm2streets" }
 zip = { version = "0.6.2", default-features = false, features=["deflate"] }
