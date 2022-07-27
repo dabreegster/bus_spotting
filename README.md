@@ -18,13 +18,13 @@ visualization.
 
 ## Status
 
-See the [user guide](user_guide.md). This project is under development during
+See the [user guide](docs/user_guide.md). This project is under development during
 June and July 2022. When the dust settles, I'll write up documentation for
 everything.
 
 ## Design
 
-See [here](design.md) for more recent notes.
+See [here](docs/design.md) for more recent notes.
 
 - Generally assuming the unit of analysis is one day at a time
 - Agnostic to the transit agency; as soon as we have ticketing or GPS data from
