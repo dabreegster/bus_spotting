@@ -1,15 +1,16 @@
 use std::collections::BTreeSet;
 
 use abstutil::{prettyprint_usize, Counter, Timer};
-use geom::{Circle, Distance, Pt2D};
+use anyhow::Result;
+use geom::{Circle, Distance, Polygon, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{ColorLegend, ColorScale};
 use widgetry::{
-    Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State, Text,
-    TextExt, Toggle, Widget,
+    Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text,
+    TextExt, Widget,
 };
 
-use gtfs::{RouteVariantID, StopID};
+use gtfs::{RouteVariant, RouteVariantID, StopID, GTFS};
 
 use super::{App, Filters, Transition};
 use crate::components::{describe, MainMenu};
@@ -31,7 +32,7 @@ impl Viewer {
         let mut batch = GeomBatch::new();
         batch.extend(Color::grey(0.5), app.model.gtfs.road_geometry.clone());
         batch.extend(
-            Color::grey(0.7),
+            Color::grey(0.5),
             app.model.gtfs.intersection_geometry.clone(),
         );
         state.draw_streets = ctx.upload(batch);
@@ -60,15 +61,23 @@ impl Viewer {
                         ],
                     ),
                 ]),
-                Toggle::choice(
-                    ctx,
-                    "draw routes",
-                    "snapped",
-                    "original",
-                    Key::S,
-                    self.panel.maybe_is_checked("draw routes").unwrap_or(false),
-                ),
                 Widget::placeholder(ctx, "stop style info"),
+                Widget::row(vec![
+                    "Draw routes:".text_widget(ctx),
+                    // Weird pattern
+                    Widget::dropdown(
+                        ctx,
+                        "route style",
+                        self.panel
+                            .maybe_dropdown_value("route style")
+                            .unwrap_or(RouteStyle::Original),
+                        vec![
+                            Choice::new("original GTFS", RouteStyle::Original),
+                            Choice::new("snapped to streets", RouteStyle::Snapped),
+                            Choice::new("non-overlapping", RouteStyle::Nonoverlapping),
+                        ],
+                    ),
+                ]),
                 ctx.style()
                     .btn_outline
                     .text("Boardings by variant")
@@ -150,7 +159,7 @@ impl State<App> for Viewer {
                 }
             }
             Outcome::Changed(_x) => {
-                // This also happens now for StopStyle and draw routes
+                // This also happens now for StopStyle and route style
 
                 // If the user sets an impossible date, this won't run, and the controls will still
                 // be fixed at the last valid state
@@ -188,9 +197,10 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
     let mut world = World::bounded(&app.model.bounds);
 
     // Draw every route variant. Track what stops we visit
-    let draw_snapped_routes = panel.is_checked("draw routes");
+    let route_style: RouteStyle = panel.dropdown_value("route style");
     let mut stops: BTreeSet<StopID> = BTreeSet::new();
     timer.start_iter("draw variants", selected_variants.len());
+    let mut drawn_routes = 0;
     for id in &selected_variants {
         timer.next();
         let variant = app.model.gtfs.variant(*id);
@@ -198,21 +208,33 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
             stops.insert(stop_time.stop_id);
         }
 
-        if let Ok(pl) = variant.maybe_snapped_polyline(&app.model.gtfs, draw_snapped_routes) {
+        if let Ok(poly) = route_style.route_shape(&app.model.gtfs, variant) {
             let mut txt = Text::new();
             txt.add_line(Line(variant.describe(&app.model.gtfs)));
 
-            // TODO Most variants overlap. Maybe perturb the lines a bit, or use the overlapping
-            // path trick
+            let color = if route_style == RouteStyle::Nonoverlapping {
+                [
+                    Color::RED,
+                    Color::GREEN,
+                    Color::PURPLE,
+                    Color::YELLOW,
+                    Color::ORANGE,
+                    Color::CYAN,
+                ][drawn_routes % 6]
+            } else {
+                Color::RED
+            };
+
             world
                 .add(Obj::Route(*id))
-                .hitbox(pl.make_polygons(Distance::meters(20.0)))
-                .draw_color(Color::RED)
-                // Since they overlap, no use wasting memory here for an effect
+                .hitbox(poly)
+                .draw_color(color)
+                // Since they usually overlap, no use wasting memory here for an effect
                 .invisibly_hoverable()
                 .tooltip(txt)
                 .clickable()
                 .build(ctx);
+            drawn_routes += 1;
         }
     }
 
@@ -287,6 +309,41 @@ enum StopStyle {
     Boardings,
     NumberTrips,
     // frequency
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum RouteStyle {
+    Original,
+    Snapped,
+    // TODO Bit of a lie. This is non-overlapping per shape, but multiple variants still share a
+    // shape.
+    Nonoverlapping,
+}
+
+impl RouteStyle {
+    fn route_shape(self, gtfs: &GTFS, variant: &RouteVariant) -> Result<Polygon> {
+        let pl = match self {
+            RouteStyle::Original => variant.polyline(gtfs)?,
+            RouteStyle::Snapped => {
+                if let Some(pl) = gtfs.snapped_shapes.get(&variant.shape_id) {
+                    pl.clone()
+                } else {
+                    variant.polyline(gtfs)?
+                }
+            }
+            RouteStyle::Nonoverlapping => {
+                if let Some(polygons) = gtfs.nonoverlapping_shapes.get(&variant.shape_id) {
+                    // TODO This breaks the hitbox, because Polygon::contains_pt can't handle a
+                    // geo::MultiPolygon pretending to be a geo::Polygon
+                    return Ok(Polygon::union_all(polygons.clone()));
+                } else {
+                    // Don't draw the original thick lines and cover up things
+                    bail!("No non-overlapping shape");
+                }
+            }
+        };
+        Ok(pl.make_polygons(Distance::meters(20.0)))
+    }
 }
 
 fn count_daily_trips_per_stop(

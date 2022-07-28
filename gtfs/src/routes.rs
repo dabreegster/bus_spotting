@@ -69,16 +69,6 @@ impl RouteVariant {
             .collect()
     }
 
-    /// In order, prefer the snapped shape, then original GTFS shape, then straight lines between stops.
-    pub fn maybe_snapped_polyline(&self, gtfs: &GTFS, snapped: bool) -> Result<PolyLine> {
-        if snapped {
-            if let Some(pl) = gtfs.snapped_shapes.get(&self.shape_id) {
-                return Ok(pl.clone());
-            }
-        }
-        self.polyline(gtfs)
-    }
-
     /// If GTFS has an original shape, use that. Otherwise calculated from straight lines between stops.
     pub fn polyline(&self, gtfs: &GTFS) -> Result<PolyLine> {
         if let Some(pl) = gtfs.shapes.get(&self.shape_id) {

@@ -36,6 +36,8 @@ pub struct GTFS {
     pub shapes: BTreeMap<ShapeID, PolyLine>,
     // Some shapes optionally snapped to a street network
     pub snapped_shapes: BTreeMap<ShapeID, PolyLine>,
+    // And then optionally split into non-overlapping pieces
+    pub nonoverlapping_shapes: BTreeMap<ShapeID, Vec<Polygon>>,
 
     // This is only retained for debugging / visualization. Once StreetNetwork stashes final
     // geometry directly, this could be simpler.
@@ -128,6 +130,7 @@ impl GTFS {
             },
             shapes: BTreeMap::new(),
             snapped_shapes: BTreeMap::new(),
+            nonoverlapping_shapes: BTreeMap::new(),
             road_geometry: Vec::new(),
             intersection_geometry: Vec::new(),
         }
