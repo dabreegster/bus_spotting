@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use abstutil::Timer;
 use anyhow::Result;
-use geom::{Distance, FindClosest, GPSBounds, LonLat, PolyLine, Polygon, Pt2D};
+use geom::{Distance, FindClosest, GPSBounds, Line, LonLat, PolyLine, Polygon, Ring};
 use street_network::initial::InitialMap;
 use street_network::{Direction, DrivingSide, LaneType, OriginalRoad, StreetNetwork};
 
@@ -53,7 +53,6 @@ pub fn snap_routes<R: std::io::Read>(
     }
 
     let mut all_paths = Vec::new();
-    let mut all_path_ids = Vec::new();
     for (id, path) in timer
         .parallelize(
             "snap route shapes",
@@ -83,16 +82,14 @@ pub fn snap_routes<R: std::io::Read>(
         if let Ok(pl) = make_snapped_shape(&initial, &path) {
             gtfs.snapped_shapes.insert(id.clone(), pl);
         }
-        all_paths.push(path.into_iter().map(|(r, _)| r).collect());
-        all_path_ids.push(id.clone());
+        all_paths.push((id.clone(), path));
     }
 
-    for (polygons, shape_id) in render_overlapping_paths(&initial, all_paths)
-        .into_iter()
-        .zip(all_path_ids.into_iter())
-    {
-        gtfs.nonoverlapping_shapes.insert(shape_id, polygons);
+    timer.start("render overlapping paths");
+    for (shape_id, polygon) in render_overlapping_paths(&initial, all_paths) {
+        gtfs.nonoverlapping_shapes.insert(shape_id, polygon);
     }
+    timer.stop("render overlapping paths");
 
     // For debugging, convert to the drawable form of StreetNetwork and stash that.
     for r in initial.roads.values() {
@@ -144,87 +141,112 @@ fn make_snapped_shape(
     PolyLine::new(pts)
 }
 
-// Per input path, return a list of polygons that should be logically unioned together to form one
-// shape.
+// Per input path, return a polygon covering it.
 //
-// Lots of logic shared with map_gui's draw_overlapping_paths.
-fn render_overlapping_paths(
+// Lots of logic shared with map_gui's draw_overlapping_paths, but also kind of experimenting with
+// gluing one polygon together.
+fn render_overlapping_paths<ID: Clone + PartialEq>(
     initial: &InitialMap,
-    paths: Vec<Vec<OriginalRoad>>,
-) -> Vec<Vec<Polygon>> {
-    let road_width_multiplier = 3.0;
+    paths: Vec<(ID, Vec<(OriginalRoad, Direction)>)>,
+) -> Vec<(ID, Polygon)> {
+    let road_width_multiplier = 1.0;
 
-    let mut output = std::iter::repeat_with(Vec::new)
-        .take(paths.len())
-        .collect::<Vec<Vec<Polygon>>>();
-
-    // Per road, just figure out what path indices we need
-    let mut objects_per_road: BTreeMap<OriginalRoad, Vec<usize>> = BTreeMap::new();
-    let mut objects_per_movement: Vec<(OriginalRoad, OriginalRoad, usize)> = Vec::new();
-    for (idx, path) in paths.into_iter().enumerate() {
-        for step in &path {
+    // Per road, just figure out what objects we need
+    let mut objects_per_road: BTreeMap<OriginalRoad, Vec<ID>> = BTreeMap::new();
+    for (id, path) in &paths {
+        for (road, _) in path {
             objects_per_road
-                .entry(step.clone())
+                .entry(road.clone())
                 .or_insert_with(Vec::new)
-                .push(idx);
-        }
-        for pair in path.windows(2) {
-            objects_per_movement.push((pair[0].clone(), pair[1].clone(), idx));
+                .push(id.clone());
         }
     }
 
-    // Per road and object, mark the 4 corners of the thickened polyline.
-    // (beginning left, beginning right, end left, end right)
-    let mut pieces: BTreeMap<(OriginalRoad, usize), (Pt2D, Pt2D, Pt2D, Pt2D)> = BTreeMap::new();
-    // Per road, divide the needed objects proportionally
-    for (road_id, objects) in objects_per_road {
-        let road = &initial.roads[&road_id];
+    let get_sides = |road_id: &OriginalRoad, id: &ID| {
+        let road = &initial.roads[road_id];
         let total_width = road_width_multiplier * 2.0 * road.half_width;
+        let objects = &objects_per_road[road_id];
         let width_per_piece = total_width / (objects.len() as f64);
-        for (piece_idx, path_idx) in objects.into_iter().enumerate() {
-            let width_from_left_side = (0.5 + (piece_idx as f64)) * width_per_piece;
-            // This logic is shift_from_left_side
-            if let Ok(pl) = road
-                .trimmed_center_pts
-                .shift_from_center(total_width, width_from_left_side)
-            {
-                let polygon = pl.make_polygons(width_per_piece);
-                output[path_idx].push(polygon);
+        let piece_idx = objects.iter().position(|x| x == id).unwrap();
 
-                // Reproduce what make_polygons does to get the 4 corners
-                if let Some(corners) = pl.get_four_corners_of_thickened(width_per_piece) {
-                    pieces.insert((road_id, path_idx), corners);
+        let width_from_left_side = (piece_idx as f64) * width_per_piece;
+        // This logic is shift_from_left_side
+        let left_pl = road
+            .trimmed_center_pts
+            .shift_from_center(total_width, width_from_left_side)
+            .unwrap();
+        let right_pl = road
+            .trimmed_center_pts
+            .shift_from_center(total_width, width_from_left_side + width_per_piece)
+            .unwrap();
+        (left_pl.into_points(), right_pl.into_points())
+    };
+
+    let mut output = Vec::new();
+    for (id, path) in paths {
+        let mut left_side_pts = Vec::new();
+        let mut right_side_pts = Vec::new();
+
+        for (road, dir) in path {
+            let (mut left, mut right) = get_sides(&road, &id);
+            if dir == Direction::Back {
+                left.reverse();
+                right.reverse();
+            }
+
+            // The relative position along the pair of roads may change dramatically, causing the
+            // left and right side to effectively swap. Just test if line segments overlap...
+            if !left_side_pts.is_empty() {
+                if let Ok(l1) = Line::new(*left_side_pts.last().unwrap(), left[0]) {
+                    if let Ok(l2) = Line::new(*right_side_pts.last().unwrap(), right[0]) {
+                        if l1.intersection(&l2).is_some() {
+                            std::mem::swap(&mut left, &mut right);
+                        }
+                    }
                 }
             }
+
+            left_side_pts.extend(left);
+            right_side_pts.extend(right);
         }
+
+        // Glue both sides together
+        right_side_pts.reverse();
+        left_side_pts.extend(right_side_pts);
+        left_side_pts.push(left_side_pts[0]);
+        left_side_pts.dedup();
+        if let Ok(ring) = Ring::new(left_side_pts) {
+            if check_ring(&ring) {
+                output.push((id, ring.into_polygon()));
+            }
+        }
+
+        // Debug by looking at the left and right side individually
+        /*if let Ok(poly1) = PolyLine::new(left_side_pts).map(|pl| pl.make_polygons(Distance::meters(0.1))) {
+            if let Ok(poly2) = PolyLine::new(right_side_pts).map(|pl| pl.make_polygons(Distance::meters(0.1))) {
+                output.push((id, poly1.union(poly2)));
+            }
+        }*/
     }
 
-    // Fill in intersections
-    for (from, to, path_idx) in objects_per_movement {
-        if let Some(from_corners) = pieces.get(&(from, path_idx)) {
-            if let Some(to_corners) = pieces.get(&(to, path_idx)) {
-                /*let from_road = app.map().get_r(from);
-                let to_road = app.map().get_r(to);
-                if let CommonEndpoint::One(i) = from_road.common_endpoint(to_road) {
-                    let (from_left, from_right) = if from_road.src_i == i {
-                        (from_corners.0, from_corners.1)
-                    } else {
-                        (from_corners.2, from_corners.3)
-                    };
-                    let (to_left, to_right) = if to_road.src_i == i {
-                        (to_corners.0, to_corners.1)
-                    } else {
-                        (to_corners.2, to_corners.3)
-                    };
-                    // Glue the 4 corners together
-                    if let Ok(ring) =
-                        Ring::new(vec![from_left, from_right, to_right, to_left, from_left])
-                    {
-                        output[path_idx].push(ring.into_polygon());
-                    }
-                }*/
+    output
+}
+
+fn check_ring(ring: &Ring) -> bool {
+    // We still wind up with bowties. Just sanity check and see if any two line segments intersect.
+    //
+    // This fixes most, but not all, cases in SJC.
+    let mut lines = Vec::new();
+    for pair in ring.points().windows(2) {
+        lines.push(Line::must_new(pair[0], pair[1]));
+    }
+
+    for l1 in &lines {
+        for l2 in &lines {
+            if l1.crosses(l2) {
+                return false;
             }
         }
     }
-    output
+    true
 }

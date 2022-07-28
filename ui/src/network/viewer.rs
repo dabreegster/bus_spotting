@@ -75,6 +75,7 @@ impl Viewer {
                             Choice::new("original GTFS", RouteStyle::Original),
                             Choice::new("snapped to streets", RouteStyle::Snapped),
                             Choice::new("non-overlapping", RouteStyle::Nonoverlapping),
+                            Choice::new("hide all", RouteStyle::HideAll),
                         ],
                     ),
                 ]),
@@ -208,6 +209,9 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
             stops.insert(stop_time.stop_id);
         }
 
+        if route_style == RouteStyle::HideAll {
+            continue;
+        }
         if let Ok(poly) = route_style.route_shape(&app.model.gtfs, variant) {
             let mut txt = Text::new();
             txt.add_line(Line(variant.describe(&app.model.gtfs)));
@@ -318,6 +322,7 @@ enum RouteStyle {
     // TODO Bit of a lie. This is non-overlapping per shape, but multiple variants still share a
     // shape.
     Nonoverlapping,
+    HideAll,
 }
 
 impl RouteStyle {
@@ -332,15 +337,14 @@ impl RouteStyle {
                 }
             }
             RouteStyle::Nonoverlapping => {
-                if let Some(polygons) = gtfs.nonoverlapping_shapes.get(&variant.shape_id) {
-                    // TODO This breaks the hitbox, because Polygon::contains_pt can't handle a
-                    // geo::MultiPolygon pretending to be a geo::Polygon
-                    return Ok(Polygon::union_all(polygons.clone()));
+                if let Some(polygon) = gtfs.nonoverlapping_shapes.get(&variant.shape_id) {
+                    return Ok(polygon.clone());
                 } else {
                     // Don't draw the original thick lines and cover up things
                     bail!("No non-overlapping shape");
                 }
             }
+            RouteStyle::HideAll => bail!("Not showing anything"),
         };
         Ok(pl.make_polygons(Distance::meters(20.0)))
     }
