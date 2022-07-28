@@ -34,6 +34,8 @@ pub struct GTFS {
     pub routes: BTreeMap<RouteID, Route>,
     pub calendar: Calendar,
     pub shapes: BTreeMap<ShapeID, PolyLine>,
+    // Some shapes optionally snapped to a street network
+    pub snapped_shapes: BTreeMap<ShapeID, PolyLine>,
 
     // This is only retained for debugging / visualization. Once StreetNetwork stashes final
     // geometry directly, this could be simpler.
@@ -125,6 +127,7 @@ impl GTFS {
                 services: BTreeMap::new(),
             },
             shapes: BTreeMap::new(),
+            snapped_shapes: BTreeMap::new(),
             road_geometry: Vec::new(),
             intersection_geometry: Vec::new(),
         }

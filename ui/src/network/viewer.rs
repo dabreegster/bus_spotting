@@ -5,8 +5,8 @@ use geom::{Circle, Distance, Pt2D};
 use widgetry::mapspace::{ObjectID, World, WorldOutcome};
 use widgetry::tools::{ColorLegend, ColorScale};
 use widgetry::{
-    Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Line, Outcome, Panel, State, Text,
-    TextExt, Widget,
+    Choice, Color, Drawable, EventCtx, GeomBatch, GfxCtx, Key, Line, Outcome, Panel, State, Text,
+    TextExt, Toggle, Widget,
 };
 
 use gtfs::{RouteVariantID, StopID};
@@ -60,6 +60,14 @@ impl Viewer {
                         ],
                     ),
                 ]),
+                Toggle::choice(
+                    ctx,
+                    "draw routes",
+                    "snapped",
+                    "original",
+                    Key::S,
+                    self.panel.maybe_is_checked("draw routes").unwrap_or(false),
+                ),
                 Widget::placeholder(ctx, "stop style info"),
                 ctx.style()
                     .btn_outline
@@ -142,7 +150,7 @@ impl State<App> for Viewer {
                 }
             }
             Outcome::Changed(_x) => {
-                // This also happens now for StopStyle
+                // This also happens now for StopStyle and draw routes
 
                 // If the user sets an impossible date, this won't run, and the controls will still
                 // be fixed at the last valid state
@@ -180,6 +188,7 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
     let mut world = World::bounded(&app.model.bounds);
 
     // Draw every route variant. Track what stops we visit
+    let draw_snapped_routes = panel.is_checked("draw routes");
     let mut stops: BTreeSet<StopID> = BTreeSet::new();
     timer.start_iter("draw variants", selected_variants.len());
     for id in &selected_variants {
@@ -189,7 +198,7 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
             stops.insert(stop_time.stop_id);
         }
 
-        if let Ok(pl) = variant.polyline(&app.model.gtfs) {
+        if let Ok(pl) = variant.maybe_snapped_polyline(&app.model.gtfs, draw_snapped_routes) {
             let mut txt = Text::new();
             txt.add_line(Line(variant.describe(&app.model.gtfs)));
 
