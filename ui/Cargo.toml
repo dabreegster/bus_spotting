@@ -18,6 +18,7 @@ abstutil = { git = "https://github.com/a-b-street/abstreet" }
 base64 = "0.13.0"
 chrono = { version = "0.4.19", features=["serde"] }
 colorous = "1.0.3"
+fs-err = "2.7.0"
 futures-channel = { version = "0.3.12"}
 geom = { git = "https://github.com/a-b-street/abstreet" }
 gtfs = { path = "../gtfs" }
@@ -29,4 +30,3 @@ street_network = { git = "https://github.com/a-b-street/osm2streets" }
 structopt = "0.3.23"
 wasm-bindgen = { version = "0.2.70", optional = true }
 widgetry = { git = "https://github.com/a-b-street/abstreet" }
-fs-err = "2.7.0"

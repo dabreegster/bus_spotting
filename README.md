@@ -16,6 +16,10 @@ Viewing vehicles and passengers as having a state machine, a day can be
 "simulated" (played back from recorded events). This is useful for
 visualization.
 
+See [these
+slides](https://docs.google.com/presentation/d/1CvjIrqPNcD3b3ojCm6Twp1cDvfYC0UqeH7Nsy2deyCM/edit?usp=sharing)
+for more.
+
 ## Status
 
 See the [user guide](docs/user_guide.md). This project is under development during
@@ -54,3 +58,14 @@ And particular questions:
     what route does the first leg use?
 3.  Per bus stop and route, draw a waiting time graph for passengers there
 4.  Where are buses most frequently delayed in traffic or at intersections?
+
+## Dependencies
+
+- [widgetry](https://github.com/a-b-street/abstreet/tree/master/widgetry/) for
+  the UI and some other core A/B Street geometry libraries
+- [osm2streets](https://github.com/a-b-street/osm2streets) to optionally show
+  the street network and (partly) snap bus routes to it
+- [Material icons](https://material.io/resources/icons/?style=sharp)
+- Common Rust libraries like [serde](https://serde.rs/),
+  [structopt](https://crates.io/crates/structopt),
+  [zip](https://crates.io/crates/zip), etc
