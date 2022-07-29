@@ -86,6 +86,9 @@ impl Viewer {
                 ctx.style().btn_outline.text("Export to CSV").build_def(ctx),
             ]);
             self.panel.replace(ctx, "contents", controls);
+            // This is necessary for the textbox to realize it still has focus. TODO panel.replace
+            // should always do this; I just need to audit more usages to make sure nothing breaks.
+            ctx.no_op_event(true, |ctx| assert!(matches!(self.panel.event(ctx), Outcome::Nothing)));
 
             let world = make_world(ctx, app, &mut self.panel, timer);
             self.world = world;

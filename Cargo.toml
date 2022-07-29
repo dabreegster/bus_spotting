@@ -9,7 +9,8 @@ members = ["gtfs", "model", "ui"]
 opt-level = 3
 
 # To temporarily work on dependencies locally, uncomment this
-#[patch."https://github.com/a-b-street/abstreet"]
+[patch."https://github.com/a-b-street/abstreet"]
+#abstio = { path = "/home/dabreegster/abstreet/abstio" }
 #abstutil = { path = "/home/dabreegster/abstreet/abstutil" }
 #geom = { path = "/home/dabreegster/abstreet/geom" }
 #widgetry = { path = "/home/dabreegster/abstreet/widgetry" }
