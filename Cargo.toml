@@ -7,3 +7,9 @@ members = ["gtfs", "model", "ui"]
 # update dependencies often).
 [profile.dev.package."*"]
 opt-level = 3
+
+# To temporarily work on dependencies locally, uncomment this
+#[patch."https://github.com/a-b-street/abstreet"]
+#abstutil = { path = "/home/dabreegster/abstreet/abstutil" }
+#geom = { path = "/home/dabreegster/abstreet/geom" }
+#widgetry = { path = "/home/dabreegster/abstreet/widgetry" }
