@@ -162,7 +162,9 @@ fn waiting_time(ctx: &mut EventCtx, app: &App, stop: &Stop) -> Widget {
         let waiting_time = event.arrival_time - series.pts.last().as_ref().unwrap().0;
         series.pts.push((event.arrival_time, waiting_time));
         // Make the line drop back to 0
-        series.pts.push((event.arrival_time + Duration::seconds(0.1), Duration::ZERO));
+        series
+            .pts
+            .push((event.arrival_time + Duration::seconds(0.1), Duration::ZERO));
     }
 
     let mut opts = PlotOptions::fixed();

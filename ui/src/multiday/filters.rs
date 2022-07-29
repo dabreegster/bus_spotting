@@ -55,11 +55,23 @@ impl Filters {
 
         let mut variant_choices = vec![Choice::new("all route variants", None)];
         // Limit the dropdown size. It's incredibly slow to use otherwise and runs off the screen.
+        let mut choices_contain_current_variant = false;
         for v in variants.iter().take(10) {
+            if Some(*v) == self.variant {
+                choices_contain_current_variant = true;
+            }
             variant_choices.push(Choice::new(
                 app.model.gtfs.variant(*v).describe(&app.model.gtfs),
                 Some(*v),
             ));
+        }
+        if !choices_contain_current_variant {
+            if let Some(v) = self.variant {
+                variant_choices.push(Choice::new(
+                    app.model.gtfs.variant(v).describe(&app.model.gtfs),
+                    Some(v),
+                ));
+            }
         }
         col.push(Widget::row(vec![
             "Route description:".text_widget(ctx),
