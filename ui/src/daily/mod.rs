@@ -41,7 +41,7 @@ impl SharedAppState for App {
             cam_zoom: canvas.cam_zoom,
             time: self.time,
         };
-        abstio::write_json("data/save_replay.json".to_string(), &ss);
+        abstio::write_json("data/save_daily.json".to_string(), &ss);
     }
 }
 
@@ -67,7 +67,7 @@ impl App {
     // before_quit is never called on web, and web starts with an empty model.
     pub fn restore_savestate(&mut self, ctx: &mut EventCtx) {
         if let Ok(savestate) = abstio::maybe_read_json::<Savestate>(
-            "data/save_replay.json".to_string(),
+            "data/save_daily.json".to_string(),
             &mut abstutil::Timer::throwaway(),
         ) {
             ctx.canvas.cam_x = savestate.cam_x;

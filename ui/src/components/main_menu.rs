@@ -23,24 +23,24 @@ impl MainMenu {
         .build(ctx)
     }
 
-    pub fn on_click_network(
+    pub fn on_click_multiday(
         ctx: &mut EventCtx,
         x: &str,
-    ) -> Option<Transition<crate::network::App>> {
+    ) -> Option<Transition<crate::multiday::App>> {
         match x {
             "Load model" => {
-                return Some(load_model::<crate::network::App, MultidayModel>(
+                return Some(load_model::<crate::multiday::App, MultidayModel>(
                     ctx,
                     Box::new(|ctx, app, model| {
-                        *app = crate::network::App::new(ctx, model);
+                        *app = crate::multiday::App::new(ctx, model);
                     }),
                 ));
             }
             "Import data" => {
-                return Some(import_data::<crate::network::App>(
+                return Some(import_data::<crate::multiday::App>(
                     ctx,
                     Box::new(|ctx, app, multiday, _| {
-                        *app = crate::network::App::new(ctx, multiday);
+                        *app = crate::multiday::App::new(ctx, multiday);
                     }),
                 ));
             }
@@ -48,22 +48,22 @@ impl MainMenu {
         }
     }
 
-    pub fn on_click_replay(ctx: &mut EventCtx, x: &str) -> Option<Transition<crate::replay::App>> {
+    pub fn on_click_daily(ctx: &mut EventCtx, x: &str) -> Option<Transition<crate::daily::App>> {
         match x {
             "Load model" => {
-                return Some(load_model::<crate::replay::App, DailyModel>(
+                return Some(load_model::<crate::daily::App, DailyModel>(
                     ctx,
                     Box::new(|ctx, app, model| {
-                        *app = crate::replay::App::new(ctx, model);
+                        *app = crate::daily::App::new(ctx, model);
                     }),
                 ));
             }
             "Import data" => {
-                return Some(import_data::<crate::replay::App>(
+                return Some(import_data::<crate::daily::App>(
                     ctx,
                     Box::new(|ctx, app, _, mut singles| {
                         // Just load one of the days arbitrarily
-                        *app = crate::replay::App::new(ctx, singles.remove(0));
+                        *app = crate::daily::App::new(ctx, singles.remove(0));
                     }),
                 ));
             }

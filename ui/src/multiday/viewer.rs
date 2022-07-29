@@ -130,7 +130,7 @@ impl State<App> for Viewer {
 
         match self.panel.event(ctx) {
             Outcome::Clicked(x) => {
-                if let Some(t) = MainMenu::on_click_network(ctx, x.as_ref()) {
+                if let Some(t) = MainMenu::on_click_multiday(ctx, x.as_ref()) {
                     return t;
                 } else {
                     match x.as_ref() {

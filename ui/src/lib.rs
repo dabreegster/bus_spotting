@@ -4,8 +4,8 @@ extern crate anyhow;
 extern crate log;
 
 mod components;
-mod network;
-mod replay;
+mod daily;
+mod multiday;
 
 use geom::{Bounds, GPSBounds};
 use structopt::StructOpt;
@@ -40,10 +40,10 @@ fn run(settings: Settings) {
         .filter(|x| x.is_some())
         .count();
     if n == 0 {
-        // Empty network view
+        // Empty multiday view
         widgetry::run(settings, |ctx| {
-            let app = network::App::new(ctx, MultidayModel::empty());
-            let states = vec![crate::network::Viewer::new_state(ctx, &app)];
+            let app = multiday::App::new(ctx, MultidayModel::empty());
+            let states = vec![crate::multiday::Viewer::new_state(ctx, &app)];
             (app, states)
         });
     } else if n > 1 {
@@ -68,9 +68,9 @@ fn run(settings: Settings) {
                 )
                 .unwrap();
 
-                network::App::new(ctx, multiday)
+                multiday::App::new(ctx, multiday)
             });
-            let states = vec![network::Viewer::new_state(ctx, &app)];
+            let states = vec![multiday::Viewer::new_state(ctx, &app)];
             (app, states)
         });
     } else if let Some(path) = args.daily {
@@ -83,10 +83,10 @@ fn run(settings: Settings) {
                 //model.look_for_best_matches_by_pos_and_time();
                 //model.supply_demand_matching().unwrap();
                 //model.vehicles_with_few_stops().unwrap();
-                replay::App::new(ctx, model)
+                daily::App::new(ctx, model)
             });
             app.restore_savestate(ctx);
-            let states = vec![replay::Replay::new_state(ctx, &app)];
+            let states = vec![daily::Replay::new_state(ctx, &app)];
             (app, states)
         });
     } else if let Some(path) = args.multiday {
@@ -94,12 +94,12 @@ fn run(settings: Settings) {
             let app = ctx.loading_screen("initialize model", |ctx, _timer| {
                 let bytes = fs_err::read(path).unwrap();
                 let decoded = base64::decode(bytes).unwrap();
-                network::App::new(
+                multiday::App::new(
                     ctx,
                     abstutil::from_binary::<MultidayModel>(&decoded).unwrap(),
                 )
             });
-            let states = vec![network::Viewer::new_state(ctx, &app)];
+            let states = vec![multiday::Viewer::new_state(ctx, &app)];
             app.restore_savestate(ctx);
             (app, states)
         });

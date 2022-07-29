@@ -326,7 +326,7 @@ impl State<App> for Replay {
                     ));
                 }
 
-                if let Some(t) = MainMenu::on_click_replay(ctx, x.as_ref()) {
+                if let Some(t) = MainMenu::on_click_daily(ctx, x.as_ref()) {
                     return t;
                 } else {
                     unreachable!()
