@@ -54,7 +54,8 @@ impl Filters {
         let variants = app.model.gtfs.variants_matching_filter(&self.filter);
 
         let mut variant_choices = vec![Choice::new("all route variants", None)];
-        for v in &variants {
+        // Limit the dropdown size. It's incredibly slow to use otherwise and runs off the screen.
+        for v in variants.iter().take(10) {
             variant_choices.push(Choice::new(
                 app.model.gtfs.variant(*v).describe(&app.model.gtfs),
                 Some(*v),
