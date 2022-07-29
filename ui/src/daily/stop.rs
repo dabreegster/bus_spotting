@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
+
 use abstutil::Counter;
+use geom::{Duration, Time, UnitFmt};
 use widgetry::{
-    Choice, DrawBaselayer, EventCtx, GfxCtx, Line, Outcome, Panel, State, Text, TextExt, Widget,
+    Choice, Color, DrawBaselayer, EventCtx, GfxCtx, Line, LinePlot, Outcome, Panel, PlotOptions,
+    Series, State, Text, TextExt, Widget,
 };
 
 use gtfs::{RouteVariant, RouteVariantID, Stop, StopID};
@@ -47,6 +51,7 @@ impl StopInfo {
                     ),
                 ]),
                 total_counts_per_variant(ctx, app, stop).section(ctx),
+                waiting_time(ctx, app, stop).section(ctx),
                 schedule(ctx, app, stop, app.model.gtfs.variant(variant)),
             ]))
             .build(ctx),
@@ -124,6 +129,49 @@ fn schedule(ctx: &mut EventCtx, app: &App, stop: &Stop, variant: &RouteVariant) 
         }
     }
     txt.into_widget(ctx)
+}
+
+fn waiting_time(ctx: &mut EventCtx, app: &App, stop: &Stop) -> Widget {
+    let mut series_per_variant = BTreeMap::new();
+    let colors = [
+        Color::RED,
+        Color::GREEN,
+        Color::PURPLE,
+        Color::YELLOW,
+        Color::ORANGE,
+        Color::CYAN,
+    ];
+
+    for event in app.model.all_boarding_events_at_stop(stop.id) {
+        // Create a new series if needed
+        let idx = series_per_variant.len();
+        let series = series_per_variant
+            .entry(event.variant)
+            .or_insert_with(|| Series {
+                label: app
+                    .model
+                    .gtfs
+                    .variant(event.variant)
+                    .describe(&app.model.gtfs),
+                color: colors[idx % colors.len()],
+                pts: vec![(Time::START_OF_DAY, Duration::ZERO)],
+            });
+
+        // When a bus visits this stop, look at the last time that happened to figure out the
+        // waiting time
+        let waiting_time = event.arrival_time - series.pts.last().as_ref().unwrap().0;
+        series.pts.push((event.arrival_time, waiting_time));
+    }
+
+    let mut opts = PlotOptions::fixed();
+    opts.max_x = Some(Time::START_OF_DAY + Duration::hours(24));
+    LinePlot::new_widget(
+        ctx,
+        "waiting time",
+        series_per_variant.into_values().collect(),
+        opts,
+        UnitFmt::metric(),
+    )
 }
 
 // TODO Use the variants list to filter by day
