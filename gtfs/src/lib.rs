@@ -145,7 +145,13 @@ impl GTFS {
                 if services.contains(&variant.service_id)
                     && variant.trips.len() >= filter.minimum_trips_per_day
                 {
-                    variants.insert(variant.variant_id);
+                    if filter.description_substring.is_empty()
+                        || variant
+                            .describe(self)
+                            .contains(&filter.description_substring)
+                    {
+                        variants.insert(variant.variant_id);
+                    }
                 }
             }
         }
@@ -219,6 +225,7 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
 pub struct VariantFilter {
     pub date_filter: DateFilter,
     pub minimum_trips_per_day: usize,
+    pub description_substring: String,
 }
 
 fn dump_bounding_box(gps_bounds: &GPSBounds) {

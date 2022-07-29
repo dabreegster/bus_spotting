@@ -41,6 +41,7 @@ impl DailyModel {
         let filter = VariantFilter {
             date_filter: DateFilter::SingleDay(self.date),
             minimum_trips_per_day: 0,
+            description_substring: String::new(),
         };
 
         let mut all_trajectories = Vec::new();

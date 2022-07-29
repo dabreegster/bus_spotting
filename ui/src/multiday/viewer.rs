@@ -134,14 +134,9 @@ impl State<App> for Viewer {
                     return t;
                 } else {
                     match x.as_ref() {
-                        "search for a route variant" => {
-                            return Transition::Push(
-                                super::search::SearchForRouteVariant::new_state(
-                                    ctx,
-                                    app,
-                                    app.model.gtfs.variants_matching_filter(&app.filters.filter),
-                                ),
-                            );
+                        "reset route description filter" => {
+                            app.filters.filter.description_substring = String::new();
+                            self.on_filter_change(ctx, app);
                         }
                         "Boardings by variant" => {
                             return Transition::Push(

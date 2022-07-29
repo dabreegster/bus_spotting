@@ -1,6 +1,5 @@
 mod analysis;
 mod filters;
-mod search;
 mod stop;
 mod variant;
 mod viewer;

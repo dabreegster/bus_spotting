@@ -57,6 +57,7 @@ impl DailyModel {
         let filter = VariantFilter {
             date_filter: DateFilter::SingleDay(self.date),
             minimum_trips_per_day: 0,
+            description_substring: String::new(),
         };
         let mut trips_to_assign: BTreeMap<String, Vec<(TripID, Time, Time)>> = BTreeMap::new();
         for variant in &self.gtfs.variants_matching_filter(&filter) {
