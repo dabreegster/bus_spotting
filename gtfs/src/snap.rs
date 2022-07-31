@@ -4,7 +4,9 @@ use abstutil::Timer;
 use anyhow::Result;
 use geom::{Distance, FindClosest, GPSBounds, Line, LonLat, PolyLine, Polygon, Ring};
 use street_network::initial::InitialMap;
-use street_network::{Direction, DrivingSide, LaneType, OriginalRoad, StreetNetwork};
+use street_network::{
+    Direction, DrivingSide, LaneType, OriginalRoad, StreetNetwork, Transformation,
+};
 
 use crate::GTFS;
 
@@ -116,13 +118,8 @@ fn import_streets(
         import_streets::Options::default_for_side(driving_side),
         timer,
     )?;
-    let consolidate_all_intersections = false;
-    let remove_disconnected = true;
-    street_network.run_all_simplifications(
-        consolidate_all_intersections,
-        remove_disconnected,
-        timer,
-    );
+    // We don't care about most transformations, especially since some of them are slow to run.
+    street_network.apply_transformations(vec![Transformation::RemoveDisconnectedRoads], timer);
     Ok(street_network)
 }
 
