@@ -88,7 +88,7 @@ pub fn snap_routes<R: std::io::Read>(
     }
 
     timer.start("render overlapping paths");
-    for (shape_id, polygon) in render_overlapping_paths(&initial, all_paths) {
+    for (shape_id, polygon) in render_overlapping_paths(&initial, all_paths, timer) {
         gtfs.nonoverlapping_shapes.insert(shape_id, polygon);
     }
     timer.stop("render overlapping paths");
@@ -142,9 +142,10 @@ fn make_snapped_shape(
 //
 // Lots of logic shared with map_gui's draw_overlapping_paths, but also kind of experimenting with
 // gluing one polygon together.
-fn render_overlapping_paths<ID: Clone + PartialEq>(
+fn render_overlapping_paths<ID: Clone + PartialEq + Send + Sync>(
     initial: &InitialMap,
     paths: Vec<(ID, Vec<(OriginalRoad, Direction)>)>,
+    timer: &mut Timer,
 ) -> Vec<(ID, Polygon)> {
     let road_width_multiplier = 1.0;
 
@@ -179,54 +180,58 @@ fn render_overlapping_paths<ID: Clone + PartialEq>(
         (left_pl.into_points(), right_pl.into_points())
     };
 
-    let mut output = Vec::new();
-    for (id, path) in paths {
-        let mut left_side_pts = Vec::new();
-        let mut right_side_pts = Vec::new();
+    timer
+        .parallelize("render path", paths, |(id, path)| {
+            let mut left_side_pts = Vec::new();
+            let mut right_side_pts = Vec::new();
 
-        for (road, dir) in path {
-            let (mut left, mut right) = get_sides(&road, &id);
-            if dir == Direction::Back {
-                left.reverse();
-                right.reverse();
-            }
+            for (road, dir) in path {
+                let (mut left, mut right) = get_sides(&road, &id);
+                if dir == Direction::Back {
+                    left.reverse();
+                    right.reverse();
+                }
 
-            // The relative position along the pair of roads may change dramatically, causing the
-            // left and right side to effectively swap. Just test if line segments overlap...
-            if !left_side_pts.is_empty() {
-                if let Ok(l1) = Line::new(*left_side_pts.last().unwrap(), left[0]) {
-                    if let Ok(l2) = Line::new(*right_side_pts.last().unwrap(), right[0]) {
-                        if l1.intersection(&l2).is_some() {
-                            std::mem::swap(&mut left, &mut right);
+                // The relative position along the pair of roads may change dramatically, causing the
+                // left and right side to effectively swap. Just test if line segments overlap...
+                if !left_side_pts.is_empty() {
+                    if let Ok(l1) = Line::new(*left_side_pts.last().unwrap(), left[0]) {
+                        if let Ok(l2) = Line::new(*right_side_pts.last().unwrap(), right[0]) {
+                            if l1.intersection(&l2).is_some() {
+                                std::mem::swap(&mut left, &mut right);
+                            }
                         }
                     }
                 }
+
+                left_side_pts.extend(left);
+                right_side_pts.extend(right);
             }
 
-            left_side_pts.extend(left);
-            right_side_pts.extend(right);
-        }
-
-        // Glue both sides together
-        right_side_pts.reverse();
-        left_side_pts.extend(right_side_pts);
-        left_side_pts.push(left_side_pts[0]);
-        left_side_pts.dedup();
-        if let Ok(ring) = Ring::new(left_side_pts) {
-            if check_ring(&ring) {
-                output.push((id, ring.into_polygon()));
+            // Glue both sides together
+            right_side_pts.reverse();
+            left_side_pts.extend(right_side_pts);
+            left_side_pts.push(left_side_pts[0]);
+            left_side_pts.dedup();
+            let mut result = None;
+            if let Ok(ring) = Ring::new(left_side_pts) {
+                if check_ring(&ring) {
+                    result = Some((id, ring.into_polygon()));
+                }
             }
-        }
 
-        // Debug by looking at the left and right side individually
-        /*if let Ok(poly1) = PolyLine::new(left_side_pts).map(|pl| pl.make_polygons(Distance::meters(0.1))) {
-            if let Ok(poly2) = PolyLine::new(right_side_pts).map(|pl| pl.make_polygons(Distance::meters(0.1))) {
-                output.push((id, poly1.union(poly2)));
-            }
-        }*/
-    }
+            // Debug by looking at the left and right side individually
+            /*if let Ok(poly1) = PolyLine::new(left_side_pts).map(|pl| pl.make_polygons(Distance::meters(0.1))) {
+                if let Ok(poly2) = PolyLine::new(right_side_pts).map(|pl| pl.make_polygons(Distance::meters(0.1))) {
+                    output.push((id, poly1.union(poly2)));
+                }
+            }*/
 
-    output
+            result
+        })
+        .into_iter()
+        .flatten()
+        .collect()
 }
 
 fn check_ring(ring: &Ring) -> bool {
