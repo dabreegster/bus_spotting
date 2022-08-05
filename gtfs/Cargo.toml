@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 abstutil = { git = "https://github.com/a-b-street/abstreet" }
-anyhow = "1.0.38"
+anyhow = { version = "1.0.38", features=["backtrace"] }
 chrono = { version = "0.4.19", features=["serde"] }
 csv = "1.1.4"
 geojson = { version = "0.22.2" }

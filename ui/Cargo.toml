@@ -12,7 +12,7 @@ default = ["widgetry/native-backend"]
 wasm = ["wasm-bindgen", "widgetry/wasm-backend"]
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = { version = "1.0.38", features=["backtrace"] }
 abstio = { git = "https://github.com/a-b-street/abstreet" }
 abstutil = { git = "https://github.com/a-b-street/abstreet" }
 base64 = "0.13.0"

@@ -52,9 +52,12 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<(Vec<Trip>, IDMapping<orig::T
             service_id: rec.service_id,
             headsign: rec.trip_headsign,
             outbound_direction: match rec.direction_id {
-                0 => true,
-                1 => false,
-                x => bail!("Unknown direction_id {x}"),
+                Some(0) => true,
+                Some(1) => false,
+                // outbound_direction is just used for grouping, so if there's no direction, that's
+                // fine
+                None => true,
+                x => bail!("Unknown direction_id {:?}", x),
             },
 
             stop_times: Vec::new(),
@@ -68,7 +71,7 @@ struct Record {
     trip_id: orig::TripID,
     route_id: RouteID,
     trip_headsign: Option<String>,
-    direction_id: usize,
+    direction_id: Option<usize>,
     shape_id: ShapeID,
     service_id: ServiceID,
 }

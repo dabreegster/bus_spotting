@@ -85,12 +85,16 @@ impl GTFS {
         }
 
         let mut id_counter = 0;
+        let mut empty = Vec::new();
         for route in gtfs.routes.values_mut() {
-            group_variants(
-                &mut id_counter,
-                route,
-                trips_per_route.remove(&route.route_id).unwrap(),
-            );
+            if let Some(trips) = trips_per_route.remove(&route.route_id) {
+                group_variants(&mut id_counter, route, trips);
+            } else {
+                empty.push(route.route_id.clone());
+            }
+        }
+        for id in empty {
+            gtfs.routes.remove(&id).unwrap();
         }
 
         // Find all variants per stop

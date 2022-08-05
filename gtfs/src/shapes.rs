@@ -29,8 +29,10 @@ pub fn load<R: std::io::Read>(
         let pts = Pt2D::approx_dedupe(pts, Distance::meters(1.0));
         // TODO The shape can double back on itself. Should we split into multiple segments instead
         // of doing this?
-        let pl = PolyLine::unchecked_new(pts);
-        results.insert(shape_id, pl);
+        if pts.len() >= 2 {
+            let pl = PolyLine::unchecked_new(pts);
+            results.insert(shape_id, pl);
+        }
     }
     Ok(results)
 }

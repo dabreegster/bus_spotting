@@ -21,6 +21,10 @@ pub fn load<R: std::io::Read>(
     let mut stop_times = BTreeMap::new();
     for rec in csv::Reader::from_reader(reader).deserialize() {
         let rec: Record = rec?;
+        // TODO Be consistent about skipping broken records or bailing
+        if rec.arrival_time.is_empty() {
+            continue;
+        }
         let arrival_time = Time::parse(&rec.arrival_time)?;
         let departure_time = Time::parse(&rec.departure_time)?;
         if arrival_time > departure_time {
