@@ -19,7 +19,7 @@ use chrono::NaiveDate;
 use geom::{Bounds, GPSBounds, Pt2D};
 use serde::{Deserialize, Serialize};
 
-use gtfs::{IDMapping, GTFS};
+use gtfs::{get_zip_file, IDMapping, GTFS};
 
 pub use self::assemble::*;
 pub use self::multiday::MultidayModel;
@@ -88,7 +88,7 @@ impl DailyModel {
 
             timer.start("loading AVL");
             for (original_id, trajectory) in
-                avl::load_trajectories(archive.by_name(&avl_path)?, &gps_bounds, date)?
+                avl::load_trajectories(get_zip_file(&mut archive, &avl_path)?, &gps_bounds, date)?
             {
                 let id = vehicle_ids.insert_new(original_id.clone())?;
                 vehicles.push(Vehicle {
@@ -101,8 +101,11 @@ impl DailyModel {
             timer.stop("loading AVL");
 
             timer.start("loading BIL");
-            let journeys =
-                ticketing::load_journeys(archive.by_name(&bil_path)?, &gps_bounds, date)?;
+            let journeys = ticketing::load_journeys(
+                get_zip_file(&mut archive, &bil_path)?,
+                &gps_bounds,
+                date,
+            )?;
             timer.stop("loading BIL");
 
             let mut model = Self {
@@ -159,8 +162,8 @@ impl DailyModel {
     }
 }
 
-fn find_all_files(
-    archive: &zip::ZipArchive<std::io::Cursor<Vec<u8>>>,
+fn find_all_files<R: std::io::Read + std::io::Seek>(
+    archive: &zip::ZipArchive<R>,
     prefix: &str,
 ) -> BTreeMap<NaiveDate, String> {
     let mut results = BTreeMap::new();

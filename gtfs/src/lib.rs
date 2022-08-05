@@ -46,21 +46,21 @@ pub struct GTFS {
 }
 
 impl GTFS {
-    pub fn load_from_dir(
-        archive: &mut ZipArchive<std::io::Cursor<Vec<u8>>>,
+    pub fn load_from_dir<R: std::io::Read + std::io::Seek>(
+        archive: &mut ZipArchive<R>,
         timer: &mut Timer,
     ) -> Result<(Self, GPSBounds)> {
         let mut gtfs = Self::empty();
-        let (stops, stop_ids, gps_bounds) = stops::load(archive.by_name("gtfs/stops.txt")?)?;
+        let (stops, stop_ids, gps_bounds) = stops::load(get_zip_file(archive, "gtfs/stops.txt")?)?;
         gtfs.stops = stops;
-        gtfs.routes = routes::load(archive.by_name("gtfs/routes.txt")?)?;
-        if let Ok(file) = archive.by_name("gtfs/shapes.txt") {
+        gtfs.routes = routes::load(get_zip_file(archive, "gtfs/routes.txt")?)?;
+        if let Ok(file) = get_zip_file(archive, "gtfs/shapes.txt") {
             gtfs.shapes = shapes::load(file, &gps_bounds)?;
         }
 
-        let (trips, trip_ids) = trips::load(archive.by_name("gtfs/trips.txt")?)?;
+        let (trips, trip_ids) = trips::load(get_zip_file(archive, "gtfs/trips.txt")?)?;
         let mut stop_times = stop_times::load(
-            archive.by_name("gtfs/stop_times.txt")?,
+            get_zip_file(archive, "gtfs/stop_times.txt")?,
             &stop_ids,
             &trip_ids,
         )?;
@@ -106,13 +106,13 @@ impl GTFS {
             }
         }
 
-        gtfs.calendar = calendar::load(archive.by_name("gtfs/calendar.txt")?)?;
+        gtfs.calendar = calendar::load(get_zip_file(archive, "gtfs/calendar.txt")?)?;
         calendar::load_exceptions(
             &mut gtfs.calendar,
-            archive.by_name("gtfs/calendar_dates.txt")?,
+            get_zip_file(archive, "gtfs/calendar_dates.txt")?,
         )?;
 
-        if let Ok(osm_xml_input) = archive.by_name("osm_input.xml") {
+        if let Ok(osm_xml_input) = get_zip_file(archive, "osm_input.xml") {
             snap::snap_routes(&mut gtfs, osm_xml_input, &gps_bounds, timer)?;
         }
 
@@ -252,4 +252,14 @@ fn dump_bounding_box(gps_bounds: &GPSBounds) {
         "GeoJSON covering the bounding box: {}",
         serde_json::to_string(&gj).unwrap()
     );
+}
+
+// Adds the path in the error message
+pub fn get_zip_file<'a, R: std::io::Read + std::io::Seek>(
+    archive: &'a mut ZipArchive<R>,
+    path: &str,
+) -> Result<zip::read::ZipFile<'a>> {
+    archive
+        .by_name(path)
+        .map_err(|err| anyhow!("{path}: {err}"))
 }
