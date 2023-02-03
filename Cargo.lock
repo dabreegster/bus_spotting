@@ -14,7 +14,7 @@ dependencies = [
 [[package]]
 name = "abstio"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#328d04337ddf4b26ff0d245793248c1e11096fda"
+source = "git+https://github.com/a-b-street/abstreet#520e8ef7927aad0899acfc0f2d797859ae527155"
 dependencies = [
  "abstutil",
  "anyhow",
@@ -38,7 +38,7 @@ dependencies = [
 [[package]]
 name = "abstutil"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#328d04337ddf4b26ff0d245793248c1e11096fda"
+source = "git+https://github.com/a-b-street/abstreet#520e8ef7927aad0899acfc0f2d797859ae527155"
 dependencies = [
  "anyhow",
  "bincode",
@@ -327,6 +327,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
+name = "celes"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39b9a21273925d7cc9e8a9a5f068122341336813c607014f5ef64f82b6acba58"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "cesu8"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d43a04d8753f35258c91f8ec639f792891f748a1edbd759cf1dcea3382ad83c"
+
+[[package]]
 name = "cfg-expr"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -380,6 +395,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "clipboard"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25a904646c0340239dcf7c51677b33928bf24fdf424b79a57909c0109075b2e7"
+dependencies = [
+ "clipboard-win",
+ "objc",
+ "objc-foundation",
+ "objc_id",
+ "x11-clipboard",
+]
+
+[[package]]
+name = "clipboard-win"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3a093d6fed558e5fe24c3dfc85a68bb68f1c824f440d3ba5aca189e2998786b"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -430,6 +467,16 @@ name = "colorous"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98804822ee752112e060b40110ae0188eff72b036baf49e61a9f2028eaf33164"
+
+[[package]]
+name = "combine"
+version = "4.6.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35ed6e9d84f0b51a7f52daf1c7d71dd136fd7a3f41a8462b8cdb8c78d920fad4"
+dependencies = [
+ "bytes",
+ "memchr",
+]
 
 [[package]]
 name = "console_log"
@@ -642,6 +689,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b1d1d91c932ef41c0f2663aa8b0ca0342d444d842c06914aa0a7e352d0bada6"
+dependencies = [
+ "libc",
+ "redox_users",
+ "winapi",
+]
+
+[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -661,6 +728,15 @@ name = "downcast-rs"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
+name = "driving-side"
+version = "0.1.0"
+source = "git+https://github.com/a-b-street/osm2lanes#e97599d62a45d63c12708a6ac53967fdf43d64b9"
+dependencies = [
+ "geo 0.23.1",
+ "geojson",
+]
 
 [[package]]
 name = "dwrote"
@@ -1031,9 +1107,9 @@ dependencies = [
 
 [[package]]
 name = "geo"
-version = "0.22.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f9a9248b7d4f0168bbf24d66d1cf6f11f49949abe44f8b8c15657dafd067cd0"
+checksum = "b39f57e9624b1a17ce621375464e9878c705d0aaadaf25cb44e4e0005a16de2f"
 dependencies = [
  "float_next_after",
  "geo-types",
@@ -1046,14 +1122,15 @@ dependencies = [
 
 [[package]]
 name = "geo-types"
-version = "0.7.6"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9805fbfcea97de816e6408e938603241879cc41eea3fba3f84f122f4f6f9c54"
+checksum = "e26879b63ac36ca5492918dc16f8c1e604b0f70f884fffbd3533f89953ab1991"
 dependencies = [
  "approx",
  "num-traits",
  "rstar 0.8.4",
  "rstar 0.9.3",
+ "serde",
 ]
 
 [[package]]
@@ -1067,13 +1144,13 @@ dependencies = [
 
 [[package]]
 name = "geojson"
-version = "0.22.3"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72d90a7b840bb94d82b66d15bc5f28bc6f9ac017a32a72610a26dc98314ebf5d"
+checksum = "ff2cc39a555a57b2a5514e223d76e23779f853840cc3c67767f77f58dc2272b7"
 dependencies = [
  "geo-types",
+ "log",
  "serde",
- "serde_derive",
  "serde_json",
  "thiserror",
 ]
@@ -1081,14 +1158,13 @@ dependencies = [
 [[package]]
 name = "geom"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#328d04337ddf4b26ff0d245793248c1e11096fda"
+source = "git+https://github.com/a-b-street/abstreet#520e8ef7927aad0899acfc0f2d797859ae527155"
 dependencies = [
  "aabb-quadtree",
- "abstutil",
  "anyhow",
  "earcutr",
  "fs-err",
- "geo 0.22.0",
+ "geo 0.23.1",
  "geojson",
  "histogram",
  "instant",
@@ -1107,6 +1183,16 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "gif"
+version = "0.11.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3edd93c6756b4dfaf2709eafcc345ba2636565295c198a9cfbf75fa5e3e00b06"
+dependencies = [
+ "color_quant",
+ "weezl",
 ]
 
 [[package]]
@@ -1169,8 +1255,8 @@ dependencies = [
 
 [[package]]
 name = "glutin"
-version = "0.29.0"
-source = "git+https://github.com/rust-windowing/glutin#a3009f87b15ab76090e6656c672540ff534a7d38"
+version = "0.28.0"
+source = "git+https://github.com/rust-windowing/glutin?rev=2bffbf52d6b4f4c32adc463818e10ac8082948e4#2bffbf52d6b4f4c32adc463818e10ac8082948e4"
 dependencies = [
  "cgl",
  "cocoa",
@@ -1179,10 +1265,10 @@ dependencies = [
  "glutin_gles2_sys",
  "glutin_glx_sys",
  "glutin_wgl_sys",
+ "lazy_static",
  "libloading",
  "log",
  "objc",
- "once_cell",
  "osmesa-sys",
  "parking_lot",
  "raw-window-handle 0.5.0",
@@ -1194,8 +1280,8 @@ dependencies = [
 
 [[package]]
 name = "glutin_egl_sys"
-version = "0.1.6"
-source = "git+https://github.com/rust-windowing/glutin#a3009f87b15ab76090e6656c672540ff534a7d38"
+version = "0.1.5"
+source = "git+https://github.com/rust-windowing/glutin?rev=2bffbf52d6b4f4c32adc463818e10ac8082948e4#2bffbf52d6b4f4c32adc463818e10ac8082948e4"
 dependencies = [
  "gl_generator",
  "winapi",
@@ -1204,7 +1290,7 @@ dependencies = [
 [[package]]
 name = "glutin_gles2_sys"
 version = "0.1.5"
-source = "git+https://github.com/rust-windowing/glutin#a3009f87b15ab76090e6656c672540ff534a7d38"
+source = "git+https://github.com/rust-windowing/glutin?rev=2bffbf52d6b4f4c32adc463818e10ac8082948e4#2bffbf52d6b4f4c32adc463818e10ac8082948e4"
 dependencies = [
  "gl_generator",
  "objc",
@@ -1212,8 +1298,8 @@ dependencies = [
 
 [[package]]
 name = "glutin_glx_sys"
-version = "0.1.8"
-source = "git+https://github.com/rust-windowing/glutin#a3009f87b15ab76090e6656c672540ff534a7d38"
+version = "0.1.7"
+source = "git+https://github.com/rust-windowing/glutin?rev=2bffbf52d6b4f4c32adc463818e10ac8082948e4#2bffbf52d6b4f4c32adc463818e10ac8082948e4"
 dependencies = [
  "gl_generator",
  "x11-dl",
@@ -1222,7 +1308,7 @@ dependencies = [
 [[package]]
 name = "glutin_wgl_sys"
 version = "0.1.5"
-source = "git+https://github.com/rust-windowing/glutin#a3009f87b15ab76090e6656c672540ff534a7d38"
+source = "git+https://github.com/rust-windowing/glutin?rev=2bffbf52d6b4f4c32adc463818e10ac8082948e4#2bffbf52d6b4f4c32adc463818e10ac8082948e4"
 dependencies = [
  "gl_generator",
 ]
@@ -1248,11 +1334,12 @@ dependencies = [
  "csv",
  "geojson",
  "geom",
- "import_streets",
  "log",
+ "osm2streets",
+ "petgraph",
  "serde",
  "serde_json",
- "street_network",
+ "streets_reader",
  "zip",
 ]
 
@@ -1309,17 +1396,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0c35f58762feb77d74ebe43bdbc3210f09be9fe6742234d573bacc26ed92b67"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "hash32-derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59d2aba832b60be25c1b169146b27c64115470981b128ed84c8db18c1b03c6ff"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1495,22 +1571,10 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "color_quant",
+ "gif",
  "num-rational",
  "num-traits",
  "png",
-]
-
-[[package]]
-name = "import_streets"
-version = "0.1.0"
-source = "git+https://github.com/a-b-street/osm2streets#cbff21efbf440064e0fd56c77feac8788cef1226"
-dependencies = [
- "abstutil",
- "anyhow",
- "geom",
- "log",
- "roxmltree",
- "street_network",
 ]
 
 [[package]]
@@ -1565,9 +1629,9 @@ checksum = "879d54834c8c76457ef4293a689b2a8c59b076067ad77b15efafbb05f92a592b"
 
 [[package]]
 name = "itertools"
-version = "0.10.3"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
 dependencies = [
  "either",
 ]
@@ -1583,6 +1647,20 @@ name = "itoa"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
+
+[[package]]
+name = "jni"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "039022cdf4d7b1cf548d31f60ae783138e5fd42013f6271049d7df7afadef96c"
+dependencies = [
+ "cesu8",
+ "combine",
+ "jni-sys",
+ "log",
+ "thiserror",
+ "walkdir",
+]
 
 [[package]]
 name = "jni-sys"
@@ -1604,6 +1682,15 @@ name = "khronos_api"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
+
+[[package]]
+name = "kstring"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec3066350882a1cd6d950d055997f379ac37fd39f81cd4d8ed186032eb3c5747"
+dependencies = [
+ "static_assertions",
+]
 
 [[package]]
 name = "kurbo"
@@ -1641,6 +1728,19 @@ name = "libm"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33a33a362ce288760ec6a508b94caaec573ae7d3bbbd91b87aa0bad4456839db"
+
+[[package]]
+name = "locale-codes"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1f4cc9d2da40c19763d5dd398baf388f2cc1473ca3d53c578c75e9ad0402324"
+dependencies = [
+ "lazy_static",
+ "log",
+ "regex",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "lock_api"
@@ -2023,9 +2123,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.13.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
+checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
 
 [[package]]
 name = "ordered-float"
@@ -2035,6 +2135,54 @@ checksum = "7940cf2ca942593318d07fcf2596cdca60a85c9e7fab408a5e21a4f9dcd40d87"
 dependencies = [
  "num-traits",
  "serde",
+]
+
+[[package]]
+name = "osm-tag-schemes"
+version = "0.1.0"
+source = "git+https://github.com/a-b-street/osm2lanes#e97599d62a45d63c12708a6ac53967fdf43d64b9"
+dependencies = [
+ "osm-tags",
+ "strum",
+]
+
+[[package]]
+name = "osm-tags"
+version = "0.1.1"
+source = "git+https://github.com/a-b-street/osm2lanes#e97599d62a45d63c12708a6ac53967fdf43d64b9"
+dependencies = [
+ "kstring",
+]
+
+[[package]]
+name = "osm2lanes"
+version = "0.1.0"
+source = "git+https://github.com/a-b-street/osm2lanes#e97599d62a45d63c12708a6ac53967fdf43d64b9"
+dependencies = [
+ "celes",
+ "locale-codes",
+ "log",
+ "osm-tag-schemes",
+ "osm-tags",
+]
+
+[[package]]
+name = "osm2streets"
+version = "0.1.0"
+source = "git+https://github.com/a-b-street/osm2streets#6773adf4dd1d4b9bedde9e76c88a647203d97d46"
+dependencies = [
+ "abstutil",
+ "anyhow",
+ "geo 0.23.1",
+ "geom",
+ "itertools",
+ "log",
+ "osm-tag-schemes",
+ "osm-tags",
+ "osm2lanes",
+ "petgraph",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2252,6 +2400,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "redox_users"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b033d837a7cf162d7993aded9304e30a83213c648b6e389db233191f891e5c2b"
+dependencies = [
+ "getrandom",
+ "redox_syscall",
+ "thiserror",
+]
+
+[[package]]
 name = "regex"
 version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2456,6 +2615,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustversion"
+version = "1.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5583e89e108996506031660fe09baa5011b9dd0341b89029313006d1fb508d70"
+
+[[package]]
 name = "rustybuzz"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2484,6 +2649,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1ff3d6d9696af502cc3110dacce942840fb06ff4514cad92236ecc455f2ce05"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "same-file"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+dependencies = [
+ "winapi-util",
 ]
 
 [[package]]
@@ -2717,18 +2891,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "street_network"
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "streets_reader"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/osm2streets#cbff21efbf440064e0fd56c77feac8788cef1226"
+source = "git+https://github.com/a-b-street/osm2streets#6773adf4dd1d4b9bedde9e76c88a647203d97d46"
 dependencies = [
- "aabb-quadtree",
  "abstutil",
  "anyhow",
+ "driving-side",
  "geom",
  "log",
- "petgraph",
- "serde",
- "serde_json",
+ "osm2streets",
+ "xmlparser",
 ]
 
 [[package]]
@@ -2768,6 +2947,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "strum"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+dependencies = [
+ "heck 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
+
+[[package]]
 name = "svgtypes"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2802,15 +3003,13 @@ dependencies = [
 
 [[package]]
 name = "taffy"
-version = "0.1.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec27dea659b100d489dffa57cf0efc6d7bfefb119af817b92cc14006c0b214e3"
+checksum = "c13e87d38366d3cadcf282165b6ba51d5422ed846459997f55a347fe98242f61"
 dependencies = [
  "arrayvec 0.7.2",
- "hash32 0.2.1",
- "hash32-derive",
  "num-traits",
- "typenum",
+ "slotmap",
 ]
 
 [[package]]
@@ -3042,7 +3241,6 @@ dependencies = [
  "model",
  "rfd",
  "serde",
- "street_network",
  "structopt",
  "wasm-bindgen",
  "widgetry",
@@ -3192,6 +3390,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ee8f19f9d74293faf70901bc20ad067dc1ad390d2cbf1e3f75f721ffee908b6"
 dependencies = [
  "vcell",
+]
+
+[[package]]
+name = "walkdir"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "808cf2735cd4b6866113f648b791c6adc5714537bc222d9347bb203386ffda56"
+dependencies = [
+ "same-file",
+ "winapi",
+ "winapi-util",
 ]
 
 [[package]]
@@ -3390,13 +3599,19 @@ dependencies = [
 
 [[package]]
 name = "webbrowser"
-version = "0.5.5"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecad156490d6b620308ed411cfee90d280b3cbd13e189ea0d3fada8acc89158a"
+checksum = "97d1fa1e5c829b2bf9eb1e28fb950248b797cd6a04866fbdfa8bc31e5eef4c78"
 dependencies = [
+ "core-foundation",
+ "dirs",
+ "jni",
+ "log",
+ "ndk-context",
+ "objc",
+ "raw-window-handle 0.5.0",
+ "url",
  "web-sys",
- "widestring",
- "winapi",
 ]
 
 [[package]]
@@ -3419,20 +3634,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "widestring"
-version = "0.4.3"
+name = "weezl"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
+checksum = "9193164d4de03a926d909d3bc7c30543cecb35400c02114792c2cae20d5e2dbb"
 
 [[package]]
 name = "widgetry"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/abstreet#328d04337ddf4b26ff0d245793248c1e11096fda"
+source = "git+https://github.com/a-b-street/abstreet#520e8ef7927aad0899acfc0f2d797859ae527155"
 dependencies = [
  "aabb-quadtree",
  "abstio",
  "abstutil",
  "anyhow",
+ "clipboard",
  "colorous",
  "downcast-rs",
  "flate2",
@@ -3632,14 +3848,33 @@ dependencies = [
 ]
 
 [[package]]
-name = "x11-dl"
-version = "2.19.1"
+name = "x11-clipboard"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea26926b4ce81a6f5d9d0f3a0bc401e5a37c6ae14a1bfaa8ff6099ca80038c59"
+checksum = "89bd49c06c9eb5d98e6ba6536cf64ac9f7ee3a009b2f53996d405b3944f6bcea"
 dependencies = [
- "lazy_static",
+ "xcb",
+]
+
+[[package]]
+name = "x11-dl"
+version = "2.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38735924fedd5314a6e548792904ed8c6de6636285cb9fec04d5b1db85c1516f"
+dependencies = [
  "libc",
+ "once_cell",
  "pkg-config",
+]
+
+[[package]]
+name = "xcb"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e917a3f24142e9ff8be2414e36c649d47d6cc2ba81f16201cdef96e533e02de"
+dependencies = [
+ "libc",
+ "log",
 ]
 
 [[package]]
@@ -3659,9 +3894,9 @@ checksum = "d2d7d3948613f75c98fd9328cfdcc45acc4d360655289d0a7d4ec931392200a3"
 
 [[package]]
 name = "xmlparser"
-version = "0.13.3"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "114ba2b24d2167ef6d67d7d04c8cc86522b87f490025f39f0303b7db5bf5e3d8"
+checksum = "4d25c75bf9ea12c4040a97f829154768bbbce366287e2dc044af160cd79a13fd"
 
 [[package]]
 name = "zip"

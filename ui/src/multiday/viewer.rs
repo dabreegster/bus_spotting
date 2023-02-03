@@ -346,7 +346,7 @@ impl RouteStyle {
             }
             RouteStyle::HideAll => bail!("Not showing anything"),
         };
-        Ok(pl.make_polygons(Distance::meters(20.0)))
+        Ok(pl.unsafe_make_polygons(Distance::meters(20.0)))
     }
 }
 

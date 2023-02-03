@@ -9,7 +9,7 @@ abstutil = { git = "https://github.com/a-b-street/abstreet" }
 anyhow = { version = "1.0.38", features=["backtrace"] }
 chrono = { version = "0.4.19", features=["serde"] }
 csv = "1.1.4"
-geojson = { version = "0.22.2" }
+geojson = { version = "0.24.0" }
 geom = { git = "https://github.com/a-b-street/abstreet" }
 gtfs = { path = "../gtfs" }
 log = "0.4.14"

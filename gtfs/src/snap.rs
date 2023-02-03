@@ -3,10 +3,7 @@ use std::collections::BTreeMap;
 use abstutil::Timer;
 use anyhow::Result;
 use geom::{Distance, FindClosest, GPSBounds, Line, LonLat, PolyLine, Polygon, Ring};
-use street_network::initial::InitialMap;
-use street_network::{
-    Direction, DrivingSide, LaneType, OriginalRoad, StreetNetwork, Transformation,
-};
+use osm2streets::{Direction, DrivingSide, LaneType, RoadID, StreetNetwork, Transformation};
 
 use crate::GTFS;
 
@@ -22,17 +19,10 @@ pub fn snap_routes<R: std::io::Read>(
 
     let mut osm_xml_input = String::new();
     reader.read_to_string(&mut osm_xml_input)?;
-    // TODO Specify or calculate DrivingSide
-    let streets = import_streets(
-        &osm_xml_input,
-        DrivingSide::Right,
-        gps_bounds.get_rectangle(),
-        timer,
-    )?;
-    let initial = InitialMap::new(&streets, timer);
+    let streets = import_streets(&osm_xml_input, gps_bounds.get_rectangle(), timer)?;
 
-    // For the left side of the road, should we start from i1 or i2?
-    let left_side_i1 = if streets.config.driving_side == DrivingSide::Right {
+    // For the left side of the road, should we start from src_i or dst_i?
+    let left_side_src_i = if streets.config.driving_side == DrivingSide::Right {
         false
     } else {
         true
@@ -44,17 +34,18 @@ pub fn snap_routes<R: std::io::Read>(
     //
     // TODO We should really do this for every pair of stops and glue those together. Variant 196
     // skips a bunch of stops!
-    let mut closest: FindClosest<(OriginalRoad, bool)> = FindClosest::new(&gps_bounds.to_bounds());
-    for (id, r) in &initial.roads {
-        if let Ok(pl) = r.trimmed_center_pts.shift_left(r.half_width) {
-            closest.add((*id, left_side_i1), pl.points());
+    let mut closest: FindClosest<(RoadID, bool)> = FindClosest::new(&gps_bounds.to_bounds());
+    for (id, r) in &streets.roads {
+        if let Ok(pl) = r.center_line.shift_left(r.half_width()) {
+            closest.add((*id, left_side_src_i), pl.points());
         }
-        if let Ok(pl) = r.trimmed_center_pts.shift_right(r.half_width) {
-            closest.add((*id, !left_side_i1), pl.points());
+        if let Ok(pl) = r.center_line.shift_right(r.half_width()) {
+            closest.add((*id, !left_side_src_i), pl.points());
         }
     }
 
     let mut all_paths = Vec::new();
+    let roads = &streets.roads;
     for (id, path) in timer
         .parallelize(
             "snap route shapes",
@@ -62,14 +53,26 @@ pub fn snap_routes<R: std::io::Read>(
             |(id, pl)| {
                 let threshold = Distance::meters(50.0);
                 let mut result = None;
-                if let Some(((from_r, from_i1), _)) = closest.closest_pt(pl.first_pt(), threshold) {
-                    if let Some(((to_r, to_i1), _)) = closest.closest_pt(pl.last_pt(), threshold) {
+                if let Some(((from_r, from_src_i), _)) =
+                    closest.closest_pt(pl.first_pt(), threshold)
+                {
+                    if let Some(((to_r, to_src_i), _)) = closest.closest_pt(pl.last_pt(), threshold)
+                    {
                         // Pathfind from the intersections
-                        let from = if from_i1 { from_r.i1 } else { from_r.i2 };
-                        let to = if to_i1 { to_r.i1 } else { to_r.i2 };
+                        // TODO Consider using RoadWithEndpoints
+                        let from = if from_src_i {
+                            roads[&from_r].src_i
+                        } else {
+                            roads[&from_r].dst_i
+                        };
+                        let to = if to_src_i {
+                            roads[&to_r].src_i
+                        } else {
+                            roads[&to_r].dst_i
+                        };
 
                         if let Some(path) =
-                            streets.simple_path(from, to, &[LaneType::Driving, LaneType::Bus])
+                            simple_path(roads, from, to, &[LaneType::Driving, LaneType::Bus])
                         {
                             result = Some((id, path));
                         }
@@ -81,24 +84,24 @@ pub fn snap_routes<R: std::io::Read>(
         .into_iter()
         .flatten()
     {
-        if let Ok(pl) = make_snapped_shape(&initial, &path) {
+        if let Ok(pl) = make_snapped_shape(&streets, &path) {
             gtfs.snapped_shapes.insert(id.clone(), pl);
         }
         all_paths.push((id.clone(), path));
     }
 
     timer.start("render overlapping paths");
-    for (shape_id, polygon) in render_overlapping_paths(&initial, all_paths, timer) {
+    for (shape_id, polygon) in render_overlapping_paths(&streets, all_paths, timer) {
         gtfs.nonoverlapping_shapes.insert(shape_id, polygon);
     }
     timer.stop("render overlapping paths");
 
     // For debugging, convert to the drawable form of StreetNetwork and stash that.
-    for r in initial.roads.values() {
+    for r in streets.roads.into_values() {
         gtfs.road_geometry
-            .push(r.trimmed_center_pts.make_polygons(2.0 * r.half_width));
+            .push(r.center_line.make_polygons(2.0 * r.half_width()));
     }
-    for i in initial.intersections.into_values() {
+    for i in streets.intersections.into_values() {
         gtfs.intersection_geometry.push(i.polygon);
     }
 
@@ -108,14 +111,13 @@ pub fn snap_routes<R: std::io::Read>(
 
 fn import_streets(
     osm_xml_input: &str,
-    driving_side: DrivingSide,
     clip_pts: Vec<LonLat>,
     timer: &mut Timer,
 ) -> Result<StreetNetwork> {
-    let mut street_network = import_streets::osm_to_street_network(
+    let (mut street_network, _) = streets_reader::osm_to_street_network(
         osm_xml_input,
         Some(clip_pts),
-        import_streets::Options::default_for_side(driving_side),
+        osm2streets::MapConfig::default(),
         timer,
     )?;
     // We don't care about most transformations, especially since some of them are slow to run.
@@ -124,12 +126,12 @@ fn import_streets(
 }
 
 fn make_snapped_shape(
-    initial: &InitialMap,
-    path: &Vec<(OriginalRoad, Direction)>,
+    streets: &StreetNetwork,
+    path: &Vec<(RoadID, Direction)>,
 ) -> Result<PolyLine> {
     let mut pts = Vec::new();
     for (r, dir) in path {
-        let mut append = initial.roads[r].trimmed_center_pts.clone().into_points();
+        let mut append = streets.roads[r].center_line.clone().into_points();
         if *dir == Direction::Back {
             append.reverse();
         }
@@ -143,14 +145,14 @@ fn make_snapped_shape(
 // Lots of logic shared with map_gui's draw_overlapping_paths, but also kind of experimenting with
 // gluing one polygon together.
 fn render_overlapping_paths<ID: Clone + PartialEq + Send + Sync>(
-    initial: &InitialMap,
-    paths: Vec<(ID, Vec<(OriginalRoad, Direction)>)>,
+    streets: &StreetNetwork,
+    paths: Vec<(ID, Vec<(RoadID, Direction)>)>,
     timer: &mut Timer,
 ) -> Vec<(ID, Polygon)> {
     let road_width_multiplier = 1.0;
 
     // Per road, just figure out what objects we need
-    let mut objects_per_road: BTreeMap<OriginalRoad, Vec<ID>> = BTreeMap::new();
+    let mut objects_per_road: BTreeMap<RoadID, Vec<ID>> = BTreeMap::new();
     for (id, path) in &paths {
         for (road, _) in path {
             objects_per_road
@@ -160,9 +162,10 @@ fn render_overlapping_paths<ID: Clone + PartialEq + Send + Sync>(
         }
     }
 
-    let get_sides = |road_id: &OriginalRoad, id: &ID| {
-        let road = &initial.roads[road_id];
-        let total_width = road_width_multiplier * 2.0 * road.half_width;
+    let roads = &streets.roads;
+    let get_sides = |road_id: &RoadID, id: &ID| {
+        let road = &roads[road_id];
+        let total_width = road_width_multiplier * 2.0 * road.half_width();
         let objects = &objects_per_road[road_id];
         let width_per_piece = total_width / (objects.len() as f64);
         let piece_idx = objects.iter().position(|x| x == id).unwrap();
@@ -170,11 +173,11 @@ fn render_overlapping_paths<ID: Clone + PartialEq + Send + Sync>(
         let width_from_left_side = (piece_idx as f64) * width_per_piece;
         // This logic is shift_from_left_side
         let left_pl = road
-            .trimmed_center_pts
+            .center_line
             .shift_from_center(total_width, width_from_left_side)
             .unwrap();
         let right_pl = road
-            .trimmed_center_pts
+            .center_line
             .shift_from_center(total_width, width_from_left_side + width_per_piece)
             .unwrap();
         (left_pl.into_points(), right_pl.into_points())
@@ -251,4 +254,49 @@ fn check_ring(ring: &Ring) -> bool {
         }
     }
     true
+}
+
+use osm2streets::{IntersectionID, Road};
+use petgraph::prelude::DiGraphMap;
+
+// TODO Hack! A copy from osm2streets. Clean up after
+// https://github.com/a-b-street/osm2streets/issues/179
+fn simple_path(
+    roads: &BTreeMap<RoadID, Road>,
+    from: IntersectionID,
+    to: IntersectionID,
+    lane_types: &[LaneType],
+) -> Option<Vec<(RoadID, Direction)>> {
+    let mut graph = DiGraphMap::new();
+    for r in roads.values() {
+        let mut fwd = false;
+        let mut back = false;
+        for lane in &r.lane_specs_ltr {
+            if lane_types.contains(&lane.lt) {
+                if lane.dir == Direction::Fwd {
+                    fwd = true;
+                } else {
+                    back = true;
+                }
+            }
+        }
+        if fwd {
+            graph.add_edge(r.src_i, r.dst_i, (r.id, Direction::Fwd));
+        }
+        if back {
+            graph.add_edge(r.dst_i, r.src_i, (r.id, Direction::Back));
+        }
+    }
+    let (_, path) = petgraph::algo::astar(
+        &graph,
+        from,
+        |i| i == to,
+        |(_, _, (r, _))| roads[r].untrimmed_length(),
+        |_| Distance::ZERO,
+    )?;
+    let roads: Vec<(RoadID, Direction)> = path
+        .windows(2)
+        .map(|pair| *graph.edge_weight(pair[0], pair[1]).unwrap())
+        .collect();
+    Some(roads)
 }

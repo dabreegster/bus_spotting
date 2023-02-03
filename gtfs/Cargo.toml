@@ -9,11 +9,12 @@ abstutil = { git = "https://github.com/a-b-street/abstreet" }
 anyhow = { version = "1.0.38", features=["backtrace"] }
 chrono = { version = "0.4.19", features=["serde"] }
 csv = "1.1.4"
-geojson = { version = "0.22.2" }
+geojson = { version = "0.24.0" }
 geom = { git = "https://github.com/a-b-street/abstreet" }
-import_streets = { git = "https://github.com/a-b-street/osm2streets" }
 log = "0.4.14"
+osm2streets = { git = "https://github.com/a-b-street/osm2streets" }
+petgraph = "0.6.2"
 serde = "1.0.123"
 serde_json = "1.0.61"
-street_network = { git = "https://github.com/a-b-street/osm2streets" }
+streets_reader = { git = "https://github.com/a-b-street/osm2streets" }
 zip = { version = "0.6.2", default-features = false, features=["deflate"] }
