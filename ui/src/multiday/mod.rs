@@ -45,6 +45,7 @@ impl App {
     pub fn new(ctx: &mut EventCtx, model: MultidayModel) -> Self {
         let bounds = &model.bounds;
         ctx.canvas.map_dims = (bounds.max_x, bounds.max_y);
+        ctx.canvas.cam_zoom = ctx.canvas.min_zoom();
         ctx.canvas.center_on_map_pt(bounds.center());
 
         Self {
