@@ -2,22 +2,19 @@
 <html>
 <head>
 	<meta charset="UTF-8">
-	<link href="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.css" rel="stylesheet">
-	<script src="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.js"></script>
+	<script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+	<link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet">
 	<script type="module">
 		import { default as init } from './ui.js';
 
-		mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
-
-		const map = new mapboxgl.Map({
-			container: 'mapbox_canvas',
-			style: 'mapbox://styles/mapbox/streets-v11',
-			//style: 'mapbox://styles/mapbox/satellite-streets-v11',
+		const map = new maplibregl.Map({
+			container: 'canvas',
+			style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
 			antialias: true,
 			interactive: false
 		});
 
-		function sync_mapbox_canvas(x1, y1, x2, y2) {
+		function sync_maplibre_canvas(x1, y1, x2, y2) {
 			// Ignore when no model is loaded and the bounds passed are nonsense
 			if (isFinite(x1)) {
 				const transform = map.cameraForBounds([[x1, y1], [x2, y2]]);
@@ -25,7 +22,7 @@
 			}
 		}
 
-		window.sync_mapbox_canvas = sync_mapbox_canvas;
+		window.sync_maplibre_canvas = sync_maplibre_canvas;
 
 		await init('./ui_bg.wasm');
 	</script>
@@ -34,6 +31,6 @@
 	<div id="loading" style="width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; z-index: 2;">
 		<h1>Loading...</h1>
 	</div>
-	<div id="mapbox_canvas" style="width: 100%; height: 100%; position: absolute; top: 0px: left: 0px; z-index: 1;"></div>
+	<div id="canvas" style="width: 100%; height: 100%; position: absolute; top: 0px: left: 0px; z-index: 1;"></div>
 </body>
 <html>
