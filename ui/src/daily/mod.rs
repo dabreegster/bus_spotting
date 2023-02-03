@@ -13,7 +13,7 @@ use widgetry::{Canvas, Color, EventCtx, GfxCtx, SharedAppState};
 
 use model::DailyModel;
 
-use crate::MapboxSync;
+use crate::MaplibreSync;
 pub use replay::Replay;
 use speed::TimeControls;
 
@@ -24,7 +24,7 @@ pub struct App {
     time_increment: Duration,
 
     #[allow(unused)]
-    mapbox: MapboxSync,
+    maplibre: MaplibreSync,
 }
 
 impl SharedAppState for App {
@@ -60,7 +60,7 @@ impl App {
             time: Time::START_OF_DAY,
             time_increment: Duration::minutes(10),
 
-            mapbox: MapboxSync::new(),
+            maplibre: MaplibreSync::new(),
         }
     }
 

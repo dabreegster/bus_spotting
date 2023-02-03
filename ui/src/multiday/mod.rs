@@ -12,14 +12,14 @@ use model::MultidayModel;
 
 use self::filters::Filters;
 pub use self::viewer::Viewer;
-use crate::MapboxSync;
+use crate::MaplibreSync;
 
 pub struct App {
     model: MultidayModel,
 
     filters: Filters,
 
-    mapbox: MapboxSync,
+    maplibre: MaplibreSync,
 }
 
 impl SharedAppState for App {
@@ -53,7 +53,7 @@ impl App {
 
             filters: Filters::new(),
 
-            mapbox: MapboxSync::new(),
+            maplibre: MaplibreSync::new(),
         }
     }
 

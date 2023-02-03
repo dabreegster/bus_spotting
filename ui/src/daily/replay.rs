@@ -201,7 +201,7 @@ impl Replay {
 
 impl State<App> for Replay {
     fn event(&mut self, ctx: &mut EventCtx, app: &mut App) -> Transition {
-        app.mapbox.sync(ctx, &app.model.gps_bounds);
+        app.maplibre.sync(ctx, &app.model.gps_bounds);
 
         let prev_time = app.time;
         if let Some(t) = self.time_controls.event(ctx, app) {

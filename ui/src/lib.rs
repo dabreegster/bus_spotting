@@ -124,12 +124,12 @@ pub fn run_wasm() {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
-    fn sync_mapbox_canvas(lon1: f64, lat1: f64, lon2: f64, lat2: f64);
+    fn sync_maplibre_canvas(lon1: f64, lat1: f64, lon2: f64, lat2: f64);
 }
 
-pub struct MapboxSync(Bounds);
+pub struct MaplibreSync(Bounds);
 
-impl MapboxSync {
+impl MaplibreSync {
     pub fn new() -> Self {
         Self(Bounds::new())
     }
@@ -148,7 +148,7 @@ impl MapboxSync {
 
             let pt1 = geom::Pt2D::new(bounds.min_x, bounds.min_y).to_gps(gps_bounds);
             let pt2 = geom::Pt2D::new(bounds.max_x, bounds.max_y).to_gps(gps_bounds);
-            sync_mapbox_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
+            sync_maplibre_canvas(pt1.x(), pt1.y(), pt2.x(), pt2.y());
         }
     }
 }
