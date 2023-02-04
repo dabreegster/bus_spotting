@@ -278,7 +278,7 @@ fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Time
                     .add(Obj::Stop(id))
                     .hitbox(hitbox)
                     .draw(batch)
-                    .hover_alpha(0.5)
+                    .hover_color(Color::BLUE.alpha(0.5))
                     .tooltip(txt)
                     .clickable()
                     .build(ctx);
@@ -416,7 +416,7 @@ fn heatmap_stops(
             .add(Obj::Stop(id))
             .hitbox(hitbox)
             .draw(batch)
-            .hover_alpha(0.5)
+            .hover_color(color.alpha(0.5))
             .tooltip(txt)
             .clickable()
             .build(ctx);
