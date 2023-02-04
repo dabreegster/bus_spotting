@@ -195,7 +195,8 @@ pub fn load_exceptions<R: std::io::Read>(calendar: &mut Calendar, reader: R) -> 
         let service = if let Some(x) = calendar.services.get_mut(&rec.service_id) {
             x
         } else {
-            bail!("Exception for unknown {:?}", rec.service_id);
+            error!("Exception for unknown {:?}", rec.service_id);
+            continue;
         };
         let date = NaiveDate::parse_from_str(&rec.date, "%Y%m%d")?;
         if rec.exception_type == 1 {
