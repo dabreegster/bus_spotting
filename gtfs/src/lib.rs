@@ -22,7 +22,7 @@ use zip::ZipArchive;
 
 pub use calendar::{Calendar, DateFilter, DaysOfWeek, Service, ServiceID};
 pub use ids::{orig, CheapID, IDMapping, StopID, TripID};
-pub use routes::{Route, RouteID, RouteVariant, RouteVariantID};
+pub use routes::{Route, RouteID, RouteType, RouteVariant, RouteVariantID};
 pub use shapes::ShapeID;
 pub use stop_times::StopTime;
 pub use stops::Stop;
@@ -144,6 +144,12 @@ impl GTFS {
         let services = self.calendar.services_matching_dates(&filter.date_filter);
         let mut variants = BTreeSet::new();
         for route in self.routes.values() {
+            if let Some(rt) = filter.route_type {
+                if route.route_type != rt {
+                    continue;
+                }
+            }
+
             for variant in &route.variants {
                 // TODO I think this is correct, but make sure trips per variant is daily
                 if services.contains(&variant.service_id)
@@ -229,6 +235,7 @@ fn group_variants(id_counter: &mut usize, route: &mut Route, trips: Vec<Trip>) {
 pub struct VariantFilter {
     pub date_filter: DateFilter,
     pub minimum_trips_per_day: usize,
+    pub route_type: Option<RouteType>,
     pub description_substring: String,
 }
 

@@ -41,6 +41,7 @@ impl DailyModel {
         let filter = VariantFilter {
             date_filter: DateFilter::SingleDay(self.date),
             minimum_trips_per_day: 0,
+            route_type: None,
             description_substring: String::new(),
         };
 

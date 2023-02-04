@@ -4,7 +4,7 @@ use widgetry::{
     include_labeled_bytes, Choice, EventCtx, Image, Line, Panel, Spinner, TextBox, TextExt, Widget,
 };
 
-use gtfs::{DateFilter, RouteVariantID, VariantFilter};
+use gtfs::{DateFilter, RouteType, RouteVariantID, VariantFilter};
 
 use super::App;
 use crate::components::{date_filter, describe};
@@ -21,6 +21,7 @@ impl Filters {
                 date_filter: DateFilter::None,
                 minimum_trips_per_day: 0,
                 description_substring: String::new(),
+                route_type: None,
             },
             variant: None,
         }
@@ -50,6 +51,36 @@ impl Filters {
             ),
         ]));
 
+        col.push(Widget::row(vec![
+            "Route description:".text_widget(ctx),
+            TextBox::widget(
+                ctx,
+                "description_substring",
+                self.filter.description_substring.clone(),
+                false,
+                10,
+            ),
+            ctx.style()
+                .btn_plain
+                .icon_bytes(include_labeled_bytes!("../../assets/reset.svg"))
+                .build_widget(ctx, "reset route description filter"),
+        ]));
+
+        let mut route_type_choices = RouteType::all()
+            .into_iter()
+            .map(|x| Choice::new(format!("{:?}", x), Some(x)))
+            .collect::<Vec<_>>();
+        route_type_choices.insert(0, Choice::new("all", None));
+        col.push(Widget::row(vec![
+            "Route type:".text_widget(ctx),
+            Widget::dropdown(
+                ctx,
+                "route_type",
+                self.filter.route_type,
+                route_type_choices,
+            ),
+        ]));
+
         // List all route variants matching the filters
         let variants = app.model.gtfs.variants_matching_filter(&self.filter);
 
@@ -73,20 +104,6 @@ impl Filters {
                 ));
             }
         }
-        col.push(Widget::row(vec![
-            "Route description:".text_widget(ctx),
-            TextBox::widget(
-                ctx,
-                "description_substring",
-                self.filter.description_substring.clone(),
-                false,
-                10,
-            ),
-            ctx.style()
-                .btn_plain
-                .icon_bytes(include_labeled_bytes!("../../assets/reset.svg"))
-                .build_widget(ctx, "reset route description filter"),
-        ]));
 
         col.push(Widget::row(vec![
             format!("{} route variants", variants.len()).text_widget(ctx),
@@ -108,6 +125,7 @@ impl Filters {
     pub fn from_controls(app: &App, p: &Panel) -> Option<Self> {
         let date_filter = date_filter::from_controls(p)?;
         let minimum_trips_per_day = p.spinner("trips_per_day");
+        let route_type = p.dropdown_value("route_type");
         let mut variant: Option<RouteVariantID> = p.dropdown_value("variant");
         let description_substring = p.text_box("description_substring");
 
@@ -124,6 +142,7 @@ impl Filters {
             filter: VariantFilter {
                 date_filter,
                 minimum_trips_per_day,
+                route_type,
                 description_substring,
             },
             variant,
