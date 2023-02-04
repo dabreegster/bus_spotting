@@ -16,6 +16,5 @@ osm2streets = { git = "https://github.com/a-b-street/osm2streets" }
 petgraph = "0.6.2"
 serde = "1.0.123"
 serde_json = "1.0.61"
-serde_repr = "0.1.10"
 streets_reader = { git = "https://github.com/a-b-street/osm2streets" }
 zip = { version = "0.6.2", default-features = false, features=["deflate"] }

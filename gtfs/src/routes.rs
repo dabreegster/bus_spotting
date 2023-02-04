@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use geom::{GPSBounds, PolyLine};
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use super::{ServiceID, ShapeID, StopID, Trip, GTFS};
 
@@ -21,22 +20,24 @@ pub struct Route {
     pub variants: Vec<RouteVariant>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize_repr, Deserialize_repr)]
-#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub enum RouteType {
-    Tram = 0,
-    Subway = 1,
-    Rail = 2,
-    Bus = 3,
-    Ferry = 4,
-    CableTram = 5,
-    AerialLift = 6,
-    Furnicular = 7,
-    Trolleybus = 11,
-    Monorail = 12,
+    Tram,
+    Subway,
+    Rail,
+    Bus,
+    Ferry,
+    CableTram,
+    AerialLift,
+    Furnicular,
+    Trolleybus,
+    Monorail,
+    /// See https://developers.google.com/transit/gtfs/reference/extended-route-types
+    Other(u8),
 }
 
 impl RouteType {
+    /// Excludes the Other case
     pub fn all() -> Vec<Self> {
         use RouteType::*;
         vec![
@@ -168,7 +169,19 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<RouteID, Route>> {
             rec.route_id.clone(),
             Route {
                 route_id: rec.route_id,
-                route_type: rec.route_type,
+                route_type: match rec.route_type {
+                    0 => RouteType::Tram,
+                    1 => RouteType::Subway,
+                    2 => RouteType::Rail,
+                    3 => RouteType::Bus,
+                    4 => RouteType::Ferry,
+                    5 => RouteType::CableTram,
+                    6 => RouteType::AerialLift,
+                    7 => RouteType::Furnicular,
+                    11 => RouteType::Trolleybus,
+                    12 => RouteType::Monorail,
+                    _ => RouteType::Other(rec.route_type),
+                },
                 short_name: rec.route_short_name,
                 long_name: rec.route_long_name,
                 description: rec.route_desc,
@@ -183,9 +196,8 @@ pub fn load<R: std::io::Read>(reader: R) -> Result<BTreeMap<RouteID, Route>> {
 #[derive(Deserialize)]
 struct Record {
     route_id: RouteID,
-    route_type: RouteType,
+    route_type: u8,
     route_short_name: Option<String>,
     route_long_name: Option<String>,
     route_desc: Option<String>,
-    // TODO Assuming route_type = 3
 }
