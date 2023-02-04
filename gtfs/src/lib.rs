@@ -51,16 +51,16 @@ impl GTFS {
         timer: &mut Timer,
     ) -> Result<(Self, GPSBounds)> {
         let mut gtfs = Self::empty();
-        let (stops, stop_ids, gps_bounds) = stops::load(get_zip_file(archive, "gtfs/stops.txt")?)?;
+        let (stops, stop_ids, gps_bounds) = stops::load(get_gtfs_file(archive, "stops.txt")?)?;
         gtfs.stops = stops;
-        gtfs.routes = routes::load(get_zip_file(archive, "gtfs/routes.txt")?)?;
-        if let Ok(file) = get_zip_file(archive, "gtfs/shapes.txt") {
+        gtfs.routes = routes::load(get_gtfs_file(archive, "routes.txt")?)?;
+        if let Ok(file) = get_gtfs_file(archive, "shapes.txt") {
             gtfs.shapes = shapes::load(file, &gps_bounds)?;
         }
 
-        let (trips, trip_ids) = trips::load(get_zip_file(archive, "gtfs/trips.txt")?)?;
+        let (trips, trip_ids) = trips::load(get_gtfs_file(archive, "trips.txt")?)?;
         let mut stop_times = stop_times::load(
-            get_zip_file(archive, "gtfs/stop_times.txt")?,
+            get_gtfs_file(archive, "stop_times.txt")?,
             &stop_ids,
             &trip_ids,
         )?;
@@ -110,10 +110,10 @@ impl GTFS {
             }
         }
 
-        gtfs.calendar = calendar::load(get_zip_file(archive, "gtfs/calendar.txt")?)?;
+        gtfs.calendar = calendar::load(get_gtfs_file(archive, "calendar.txt")?)?;
         calendar::load_exceptions(
             &mut gtfs.calendar,
-            get_zip_file(archive, "gtfs/calendar_dates.txt")?,
+            get_gtfs_file(archive, "calendar_dates.txt")?,
         )?;
 
         if let Ok(osm_xml_input) = get_zip_file(archive, "osm_input.xml") {
@@ -273,4 +273,18 @@ pub fn get_zip_file<'a, R: std::io::Read + std::io::Seek>(
     archive
         .by_name(path)
         .map_err(|err| anyhow!("{path}: {err}"))
+}
+
+// Accept either gtfs/{path} or just {path}. If the user is just feeding in a GTFS zip, it'll be
+// the latter.
+fn get_gtfs_file<'a, R: std::io::Read + std::io::Seek>(
+    archive: &'a mut ZipArchive<R>,
+    path: &str,
+) -> Result<zip::read::ZipFile<'a>> {
+    // The borrow checker is really fighting us here, so do this hack
+    if archive.file_names().any(|x| x == path) {
+        get_zip_file(archive, path)
+    } else {
+        get_zip_file(archive, &format!("gtfs/{path}"))
+    }
 }
