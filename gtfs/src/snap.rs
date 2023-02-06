@@ -45,7 +45,6 @@ pub fn snap_routes<R: std::io::Read>(
     }
 
     let mut all_paths = Vec::new();
-    let roads = &streets.roads;
     for (id, path) in timer
         .parallelize(
             "snap route shapes",
@@ -61,18 +60,18 @@ pub fn snap_routes<R: std::io::Read>(
                         // Pathfind from the intersections
                         // TODO Consider using RoadWithEndpoints
                         let from = if from_src_i {
-                            roads[&from_r].src_i
+                            streets.roads[&from_r].src_i
                         } else {
-                            roads[&from_r].dst_i
+                            streets.roads[&from_r].dst_i
                         };
                         let to = if to_src_i {
-                            roads[&to_r].src_i
+                            streets.roads[&to_r].src_i
                         } else {
-                            roads[&to_r].dst_i
+                            streets.roads[&to_r].dst_i
                         };
 
                         if let Some(path) =
-                            simple_path(roads, from, to, &[LaneType::Driving, LaneType::Bus])
+                            streets.simple_path(from, to, &[LaneType::Driving, LaneType::Bus])
                         {
                             result = Some((id, path));
                         }
@@ -254,49 +253,4 @@ fn check_ring(ring: &Ring) -> bool {
         }
     }
     true
-}
-
-use osm2streets::{IntersectionID, Road};
-use petgraph::prelude::DiGraphMap;
-
-// TODO Hack! A copy from osm2streets. Clean up after
-// https://github.com/a-b-street/osm2streets/issues/179
-fn simple_path(
-    roads: &BTreeMap<RoadID, Road>,
-    from: IntersectionID,
-    to: IntersectionID,
-    lane_types: &[LaneType],
-) -> Option<Vec<(RoadID, Direction)>> {
-    let mut graph = DiGraphMap::new();
-    for r in roads.values() {
-        let mut fwd = false;
-        let mut back = false;
-        for lane in &r.lane_specs_ltr {
-            if lane_types.contains(&lane.lt) {
-                if lane.dir == Direction::Fwd {
-                    fwd = true;
-                } else {
-                    back = true;
-                }
-            }
-        }
-        if fwd {
-            graph.add_edge(r.src_i, r.dst_i, (r.id, Direction::Fwd));
-        }
-        if back {
-            graph.add_edge(r.dst_i, r.src_i, (r.id, Direction::Back));
-        }
-    }
-    let (_, path) = petgraph::algo::astar(
-        &graph,
-        from,
-        |i| i == to,
-        |(_, _, (r, _))| roads[r].untrimmed_length(),
-        |_| Distance::ZERO,
-    )?;
-    let roads: Vec<(RoadID, Direction)> = path
-        .windows(2)
-        .map(|pair| *graph.edge_weight(pair[0], pair[1]).unwrap())
-        .collect();
-    Some(roads)
 }
