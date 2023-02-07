@@ -34,7 +34,7 @@ pub fn snap_routes<R: std::io::Read>(
     //
     // TODO We should really do this for every pair of stops and glue those together. Variant 196
     // skips a bunch of stops!
-    let mut closest: FindClosest<(RoadID, bool)> = FindClosest::new(&gps_bounds.to_bounds());
+    let mut closest: FindClosest<(RoadID, bool)> = FindClosest::new();
     for (id, r) in &streets.roads {
         if let Ok(pl) = r.center_line.shift_left(r.half_width()) {
             closest.add((*id, left_side_src_i), pl.points());

@@ -25,7 +25,7 @@ impl Viewer {
     pub fn new_state(ctx: &mut EventCtx, app: &App) -> Box<dyn State<App>> {
         let mut state = Self {
             panel: crate::components::MainMenu::panel(ctx),
-            world: World::unbounded(),
+            world: World::new(),
             draw_streets: Drawable::empty(ctx),
         };
 
@@ -195,7 +195,7 @@ impl ObjectID for Obj {}
 
 fn make_world(ctx: &mut EventCtx, app: &App, panel: &mut Panel, timer: &mut Timer) -> World<Obj> {
     let selected_variants = app.filters.selected_variants(app);
-    let mut world = World::bounded(&app.model.bounds);
+    let mut world = World::new();
 
     // Draw every route variant. Track what stops we visit
     let route_style: RouteStyle = panel.dropdown_value("route style");

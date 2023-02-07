@@ -436,7 +436,7 @@ enum Obj {
 impl ObjectID for Obj {}
 
 fn make_static_world(ctx: &mut EventCtx, app: &App) -> World<Obj> {
-    let mut world = World::bounded(&app.model.bounds);
+    let mut world = World::new();
 
     // TODO We really need unzoomed circles
     let radius = Distance::meters(50.0);
