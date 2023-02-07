@@ -20,13 +20,11 @@ export class IntoUnderlyingByteSource {
 */
   cancel(): void;
 /**
-* @returns {number}
 */
   readonly autoAllocateChunkSize: number;
 /**
-* @returns {any}
 */
-  readonly type: any;
+  readonly type: string;
 }
 /**
 */
@@ -66,19 +64,15 @@ export class IntoUnderlyingSource {
 export class PipeOptions {
   free(): void;
 /**
-* @returns {boolean}
 */
   readonly preventAbort: boolean;
 /**
-* @returns {boolean}
 */
   readonly preventCancel: boolean;
 /**
-* @returns {boolean}
 */
   readonly preventClose: boolean;
 /**
-* @returns {AbortSignal | undefined}
 */
   readonly signal: AbortSignal | undefined;
 }
@@ -87,7 +81,6 @@ export class PipeOptions {
 export class QueuingStrategy {
   free(): void;
 /**
-* @returns {number}
 */
   readonly highWaterMark: number;
 }
@@ -97,7 +90,6 @@ export class QueuingStrategy {
 export class ReadableStreamGetReaderOptions {
   free(): void;
 /**
-* @returns {any}
 */
   readonly mode: any;
 }
@@ -115,7 +107,7 @@ export interface InitOutput {
   readonly pipeoptions_preventAbort: (a: number) => number;
   readonly pipeoptions_signal: (a: number) => number;
   readonly __wbg_intounderlyingbytesource_free: (a: number) => void;
-  readonly intounderlyingbytesource_type: (a: number) => number;
+  readonly intounderlyingbytesource_type: (a: number, b: number) => void;
   readonly intounderlyingbytesource_autoAllocateChunkSize: (a: number) => number;
   readonly intounderlyingbytesource_start: (a: number, b: number) => void;
   readonly intounderlyingbytesource_pull: (a: number, b: number) => number;
@@ -132,16 +124,29 @@ export interface InitOutput {
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
-  readonly _dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hecc270b58ba1d424: (a: number, b: number) => void;
-  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__he0fa5aaa7b89f02c: (a: number, b: number, c: number) => void;
-  readonly _dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h2d43d7fba864ff85: (a: number, b: number) => void;
-  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h42e0dd3330d214c1: (a: number, b: number, c: number) => void;
-  readonly _dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hd3cf77ba2f52d965: (a: number, b: number) => void;
-  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h853ea8249172f860: (a: number, b: number, c: number) => void;
+  readonly _dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h5f90d6857b91a609: (a: number, b: number) => void;
+  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h46c3bc3cc99a6e2b: (a: number, b: number, c: number) => void;
+  readonly _dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hdd6d6dd12a17d45a: (a: number, b: number) => void;
+  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h63c19e4a4f9f6d31: (a: number, b: number, c: number) => void;
+  readonly _dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hc82db546f9cdcc4a: (a: number, b: number) => void;
+  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h5f33362706220879: (a: number, b: number, c: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
-  readonly wasm_bindgen__convert__closures__invoke2_mut__h58a52ccad9890fba: (a: number, b: number, c: number, d: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke2_mut__hc5dbc8e58bdb34f7: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_free: (a: number, b: number) => void;
   readonly __wbindgen_start: () => void;
 }
+
+export type SyncInitInput = BufferSource | WebAssembly.Module;
+/**
+* Instantiates the given `module`, which can either be bytes or
+* a precompiled `WebAssembly.Module`.
+*
+* @param {SyncInitInput} module
+*
+* @returns {InitOutput}
+*/
+export function initSync(module: SyncInitInput): InitOutput;
 
 /**
 * If `module_or_path` is {RequestInfo} or {URL}, makes a request and
